@@ -2,9 +2,7 @@
 
 mod commands;
 mod events;
-mod i18n;
 mod logging;
-mod menu;
 mod otel;
 mod state;
 
@@ -15,16 +13,6 @@ use state::AppState;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .menu(|handle| {
-            let locale = handle
-                .state::<AppState>()
-                .settings
-                .snapshot()
-                .general
-                .locale;
-            menu::build(handle, locale)
-        })
-        .on_menu_event(menu::handle_event)
         .manage(AppState::new())
         .invoke_handler(tauri::generate_handler![
             commands::connection::connection_create,

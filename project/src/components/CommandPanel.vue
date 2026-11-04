@@ -15,7 +15,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   refresh: [];
-  history: [];
 }>();
 
 const { t } = useI18n();
@@ -134,11 +133,7 @@ function next(): void {
   <section class="command">
     <header class="head">
       <span>{{ t("command.title") }}</span>
-      <div class="head-actions">
-        <button type="button" class="tiny" @click="emit('history')">
-          {{ t("command.history") }} ({{ history.entries.length }})
-        </button>
-      </div>
+
     </header>
 
     <div class="body">

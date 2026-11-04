@@ -137,6 +137,8 @@ export default {
     history: "历史",
   },
   shell: {
+    about: "关于",
+    closeWindow: "关闭窗口",
     resizeTree: "拖动调整树宽度",
     resizeInspector: "拖动调整右侧宽度",
     czxid: "czxid",

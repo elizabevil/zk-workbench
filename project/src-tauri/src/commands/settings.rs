@@ -1,6 +1,6 @@
 //! 设置方向命令。
 
-use tauri::{AppHandle, State};
+use tauri::State;
 use zkui_core::config::Settings;
 use zkui_core::error::AppResult;
 
@@ -12,15 +12,8 @@ pub fn settings_get(state: State<'_, AppState>) -> Settings {
 }
 
 #[tauri::command]
-pub fn settings_save(
-    app: AppHandle,
-    state: State<'_, AppState>,
-    settings: Settings,
-) -> AppResult<Settings> {
-    let locale = settings.general.locale;
-    let saved = state.settings.save(settings)?;
-    crate::menu::apply(&app, locale);
-    Ok(saved)
+pub fn settings_save(state: State<'_, AppState>, settings: Settings) -> AppResult<Settings> {
+    state.settings.save(settings)
 }
 
 #[tauri::command]

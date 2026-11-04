@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import hljs from "highlight.js/lib/core";
 import jsonLanguage from "highlight.js/lib/languages/json";
 import yamlLanguage from "highlight.js/lib/languages/yaml";
@@ -6,6 +7,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 import { isMap, isSeq, parseDocument } from "yaml";
+import { appInfo } from "@/api/app";
 import { auditList } from "@/api/audit";
 import { type InvokeRejection, toAppError } from "@/api/client";
 import { nodeAcl, nodeChildren, nodeData, nodeStat } from "@/api/node";
@@ -64,6 +66,15 @@ const jumpInput = ref<HTMLInputElement | null>(null);
 const jumpCompletion = ref<{ prefix: string; index: number } | null>(null);
 const shortcuts = ref<ShortcutMap>(loadShortcuts());
 const toolsOpen = ref(false);
+
+async function showAbout(): Promise<void> {
+  const info = await appInfo();
+  alert(`${info.name} ${info.version}`.trim());
+}
+
+async function closeWindow(): Promise<void> {
+  await getCurrentWindow().close();
+}
 const history = useHistoryStore();
 const timelineOpen = ref(true);
 const sideTab = ref<"recent" | "history">("recent");
@@ -638,6 +649,11 @@ function onDeleted(outcome: DeleteOutcome): void {
             {{ t("home.observability") }}
           </button>
           <button type="button" @click="router.push('/settings')">{{ t("home.settings") }}</button>
+          <div class="tools-sep" />
+          <button type="button" @click="toolsOpen = false; showAbout()">{{ t("shell.about") }}</button>
+          <button type="button" @click="toolsOpen = false; closeWindow()">
+            {{ t("shell.closeWindow") }}
+          </button>
         </div>
       </div>
     </header>
@@ -952,7 +968,6 @@ function onDeleted(outcome: DeleteOutcome): void {
       :connection-id="connectionId"
       :connection-name="store.snapshot?.display_name ?? ''"
       @refresh="refresh"
-      @history="sideTab = 'history'"
     />
 
     <footer class="statusbar">
@@ -1027,6 +1042,7 @@ function onDeleted(outcome: DeleteOutcome): void {
 }
 .topbar {
   position: relative;
+  z-index: 30;
   display: flex;
   align-items: center;
   height: 48px;
@@ -1384,12 +1400,24 @@ function onDeleted(outcome: DeleteOutcome): void {
   background: rgb(10 13 16 / 70%);
 }
 .resizer {
-  flex: 0 0 5px;
-  cursor: col-resize;
+  position: relative;
+  flex: 0 0 3px;
+  padding: 0;
+  border: none;
   background: transparent;
+  cursor: col-resize;
 }
-.resizer:hover {
-  background: rgb(255 255 255 / 10%);
+.resizer::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 1px;
+  width: 1px;
+  background: rgb(255 255 255 / 8%);
+}
+.resizer:hover::after {
+  background: #22d3ee;
 }
 .side-tabs {
   display: flex;
@@ -1491,6 +1519,7 @@ function onDeleted(outcome: DeleteOutcome): void {
 }
 .tools-menu {
   position: absolute;
+  z-index: 100;
   right: 0;
   top: calc(100% + 6px);
   display: flex;
@@ -1500,7 +1529,6 @@ function onDeleted(outcome: DeleteOutcome): void {
   border: 1px solid #2a323c;
   border-radius: 6px;
   background: #161b22;
-  z-index: 20;
 }
 .tools-menu button {
   text-align: left;
@@ -1513,6 +1541,11 @@ function onDeleted(outcome: DeleteOutcome): void {
 }
 .tools-menu button:hover {
   background: rgb(255 255 255 / 8%);
+}
+.tools-sep {
+  height: 1px;
+  margin: 4px 2px;
+  background: rgb(255 255 255 / 10%);
 }
 .statusbar .state {
   display: flex;

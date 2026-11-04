@@ -138,6 +138,8 @@ export default {
     history: "History",
   },
   shell: {
+    about: "About",
+    closeWindow: "Close window",
     resizeTree: "Resize tree",
     resizeInspector: "Resize inspector",
     czxid: "czxid",
