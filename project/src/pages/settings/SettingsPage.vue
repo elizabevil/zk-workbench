@@ -64,6 +64,7 @@ const otelMessage = ref("");
 const passwords = ref<Record<number, string>>({});
 const testTarget = ref("127.0.0.1:2181");
 const testMessage = ref("");
+const dragIndex = ref<number | null>(null);
 
 async function loadMetrics(): Promise<void> {
   metrics.value = await metricsSnapshot();
@@ -148,28 +149,6 @@ onMounted(async () => {
 
 onUnmounted(() => observer?.disconnect());
 
-function moveProxy(index: number, delta: number): void {
-  const profiles = store.settings?.proxy.profiles;
-  if (!profiles) {
-    return;
-  }
-  const target = index + delta;
-  if (target < 0 || target >= profiles.length) {
-    return;
-  }
-  const [item] = profiles.splice(index, 1);
-  profiles.splice(target, 0, item);
-}
-
-async function setPassword(index: number, profile: ProxyProfile): Promise<void> {
-  const password = passwords.value[index];
-  if (!password) {
-    return;
-  }
-  await proxyPasswordSet(profile.name, password);
-  passwords.value[index] = "";
-}
-
 async function clearPassword(profile: ProxyProfile): Promise<void> {
   await proxyPasswordClear(profile.name);
 }
@@ -193,13 +172,45 @@ async function testProxy(profile: ProxyProfile): Promise<void> {
 
 function addProxy(): void {
   const profile: ProxyProfile = {
-    name: `proxy-${store.settings?.proxy.profiles.length ?? 0 + 1}`,
+    name: "socks5://",
     kind: "socks5",
     host: "",
     port: 1080,
     username: null,
   };
   store.settings?.proxy.profiles.push(profile);
+}
+
+function dragStart(index: number): void {
+  dragIndex.value = index;
+}
+
+function drop(index: number): void {
+  const profiles = store.settings?.proxy.profiles;
+  const from = dragIndex.value;
+  dragIndex.value = null;
+  if (!profiles || from === null || from === index) {
+    return;
+  }
+  const [item] = profiles.splice(from, 1);
+  profiles.splice(index, 0, item);
+}
+
+async function saveSettings(): Promise<void> {
+  if (!store.settings) {
+    return;
+  }
+  for (const profile of store.settings.proxy.profiles) {
+    profile.name = `${profile.kind}://${profile.host}:${profile.port}`;
+  }
+  for (const [index, password] of Object.entries(passwords.value)) {
+    const profile = store.settings.proxy.profiles[Number(index)];
+    if (profile && password) {
+      await proxyPasswordSet(profile.name, password);
+      passwords.value[Number(index)] = "";
+    }
+  }
+  await store.save();
 }
 
 function removeProxy(index: number): void {
@@ -230,7 +241,7 @@ function removeProxy(index: number): void {
         </button>
       </nav>
 
-      <form v-if="store.settings" class="sections settings-form" @submit.prevent="store.save()">
+      <form v-if="store.settings" class="sections settings-form" @submit.prevent="saveSettings">
       <fieldset>
         <legend>{{ t("settings.general.title") }}</legend>
         <label>
@@ -318,8 +329,21 @@ function removeProxy(index: number): void {
           {{ t("settings.proxy.noProxy") }}
           <textarea v-model="noProxyText" rows="3" />
         </label>
-        <div v-for="(profile, index) in store.settings.proxy.profiles" :key="index" class="proxy-row">
-          <input v-model="profile.name" :placeholder="t('settings.proxy.name')" />
+        <div
+          v-for="(profile, index) in store.settings.proxy.profiles"
+          :key="index"
+          class="proxy-row"
+          @dragover.prevent
+          @drop="drop(index)"
+        >
+          <span
+            class="proxy-handle"
+            draggable="true"
+            :title="t('settings.proxy.drag')"
+            @dragstart="dragStart(index)"
+          >
+            ⠿
+          </span>
           <select v-model="profile.kind">
             <option v-for="kind in PROXY_KINDS" :key="kind" :value="kind">
               {{ kind }}
@@ -334,15 +358,10 @@ function removeProxy(index: number): void {
             type="password"
           />
           <div class="row-actions">
-            <button type="button" @click="moveProxy(index, -1)">↑</button>
-            <button type="button" @click="moveProxy(index, 1)">↓</button>
-            <button type="button" @click="setPassword(index, profile)">
-              {{ t("settings.proxy.setPassword") }}
-            </button>
+            <button type="button" @click="testProxy(profile)">{{ t("settings.proxy.test") }}</button>
             <button type="button" @click="clearPassword(profile)">
               {{ t("settings.proxy.clearPassword") }}
             </button>
-            <button type="button" @click="testProxy(profile)">{{ t("settings.proxy.test") }}</button>
             <button type="button" @click="removeProxy(index)">{{ t("settings.proxy.remove") }}</button>
           </div>
         </div>
@@ -483,7 +502,7 @@ function removeProxy(index: number): void {
       </fieldset>
 
       <div class="actions">
-        <button :disabled="store.saving" type="submit">{{ t("settings.save") }}</button>
+        <button :disabled="store.saving" type="button" @click="saveSettings">{{ t("settings.save") }}</button>
         <button type="button" @click="resetSettings">{{ t("settings.resetConfig") }}</button>
       </div>
       </form>
@@ -570,9 +589,17 @@ label.inline {
 }
 .proxy-row {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr 90px 1fr 1fr;
-  align-items: start;
-  gap: 6px;
+  grid-template-columns: 2% 1fr 1fr 0.6fr 1fr 1fr auto;
+  align-items: center;
+  gap: 8px;
+}
+.proxy-handle {
+  cursor: grab;
+  color: #9aa4b2;
+  text-align: center;
+}
+.proxy-handle:active {
+  cursor: grabbing;
 }
 .row-actions {
   display: flex;

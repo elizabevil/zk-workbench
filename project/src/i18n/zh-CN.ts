@@ -188,6 +188,7 @@ export default {
       title: "代理",
       enabled: "启用代理",
       noProxy: "绕过列表（每行一条）",
+      drag: "拖动排序",
       name: "名称",
       host: "主机",
       port: "端口",

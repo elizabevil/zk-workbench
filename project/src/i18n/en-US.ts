@@ -194,6 +194,7 @@ export default {
       title: "Proxy",
       enabled: "Enable proxy",
       noProxy: "Bypass list (one per line)",
+      drag: "Drag to reorder",
       name: "Name",
       host: "Host",
       port: "Port",
