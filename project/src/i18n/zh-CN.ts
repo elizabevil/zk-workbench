@@ -130,6 +130,8 @@ export default {
     history: "历史",
   },
   shell: {
+    recentNodes: "最近节点",
+    recentEmpty: "还没有打开过节点",
     commandHistory: "操作历史",
     historyEmpty: "本次会话还没有执行命令",
     expandAll: "展开全部",

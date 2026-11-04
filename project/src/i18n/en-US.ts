@@ -131,6 +131,8 @@ export default {
     history: "History",
   },
   shell: {
+    recentNodes: "Recent nodes",
+    recentEmpty: "No nodes opened yet",
     commandHistory: "Action history",
     historyEmpty: "No commands in this session",
     expandAll: "Expand all",

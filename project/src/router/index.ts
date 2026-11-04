@@ -10,6 +10,16 @@ export const router = createRouter({
       component: () => import("@/pages/workspace/WorkspacePage.vue"),
     },
     {
+      path: "/audit",
+      name: "audit",
+      component: () => import("@/pages/audit/AuditPage.vue"),
+    },
+    {
+      path: "/observability",
+      name: "observability",
+      component: () => import("@/pages/observability/ObservabilityPage.vue"),
+    },
+    {
       path: "/settings",
       name: "settings",
       component: () => import("@/pages/settings/SettingsPage.vue"),

@@ -66,6 +66,7 @@ const toolsOpen = ref(false);
 const history = useHistoryStore();
 const historyOpen = ref(true);
 const timelineOpen = ref(true);
+const recentOpen = ref(true);
 const expandedPaths = ref<Set<string>>(new Set());
 const createDefaultPath = ref<string | undefined>(undefined);
 
@@ -621,27 +622,6 @@ function onDeleted(outcome: DeleteOutcome): void {
             </div>
           </div>
 
-          <div class="node-tabs">
-            <button
-              v-for="tab in tabs.tabsFor(connectionId)"
-              :key="tab"
-              type="button"
-              class="node-tab"
-              :class="{ active: tab === selectedPath }"
-              @click="select(tab)"
-            >
-              {{ tab }}
-              <button
-                class="close"
-                type="button"
-                :aria-label="t('shell.closeTab')"
-                @click.stop="closeTab(tab)"
-              >
-                ×
-              </button>
-            </button>
-          </div>
-
           <div class="tabs">
             <button
               type="button"
@@ -765,6 +745,23 @@ function onDeleted(outcome: DeleteOutcome): void {
           <div><dt>{{ t("shell.ephemeral") }}</dt><dd>{{ stat.ephemeral_owner === 0 ? t("shell.persistent") : stat.ephemeral_owner }}</dd></div>
           <div><dt>{{ t("shell.mtime") }}</dt><dd>{{ toRfc3339(stat.mtime) }}</dd></div>
         </dl>
+        <button type="button" class="aside-head section-toggle" @click="recentOpen = !recentOpen">
+          {{ t("shell.recentNodes") }} ({{ tabs.tabsFor(connectionId).length }})
+        </button>
+        <ul v-if="recentOpen && tabs.tabsFor(connectionId).length" class="timeline">
+          <li v-for="path in [...tabs.tabsFor(connectionId)].reverse()" :key="path">
+            <button type="button" class="history-line mono" :title="path" @click="select(path)">
+              {{ path }}
+            </button>
+            <button type="button" class="tiny" :aria-label="t('shell.closeTab')" @click="closeTab(path)">
+              ×
+            </button>
+          </li>
+        </ul>
+        <p v-if="recentOpen && !tabs.tabsFor(connectionId).length" class="muted">
+          {{ t("shell.recentEmpty") }}
+        </p>
+
         <button type="button" class="aside-head section-toggle" @click="historyOpen = !historyOpen">
           {{ t("shell.commandHistory") }} ({{ history.entries.length }})
         </button>
