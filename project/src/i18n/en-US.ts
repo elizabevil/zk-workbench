@@ -250,6 +250,9 @@ export default {
     },
     observability: {
       title: "Observability",
+      otlp: "Enable OpenTelemetry export",
+      endpoint: "OTLP endpoint",
+      sampleRatio: "Sample ratio",
       otelExportNow: "Export now",
       otelEnabled: "OTel enabled",
       otelDisabled: "OTel disabled",
