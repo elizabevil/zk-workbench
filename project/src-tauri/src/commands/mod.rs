@@ -4,6 +4,7 @@ pub mod audit;
 pub mod connection;
 pub mod metrics;
 pub mod node;
+pub mod otel;
 pub mod profile;
 pub mod proxy;
 pub mod settings;

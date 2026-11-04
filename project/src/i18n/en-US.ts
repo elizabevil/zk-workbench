@@ -184,6 +184,12 @@ export default {
     },
     observability: {
       title: "Observability",
+      otelExportNow: "Export now",
+      otelEnabled: "OTel enabled",
+      otelDisabled: "OTel disabled",
+      otelExported: "Export succeeded",
+      otelLast: "Last export",
+      otelError: "Last error",
       metrics: "Local metrics",
       refresh: "Refresh",
       connects: "Connect attempts",

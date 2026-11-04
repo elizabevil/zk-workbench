@@ -108,3 +108,16 @@ pub fn audit_failed(detail: &str) -> AppError {
         },
     )
 }
+
+/// OTel 导出失败。
+pub fn otel_failed(detail: &str) -> AppError {
+    AppError::new(
+        ErrorKind::OtelExportFailed,
+        ErrorScope::App,
+        2008,
+        ErrorFields {
+            detail: Some(detail.to_string()),
+            ..Default::default()
+        },
+    )
+}

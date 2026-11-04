@@ -61,6 +61,7 @@ pub enum ErrorKind {
     Closed,
     SecretStore,
     AuditFailed,
+    OtelExportFailed,
     // proxy 域
     Connect,
     Handshake,
@@ -92,6 +93,7 @@ impl ErrorKind {
             ErrorKind::Closed => "closed",
             ErrorKind::SecretStore => "secret_store",
             ErrorKind::AuditFailed => "audit_failed",
+            ErrorKind::OtelExportFailed => "otel_export_failed",
             ErrorKind::Connect => "connect",
             ErrorKind::Handshake => "handshake",
             ErrorKind::InvalidArgument => "invalid_argument",

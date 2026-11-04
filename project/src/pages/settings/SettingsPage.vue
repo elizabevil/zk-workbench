@@ -7,10 +7,12 @@ import { appPaths } from "@/api/app";
 import { auditClear, auditExport, auditList, auditPrune, auditVerify } from "@/api/audit";
 import { type InvokeRejection, toAppError } from "@/api/client";
 import { metricsSnapshot } from "@/api/metrics";
+import { otelExportNow, otelStatus } from "@/api/otel";
 import { proxyPasswordClear, proxyPasswordSet, proxyTest } from "@/api/proxy";
 import type { AppPaths } from "@/api/types/AppPaths";
 import type { AuditRecord } from "@/api/types/AuditRecord";
 import type { MetricsSnapshot } from "@/api/types/MetricsSnapshot";
+import type { OtelExportStatus } from "@/api/types/OtelExportStatus";
 import type { ProxyProfile } from "@/api/types/ProxyProfile";
 import { LOCALES } from "@/i18n/locale";
 import { NOTIFICATION_LEVELS, PROXY_KINDS } from "@/settings/constants";
@@ -38,12 +40,29 @@ const metrics = ref<MetricsSnapshot | null>(null);
 const auditRows = ref<AuditRecord[]>([]);
 const auditMessage = ref("");
 const exportPath = ref("");
+const otel = ref<OtelExportStatus | null>(null);
+const otelMessage = ref("");
 const passwords = ref<Record<number, string>>({});
 const testTarget = ref("127.0.0.1:2181");
 const testMessage = ref("");
 
 async function loadMetrics(): Promise<void> {
   metrics.value = await metricsSnapshot();
+}
+
+async function loadOtel(): Promise<void> {
+  otel.value = await otelStatus();
+}
+
+async function exportOtel(): Promise<void> {
+  try {
+    await otelExportNow();
+    otelMessage.value = t("settings.observability.otelExported");
+  } catch (raw) {
+    const error = raw as { message_key?: string };
+    otelMessage.value = error.message_key ? t(error.message_key) : String(raw);
+  }
+  await loadOtel();
 }
 
 async function loadAudit(): Promise<void> {
@@ -86,6 +105,7 @@ onMounted(async () => {
   paths.value = await appPaths();
   await loadMetrics();
   await loadAudit();
+  await loadOtel();
 });
 
 function moveProxy(index: number, delta: number): void {
@@ -347,6 +367,26 @@ function removeProxy(index: number): void {
           />
         </label>
         <p class="hint">{{ t("settings.observability.hint") }}</p>
+
+        <div class="audit-actions">
+          <button type="button" @click="exportOtel">
+            {{ t("settings.observability.otelExportNow") }}
+          </button>
+          <button type="button" @click="loadOtel">
+            {{ t("settings.observability.refresh") }}
+          </button>
+          <span v-if="otel" class="hint">
+            {{ otel.enabled ? t("settings.observability.otelEnabled") : t("settings.observability.otelDisabled") }}
+            <template v-if="otel.last_export_ts">
+              · {{ t("settings.observability.otelLast") }}:
+              {{ new Date(otel.last_export_ts).toLocaleString() }}
+            </template>
+            <template v-if="otel.last_error">
+              · {{ t("settings.observability.otelError") }}: {{ otel.last_error }}
+            </template>
+          </span>
+        </div>
+        <p v-if="otelMessage" class="hint">{{ otelMessage }}</p>
 
         <div class="metrics-head">
           <span>{{ t("settings.observability.metrics") }}</span>

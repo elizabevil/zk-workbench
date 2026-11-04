@@ -2,6 +2,7 @@
 
 mod commands;
 mod events;
+mod otel;
 mod state;
 
 use state::AppState;
@@ -22,6 +23,8 @@ pub fn run() {
             commands::audit::audit_clear,
             commands::audit::audit_prune,
             commands::audit::audit_export,
+            commands::otel::otel_export_now,
+            commands::otel::otel_status,
             commands::node::node_children,
             commands::node::node_stat,
             commands::node::node_data,
@@ -43,6 +46,7 @@ pub fn run() {
         ])
         .setup(|app| {
             events::spawn_forwarder(app.handle().clone());
+            otel::spawn_periodic(app.handle().clone());
             Ok(())
         })
         .run(tauri::generate_context!())

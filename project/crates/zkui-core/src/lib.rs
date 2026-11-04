@@ -9,6 +9,7 @@ pub mod connection;
 pub mod error;
 pub mod ipc;
 pub mod metrics;
+pub mod otel;
 pub mod profiles;
 pub mod secrets;
 pub mod transport;

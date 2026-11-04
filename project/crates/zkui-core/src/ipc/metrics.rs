@@ -3,7 +3,7 @@
 use serde::Serialize;
 use ts_rs::TS;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, TS)]
 #[ts(export)]
 pub struct MetricsSnapshot {
     #[ts(type = "number")]
@@ -28,4 +28,15 @@ pub struct MetricsSnapshot {
     pub write_p50_ms: u64,
     #[ts(type = "number")]
     pub write_p95_ms: u64,
+}
+
+/// OTel 导出状态。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[ts(export)]
+pub struct OtelExportStatus {
+    pub enabled: bool,
+    pub endpoint: String,
+    #[ts(type = "number | null")]
+    pub last_export_ts: Option<i64>,
+    pub last_error: Option<String>,
 }
