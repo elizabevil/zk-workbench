@@ -5,6 +5,23 @@ body,
   margin: 0;
 }
 
+#app {
+  height: 100%;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 100%;
+  overflow: hidden;
+}
+
+.app > * {
+  flex: 1;
+  min-height: 0;
+}
+
 body {
   background: #101418;
   color: #e6e6e6;

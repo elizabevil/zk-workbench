@@ -26,6 +26,7 @@ import TreeNodeItem from "@/components/TreeNodeItem.vue";
 import { useConnectionStore } from "@/stores/connection";
 import { useTabsStore } from "@/stores/tabs";
 import { decodeUtf8Base64, hexPreview } from "@/utils/encoding";
+import { toRfc3339 } from "@/utils/time";
 
 hljs.registerLanguage("json", jsonLanguage);
 hljs.registerLanguage("yaml", yamlLanguage);
@@ -529,8 +530,8 @@ function onDeleted(outcome: DeleteOutcome): void {
                   <span class="muted">{{ t("data.bytes") }}: {{ data.byte_len }}</span>
                   <select v-model="format" class="format-select">
                     <option value="raw">{{ t("data.formatRaw") }}</option>
-                    <option value="json" :disabled="!jsonText">JSON</option>
-                    <option value="yaml" :disabled="!yamlText">YAML</option>
+                    <option value="json">JSON</option>
+                    <option value="yaml">YAML</option>
                   </select>
                   <template v-if="data.truncated">
                     <span class="warn">{{ t("data.truncated") }}</span>
@@ -578,7 +579,7 @@ function onDeleted(outcome: DeleteOutcome): void {
                   {{ stat?.ephemeral_owner === 0 ? t("shell.persistent") : stat?.ephemeral_owner }}
                 </dd>
               </div>
-              <div><dt>{{ t("shell.mtime") }}</dt><dd>{{ stat ? new Date(stat.mtime).toLocaleString() : "" }}</dd></div>
+              <div><dt>{{ t("shell.mtime") }}</dt><dd>{{ stat ? toRfc3339(stat.mtime) : "" }}</dd></div>
             </dl>
           </template>
         </div>
@@ -593,13 +594,13 @@ function onDeleted(outcome: DeleteOutcome): void {
           <div><dt>{{ t("shell.children") }}</dt><dd>{{ stat.num_children }}</dd></div>
           <div><dt>{{ t("shell.dataLength") }}</dt><dd>{{ stat.data_length }}</dd></div>
           <div><dt>{{ t("shell.ephemeral") }}</dt><dd>{{ stat.ephemeral_owner === 0 ? t("shell.persistent") : stat.ephemeral_owner }}</dd></div>
-          <div><dt>{{ t("shell.mtime") }}</dt><dd>{{ new Date(stat.mtime).toLocaleString() }}</dd></div>
+          <div><dt>{{ t("shell.mtime") }}</dt><dd>{{ toRfc3339(stat.mtime) }}</dd></div>
         </dl>
         <div class="aside-head timeline-head">{{ t("shell.timeline") }}</div>
         <ul v-if="timeline.length" class="timeline">
           <li v-for="entry in timeline" :key="entry.id">
             <span class="mono">{{ entry.op }}</span>
-            <span class="muted">{{ new Date(entry.ts).toLocaleTimeString() }}</span>
+            <span class="muted">{{ toRfc3339(entry.ts) }}</span>
           </li>
         </ul>
         <p v-else class="muted">{{ t("shell.timelineEmpty") }}</p>
@@ -614,13 +615,16 @@ function onDeleted(outcome: DeleteOutcome): void {
     />
 
     <footer class="statusbar">
-      <span>{{ t("shell.state") }}: {{ stateLabel }}</span>
-      <span>generation: {{ store.snapshot?.generation ?? "-" }}</span>
-      <span v-if="store.snapshot">
-        {{ t("shell.session") }}: {{ Math.round(store.snapshot.session_timeout_ms / 1000) }}s
+      <span class="state">
+        <span class="dot" :data-state="store.snapshot?.state ?? 'none'" />
+        {{ stateLabel }}
+      </span>
+      <span>{{ t("shell.connection") }}: {{ store.snapshot?.display_name ?? "-" }}</span>
+      <span v-if="(store.snapshot?.generation ?? 0) > 0">
+        {{ t("shell.generation") }}: {{ store.snapshot?.generation }}
       </span>
       <div class="spacer" />
-      <span>{{ store.snapshot?.connection_id ?? "" }}</span>
+      <span class="muted">{{ store.snapshot?.connection_id ?? "" }}</span>
     </footer>
 
     <p v-if="toast" class="toast">
@@ -882,9 +886,10 @@ function onDeleted(outcome: DeleteOutcome): void {
 .format-select {
   padding: 4px 8px;
   border-radius: 5px;
-  border: 1px solid #2a323c;
-  background: #101418;
-  color: inherit;
+  border: 1px solid var(--control-border, #3b4654);
+  background: var(--control-bg, #0d1117);
+  color: var(--control-fg, #e6edf3);
+  font-family: ui-monospace, monospace;
   font-size: 12px;
 }
 .data-toolbar {
@@ -1030,6 +1035,14 @@ function onDeleted(outcome: DeleteOutcome): void {
   justify-content: space-between;
   padding: 3px 0;
   border-bottom: 1px solid rgb(255 255 255 / 5%);
+}
+.statusbar .state {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.statusbar .dot {
+  display: inline-block;
 }
 .statusbar {
   display: flex;

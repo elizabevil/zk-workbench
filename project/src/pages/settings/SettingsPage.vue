@@ -17,6 +17,7 @@ import type { ProxyProfile } from "@/api/types/ProxyProfile";
 import { LOCALES } from "@/i18n/locale";
 import { NOTIFICATION_LEVELS, PROXY_KINDS } from "@/settings/constants";
 import { useSettingsStore } from "@/stores/settings";
+import { toRfc3339 } from "@/utils/time";
 
 const { t } = useI18n();
 const router = useRouter();
@@ -385,7 +386,7 @@ function removeProxy(index: number): void {
           </thead>
           <tbody>
             <tr v-for="row in auditRows" :key="row.id">
-              <td>{{ new Date(row.ts).toLocaleString() }}</td>
+              <td>{{ toRfc3339(row.ts) }}</td>
               <td>{{ row.op }}</td>
               <td class="mono">{{ row.path ?? "-" }}</td>
               <td>
@@ -431,7 +432,7 @@ function removeProxy(index: number): void {
             {{ otel.enabled ? t("settings.observability.otelEnabled") : t("settings.observability.otelDisabled") }}
             <template v-if="otel.last_export_ts">
               · {{ t("settings.observability.otelLast") }}:
-              {{ new Date(otel.last_export_ts).toLocaleString() }}
+              {{ toRfc3339(otel.last_export_ts) }}
             </template>
             <template v-if="otel.last_error">
               · {{ t("settings.observability.otelError") }}: {{ otel.last_error }}
@@ -493,6 +494,8 @@ function removeProxy(index: number): void {
 
 <style scoped>
 .settings {
+  height: 100%;
+  overflow-y: auto;
   padding: 24px;
   display: flex;
   flex-direction: column;

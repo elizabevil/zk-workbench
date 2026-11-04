@@ -172,7 +172,8 @@ async function connected(): Promise<void> {
 
 <style scoped>
 .home {
-  min-height: 100%;
+  height: 100%;
+  overflow-y: auto;
   color: #e6e6e6;
 }
 .topbar {
