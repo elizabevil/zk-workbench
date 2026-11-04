@@ -544,7 +544,7 @@ h2 {
 }
 
 .path {
-  color: #9aa4b2;
+  color: var(--app-text-muted, #9aa4b2);
   font-family: ui-monospace, monospace;
   font-size: 12px;
   overflow: hidden;
@@ -554,7 +554,7 @@ h2 {
 
 .diff-summary {
   margin-left: auto;
-  color: #9aa4b2;
+  color: var(--app-text-muted, #9aa4b2);
   font-family: ui-monospace, monospace;
   font-size: 11px;
   white-space: nowrap;
@@ -591,7 +591,7 @@ h2 {
   align-items: center;
   gap: 4px;
   height: 20px;
-  color: #6b7280;
+  color: var(--app-text-dim, #6b7280);
   font-family: ui-monospace, monospace;
   font-size: 11px;
   line-height: 20px;
@@ -654,7 +654,7 @@ h2 {
   border: none;
   outline: none;
   background: transparent;
-  color: #e6e6e6;
+  color: var(--app-text, #e6e6e6);
   font-family: ui-monospace, monospace;
   font-size: 13px;
   line-height: 20px;
@@ -711,7 +711,7 @@ h2 {
   border: 1px solid transparent;
   border-radius: 4px;
   background: transparent;
-  color: #9aa4b2;
+  color: var(--app-text-muted, #9aa4b2);
   cursor: pointer;
   line-height: 1;
 }
@@ -745,7 +745,7 @@ h2 {
 
 .result {
   min-width: 3.2rem;
-  color: #9aa4b2;
+  color: var(--app-text-muted, #9aa4b2);
   font-size: 11px;
   text-align: right;
   white-space: nowrap;
@@ -765,7 +765,7 @@ h2 {
   border-radius: 5px;
   border: 1px solid #2a323c;
   background: #1d242c;
-  color: #cbd5e1;
+  color: var(--app-text-soft, #cbd5e1);
   cursor: pointer;
   font-size: 11px;
 }
@@ -796,7 +796,7 @@ button {
 }
 
 .muted {
-  color: #9aa4b2;
+  color: var(--app-text-muted, #9aa4b2);
   font-size: 12px;
   margin: 0;
 }

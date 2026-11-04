@@ -11,7 +11,8 @@ import {listenConnectionState, MENU_ACTION, MENU_ACTION_SETTINGS} from "@/api/ev
 import {useConnectionStore} from "@/stores/connection";
 import {useSettingsStore} from "@/stores/settings";
 import {useUiStore} from "@/stores/ui";
-import {naiveThemeOverrides} from "@/theme/naive";
+import {createNaiveThemeOverrides} from "@/theme/naive";
+import {rgbaColor} from "@/utils/color";
 import {BASE_FONT_SIZE, effectiveZoom, loadZoom, nextZoom, saveZoom} from "@/utils/zoom";
 
 const router = useRouter();
@@ -110,16 +111,44 @@ const background = computed(() => {
 });
 
 const appStyle = computed(() => {
-  const opacity = (settings.settings?.appearance.panel_opacity ?? 50) / 100;
+  const appearance = settings.settings?.appearance;
+  const opacity = (appearance?.panel_opacity ?? 50) / 100;
+  const fontOpacity = (appearance?.font_opacity ?? 100) / 100;
+  const fontColor = appearance?.font_color ?? "#e6e6e6";
+  const workspaceScale = (appearance?.workspace_font_size ?? 14) / 14;
   return {
     "--panel-bg": `rgb(0 0 0 / ${opacity})`,
     "--panel-hover-bg": `rgb(0 0 0 / ${Math.min(0.9, opacity + 0.12)})`,
+    "--app-text": rgbaColor(fontColor, fontOpacity),
+    "--app-text-soft": rgbaColor(fontColor, fontOpacity * 0.85),
+    "--app-text-muted": rgbaColor(fontColor, fontOpacity * 0.65),
+    "--app-text-dim": rgbaColor(fontColor, fontOpacity * 0.45),
+    "--workspace-font-scale": String(workspaceScale),
   };
 });
 
 const naiveLocale = computed(() =>
   settings.settings?.general.locale === "en-US" ? enUS : zhCN,
 );
+
+// 弹框会 Teleport 到 body，CSS 变量需要同步到根节点才能继承。
+watch(
+  appStyle,
+  (style) => {
+    for (const [name, value] of Object.entries(style)) {
+      document.documentElement.style.setProperty(name, String(value));
+    }
+  },
+  {immediate: true},
+);
+
+const naiveThemeOverrides = computed(() => {
+  const appearance = settings.settings?.appearance;
+  return createNaiveThemeOverrides(
+    appearance?.font_color ?? "#e6e6e6",
+    (appearance?.font_opacity ?? 100) / 100,
+  );
+});
 
 const backgroundStyle = computed(() => {
   const blur = settings.settings?.appearance.background_blur ?? 0;

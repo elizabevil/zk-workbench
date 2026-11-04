@@ -38,4 +38,16 @@ export type AppearanceSettings = {
      * 界面字号（px），默认 14。
      */
     font_size: number,
+    /**
+     * 全局字体颜色，CSS 十六进制颜色。
+     */
+    font_color: string,
+    /**
+     * 全局字体透明度，0-100，默认 100。
+     */
+    font_opacity: number,
+    /**
+     * 工作区字号（px），默认 14。
+     */
+    workspace_font_size: number,
 };

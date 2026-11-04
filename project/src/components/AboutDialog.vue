@@ -182,14 +182,14 @@ h2 {
 
 .version {
   margin: 0;
-  color: #9aa4b2;
+  color: var(--app-text-muted, #9aa4b2);
   font-family: ui-monospace, monospace;
   font-size: 12px;
 }
 
 .description {
   margin: 2px 0 4px;
-  color: #cbd5e1;
+  color: var(--app-text-soft, #cbd5e1);
   font-size: 13px;
   text-align: center;
 }
@@ -206,7 +206,7 @@ h2 {
 
 .block h3 {
   margin: 0;
-  color: #9aa4b2;
+  color: var(--app-text-muted, #9aa4b2);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.8px;
@@ -237,12 +237,12 @@ h2 {
 .developer,
 .legal {
   margin: 0;
-  color: #9aa4b2;
+  color: var(--app-text-muted, #9aa4b2);
   font-size: 11px;
 }
 
 .legal {
-  color: #6b7280;
+  color: var(--app-text-dim, #6b7280);
 }
 
 .actions {

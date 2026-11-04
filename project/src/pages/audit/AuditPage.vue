@@ -197,7 +197,7 @@ h1 {
 }
 
 .hint {
-  color: #9aa4b2;
+  color: var(--app-text-muted, #9aa4b2);
   margin: 0;
   font-size: 12px;
 }
@@ -213,7 +213,7 @@ h1 {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #cbd5e1;
+  color: var(--app-text-soft, #cbd5e1);
   font-size: 13px;
 }
 

@@ -1324,7 +1324,14 @@ function onDeleted(outcome: DeleteOutcome): void {
   display: flex;
   flex-direction: column;
   height: 100%;
-  color: #e6e6e6;
+  color: var(--app-text, #e6e6e6);
+  font-size: calc(14px * var(--workspace-font-scale, 1));
+}
+
+.shell :deep(.n-button),
+.shell :deep(.n-input),
+.shell :deep(.n-base-selection) {
+  font-size: calc(12px * var(--workspace-font-scale, 1));
 }
 
 .topbar {
@@ -1364,14 +1371,14 @@ function onDeleted(outcome: DeleteOutcome): void {
 }
 
 .endpoint {
-  color: #9aa4b2;
+  color: var(--app-text-muted, #9aa4b2);
   font-family: ui-monospace, monospace;
-  font-size: 12px;
+  font-size: calc(12px * var(--workspace-font-scale, 1));
 }
 
 .caret {
-  color: #9aa4b2;
-  font-size: 11px;
+  color: var(--app-text-muted, #9aa4b2);
+  font-size: calc(11px * var(--workspace-font-scale, 1));
 }
 
 .menu {
@@ -1509,9 +1516,9 @@ function onDeleted(outcome: DeleteOutcome): void {
   border-radius: 5px;
   border: 1px solid rgb(255 255 255 / 15%);
   background: transparent;
-  color: #cbd5e1;
+  color: var(--app-text-soft, #cbd5e1);
   cursor: pointer;
-  font-size: 12px;
+  font-size: calc(12px * var(--workspace-font-scale, 1));
 }
 
 .tiny:disabled {
@@ -1539,7 +1546,7 @@ function onDeleted(outcome: DeleteOutcome): void {
   background: #101418;
   color: inherit;
   font-family: ui-monospace, monospace;
-  font-size: 12px;
+  font-size: calc(12px * var(--workspace-font-scale, 1));
 }
 
 .tree-actions {
@@ -1575,7 +1582,7 @@ function onDeleted(outcome: DeleteOutcome): void {
 
 .placeholder h2 {
   margin: 0 0 6px;
-  font-size: 18px;
+  font-size: calc(18px * var(--workspace-font-scale, 1));
 }
 
 .detail {
@@ -1600,7 +1607,7 @@ function onDeleted(outcome: DeleteOutcome): void {
   color: inherit;
   cursor: pointer;
   font-family: ui-monospace, monospace;
-  font-size: 17px;
+  font-size: calc(17px * var(--workspace-font-scale, 1));
   padding: 0;
   text-align: left;
   word-break: break-all;
@@ -1668,7 +1675,7 @@ function onDeleted(outcome: DeleteOutcome): void {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  font-size: calc(13px * var(--workspace-font-scale, 1));
 }
 
 .custom-refresh-input {
@@ -1691,7 +1698,7 @@ function onDeleted(outcome: DeleteOutcome): void {
   padding: 6px 12px;
   border: none;
   background: transparent;
-  color: #9aa4b2;
+  color: var(--app-text-muted, #9aa4b2);
   cursor: pointer;
   border-bottom: 2px solid transparent;
 }
@@ -1714,7 +1721,7 @@ function onDeleted(outcome: DeleteOutcome): void {
   background: var(--control-bg, #0d1117);
   color: var(--control-fg, #e6edf3);
   font-family: ui-monospace, monospace;
-  font-size: 12px;
+  font-size: calc(12px * var(--workspace-font-scale, 1));
 }
 
 .data-toolbar {
@@ -1746,7 +1753,7 @@ function onDeleted(outcome: DeleteOutcome): void {
   border: 1px solid rgb(255 255 255 / 8%);
   background: rgb(16 20 24 / 70%);
   font-family: ui-monospace, monospace;
-  font-size: 13px;
+  font-size: calc(13px * var(--workspace-font-scale, 1));
   white-space: pre-wrap;
   word-break: break-all;
   max-height: 60vh;
@@ -1762,7 +1769,7 @@ function onDeleted(outcome: DeleteOutcome): void {
 .warn {
   color: #fbbf24;
   margin: 0;
-  font-size: 13px;
+  font-size: calc(13px * var(--workspace-font-scale, 1));
 }
 
 .acl-pane {
@@ -1774,7 +1781,7 @@ function onDeleted(outcome: DeleteOutcome): void {
 .acl-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: calc(13px * var(--workspace-font-scale, 1));
 }
 
 .acl-table th,
@@ -1789,8 +1796,8 @@ function onDeleted(outcome: DeleteOutcome): void {
 }
 
 .hint {
-  color: #9aa4b2;
-  font-size: 12px;
+  color: var(--app-text-muted, #9aa4b2);
+  font-size: calc(12px * var(--workspace-font-scale, 1));
 }
 
 .stat-groups {
@@ -1801,9 +1808,9 @@ function onDeleted(outcome: DeleteOutcome): void {
 
 .stat-group h3 {
   margin: 0 0 6px;
-  font-size: 12px;
+  font-size: calc(12px * var(--workspace-font-scale, 1));
   font-weight: 600;
-  color: #9aa4b2;
+  color: var(--app-text-muted, #9aa4b2);
 }
 
 .stat-table {
@@ -1819,11 +1826,11 @@ function onDeleted(outcome: DeleteOutcome): void {
   gap: 8px;
   padding: 3px 0;
   border-bottom: 1px solid rgb(255 255 255 / 5%);
-  font-size: 12px;
+  font-size: calc(12px * var(--workspace-font-scale, 1));
 }
 
 .stat-table dt {
-  color: #9aa4b2;
+  color: var(--app-text-muted, #9aa4b2);
 }
 
 .stat-table dd {
@@ -1845,8 +1852,8 @@ function onDeleted(outcome: DeleteOutcome): void {
 }
 
 .stat-grid dt {
-  color: #9aa4b2;
-  font-size: 12px;
+  color: var(--app-text-muted, #9aa4b2);
+  font-size: calc(12px * var(--workspace-font-scale, 1));
   margin-bottom: 4px;
 }
 
@@ -1869,10 +1876,10 @@ function onDeleted(outcome: DeleteOutcome): void {
   border: 1px solid rgb(255 255 255 / 10%);
   border-radius: 6px 6px 0 0;
   background: rgb(16 20 24 / 60%);
-  color: #cbd5e1;
+  color: var(--app-text-soft, #cbd5e1);
   cursor: pointer;
   font-family: ui-monospace, monospace;
-  font-size: 12px;
+  font-size: calc(12px * var(--workspace-font-scale, 1));
   white-space: nowrap;
 }
 
@@ -1882,7 +1889,7 @@ function onDeleted(outcome: DeleteOutcome): void {
 }
 
 .node-tab .close {
-  color: #9aa4b2;
+  color: var(--app-text-muted, #9aa4b2);
 }
 
 .inspector {
@@ -1929,9 +1936,9 @@ function onDeleted(outcome: DeleteOutcome): void {
   border: none;
   border-bottom: 2px solid transparent;
   background: transparent;
-  color: #9aa4b2;
+  color: var(--app-text-muted, #9aa4b2);
   cursor: pointer;
-  font-size: 11px;
+  font-size: calc(11px * var(--workspace-font-scale, 1));
 }
 
 .side-tabs button.active {
@@ -1947,15 +1954,15 @@ function onDeleted(outcome: DeleteOutcome): void {
 }
 
 .side-body .timeline {
-  font-size: 11px;
+  font-size: calc(11px * var(--workspace-font-scale, 1));
 }
 
 .side-body .history-line {
-  font-size: 11px;
+  font-size: calc(11px * var(--workspace-font-scale, 1));
 }
 
 .side-body .timeline .muted {
-  font-size: 11px;
+  font-size: calc(11px * var(--workspace-font-scale, 1));
 }
 
 .inspector {
@@ -1974,14 +1981,14 @@ function onDeleted(outcome: DeleteOutcome): void {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  font-size: 12px;
+  font-size: calc(12px * var(--workspace-font-scale, 1));
   padding: 3px 0;
   border-bottom: 1px solid rgb(255 255 255 / 5%);
 }
 
 .inspector-grid dt {
   flex: 0 0 auto;
-  color: #9aa4b2;
+  color: var(--app-text-muted, #9aa4b2);
   white-space: nowrap;
 }
 
@@ -2010,8 +2017,8 @@ function onDeleted(outcome: DeleteOutcome): void {
 }
 
 .chevron {
-  color: #9aa4b2;
-  font-size: 11px;
+  color: var(--app-text-muted, #9aa4b2);
+  font-size: calc(11px * var(--workspace-font-scale, 1));
 }
 
 .section-toggle {
@@ -2023,9 +2030,9 @@ function onDeleted(outcome: DeleteOutcome): void {
   text-align: left;
   border: none;
   background: transparent;
-  color: #9aa4b2;
+  color: var(--app-text-muted, #9aa4b2);
   cursor: pointer;
-  font-size: 12px;
+  font-size: calc(12px * var(--workspace-font-scale, 1));
   padding: 4px 0;
 }
 
@@ -2034,7 +2041,7 @@ function onDeleted(outcome: DeleteOutcome): void {
   min-width: 0;
   border: none;
   background: transparent;
-  color: #cbd5e1;
+  color: var(--app-text-soft, #cbd5e1);
   cursor: pointer;
   padding: 0;
   text-align: left;
@@ -2056,7 +2063,7 @@ function onDeleted(outcome: DeleteOutcome): void {
   margin: 0;
   padding: 0;
   list-style: none;
-  font-size: 12px;
+  font-size: calc(12px * var(--workspace-font-scale, 1));
 }
 
 .timeline li {
@@ -2123,8 +2130,8 @@ function onDeleted(outcome: DeleteOutcome): void {
   gap: 4px 16px;
   min-height: 28px;
   padding: 4px 12px;
-  font-size: 12px;
-  color: #9aa4b2;
+  font-size: calc(12px * var(--workspace-font-scale, 1));
+  color: var(--app-text-muted, #9aa4b2);
   border-top: 1px solid rgb(255 255 255 / 8%);
   background: rgb(16 20 24 / 80%);
 }
@@ -2135,7 +2142,7 @@ function onDeleted(outcome: DeleteOutcome): void {
   gap: 4px 12px;
   margin-left: auto;
   font-family: ui-monospace, monospace;
-  font-size: 11px;
+  font-size: calc(11px * var(--workspace-font-scale, 1));
 }
 
 .toast {
@@ -2148,12 +2155,12 @@ function onDeleted(outcome: DeleteOutcome): void {
   border-radius: 6px;
   background: #1d242c;
   border: 1px solid #2a323c;
-  font-size: 13px;
+  font-size: calc(13px * var(--workspace-font-scale, 1));
 }
 
 .muted {
-  color: #9aa4b2;
-  font-size: 12px;
+  color: var(--app-text-muted, #9aa4b2);
+  font-size: calc(12px * var(--workspace-font-scale, 1));
 }
 
 .error {

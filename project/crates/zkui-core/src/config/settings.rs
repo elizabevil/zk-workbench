@@ -156,6 +156,12 @@ pub struct AppearanceSettings {
     pub background_blur: u8,
     /// 界面字号（px），默认 14。
     pub font_size: u8,
+    /// 全局字体颜色，CSS 十六进制颜色。
+    pub font_color: String,
+    /// 全局字体透明度，0-100，默认 100。
+    pub font_opacity: u8,
+    /// 工作区字号（px），默认 14。
+    pub workspace_font_size: u8,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -180,6 +186,9 @@ impl Default for AppearanceSettings {
             panel_opacity: 50,
             background_blur: 0,
             font_size: 14,
+            font_color: "#e6e6e6".to_string(),
+            font_opacity: 100,
+            workspace_font_size: 14,
         }
     }
 }

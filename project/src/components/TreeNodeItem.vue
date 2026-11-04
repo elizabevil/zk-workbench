@@ -153,7 +153,7 @@ function childPath(name: string): string {
 
 <style scoped>
 .node {
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--workspace-font-scale, 1));
 }
 
 .row {
@@ -192,9 +192,9 @@ function childPath(name: string): string {
   padding: 0;
   border: none;
   background: transparent;
-  color: #9aa4b2;
+  color: var(--app-text-muted, #9aa4b2);
   cursor: pointer;
-  font-size: 10px;
+  font-size: calc(10px * var(--workspace-font-scale, 1));
   line-height: 1;
 }
 
@@ -206,7 +206,7 @@ function childPath(name: string): string {
   background: transparent;
   color: #d7dee8;
   cursor: pointer;
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--workspace-font-scale, 1));
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -217,8 +217,8 @@ function childPath(name: string): string {
 }
 
 .muted {
-  color: #9aa4b2;
-  font-size: 11px;
+  color: var(--app-text-muted, #9aa4b2);
+  font-size: calc(11px * var(--workspace-font-scale, 1));
 }
 
 .retry {
@@ -226,7 +226,7 @@ function childPath(name: string): string {
   background: transparent;
   color: #f87171;
   cursor: pointer;
-  font-size: 11px;
+  font-size: calc(11px * var(--workspace-font-scale, 1));
 }
 
 .children {
@@ -237,8 +237,8 @@ function childPath(name: string): string {
 
 .empty {
   padding: 2px 6px;
-  color: #6b7280;
-  font-size: 11px;
+  color: var(--app-text-dim, #6b7280);
+  font-size: calc(11px * var(--workspace-font-scale, 1));
   user-select: none;
 }
 

@@ -258,8 +258,8 @@ function next(): void {
 .head {
   display: flex;
   justify-content: space-between;
-  font-size: 12px;
-  color: #9aa4b2;
+  font-size: calc(12px * var(--workspace-font-scale, 1));
+  color: var(--app-text-muted, #9aa4b2);
 }
 
 .body {
@@ -277,7 +277,7 @@ function next(): void {
   border: 1px solid rgb(255 255 255 / 8%);
   background: rgb(16 20 24 / 85%);
   font-family: ui-monospace, monospace;
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--workspace-font-scale, 1));
   line-height: 1.55;
   white-space: pre-wrap;
 }
@@ -291,9 +291,9 @@ function next(): void {
   margin: 0;
   padding: 0 2px;
   overflow: hidden;
-  color: #9aa4b2;
+  color: var(--app-text-muted, #9aa4b2);
   font-family: ui-monospace, monospace;
-  font-size: 11px;
+  font-size: calc(11px * var(--workspace-font-scale, 1));
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -313,7 +313,7 @@ function next(): void {
 }
 
 .muted {
-  color: #9aa4b2;
-  font-size: 11px;
+  color: var(--app-text-muted, #9aa4b2);
+  font-size: calc(11px * var(--workspace-font-scale, 1));
 }
 </style>

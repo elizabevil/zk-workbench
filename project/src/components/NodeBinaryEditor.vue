@@ -184,7 +184,7 @@ function onShow(value: boolean): void {
 
 .file-input {
   max-width: 100%;
-  color: #9aa4b2;
+  color: var(--app-text-muted, #9aa4b2);
   font: inherit;
 }
 
@@ -194,7 +194,7 @@ function onShow(value: boolean): void {
   border: 1px solid #2a323c;
   border-radius: 4px;
   background: #1d242c;
-  color: #e6e6e6;
+  color: var(--app-text, #e6e6e6);
   cursor: pointer;
 }
 
@@ -210,7 +210,7 @@ function onShow(value: boolean): void {
 }
 
 .muted {
-  color: #9aa4b2;
+  color: var(--app-text-muted, #9aa4b2);
   font-size: 12px;
 }
 </style>

@@ -198,6 +198,18 @@ function setFontSize(value: number): void {
   }
 }
 
+function setWorkspaceFontSize(value: number): void {
+  if (store.settings) {
+    store.settings.appearance.workspace_font_size = value;
+  }
+}
+
+function setFontOpacity(value: number): void {
+  if (store.settings) {
+    store.settings.appearance.font_opacity = value;
+  }
+}
+
 function setMaxAttempts(value: number): void {
   if (store.settings) {
     store.settings.retry.max_attempts = value;
@@ -643,11 +655,50 @@ function removeProxy(index: number): void {
               @update:value="(value) => applyNumber(value, setFontSize)"
             />
           </NFormItem>
+          <NFormItem :label="t('settings.appearance.workspaceFontSize')">
+            <NInputNumber
+              :max="22"
+              :min="10"
+              :show-button="false"
+              :value="store.settings.appearance.workspace_font_size"
+              class="control-xs"
+              @update:value="(value) => applyNumber(value, setWorkspaceFontSize)"
+            />
+          </NFormItem>
+          <NFormItem :label="t('settings.appearance.fontColor')">
+            <NColorPicker
+              v-model:value="store.settings.appearance.font_color"
+              :modes="['hex']"
+              :show-alpha="false"
+              class="control-color"
+            />
+          </NFormItem>
+          <NFormItem :label="t('settings.appearance.fontOpacity')">
+            <div class="slider-control">
+              <NSlider
+                :max="100"
+                :min="0"
+                :value="store.settings.appearance.font_opacity"
+                @update:value="(value) => applyNumber(value, setFontOpacity)"
+              />
+              <span class="slider-value">{{ store.settings.appearance.font_opacity }}</span>
+            </div>
+          </NFormItem>
           <div :style="appearancePreview" class="preview">
-            <span class="preview-sample" :style="{fontSize: `${store.settings.appearance.font_size}px`}">
-              {{ t("settings.appearance.previewText") }}
+            <div class="preview-lines">
+              <span class="preview-sample" :style="{fontSize: `${store.settings.appearance.font_size}px`}">
+                {{ t("settings.appearance.previewUI") }}
+              </span>
+              <span
+                class="preview-sample"
+                :style="{fontSize: `${store.settings.appearance.workspace_font_size}px`}"
+              >
+                {{ t("settings.appearance.previewWorkspace") }}
+              </span>
+            </div>
+            <span class="preview-meta">
+              {{ store.settings.appearance.font_size }} / {{ store.settings.appearance.workspace_font_size }} px
             </span>
-            <span class="preview-meta">{{ store.settings.appearance.font_size }} px</span>
           </div>
         </fieldset>
 
@@ -891,7 +942,7 @@ function removeProxy(index: number): void {
   padding: 3px 9px;
   border: 1px solid rgb(255 255 255 / 12%);
   border-radius: 999px;
-  color: #9aa4b2;
+  color: var(--app-text-muted, #9aa4b2);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
@@ -901,7 +952,7 @@ function removeProxy(index: number): void {
   border: 1px solid rgb(255 255 255 / 15%);
   border-radius: 6px;
   background: rgb(255 255 255 / 8%);
-  color: #e6e6e6;
+  color: var(--app-text, #e6e6e6);
   cursor: pointer;
 }
 
@@ -937,7 +988,7 @@ function removeProxy(index: number): void {
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: #9aa4b2;
+  color: var(--app-text-muted, #9aa4b2);
   cursor: pointer;
 }
 
@@ -985,7 +1036,7 @@ legend {
 
 .settings-form :deep(.n-form-item-label) {
   padding-right: 20px;
-  color: #cbd5e1;
+  color: var(--app-text-soft, #cbd5e1);
   font-size: 13px;
   text-align: left;
 }
@@ -1062,7 +1113,7 @@ legend {
 
 .slider-value {
   width: 2.5rem;
-  color: #9aa4b2;
+  color: var(--app-text-muted, #9aa4b2);
   font-size: 12px;
   text-align: right;
 }
@@ -1078,7 +1129,7 @@ legend {
 .file-name {
   min-width: 0;
   overflow: hidden;
-  color: #cbd5e1;
+  color: var(--app-text-soft, #cbd5e1);
   font-family: ui-monospace, monospace;
   font-size: 12px;
   text-overflow: ellipsis;
@@ -1096,7 +1147,7 @@ legend {
   border: 1px solid #2a323c;
   border-radius: 5px;
   background: #101418;
-  color: #e6e6e6;
+  color: var(--app-text, #e6e6e6);
   font-family: ui-monospace, monospace;
   font-size: 12px;
 }
@@ -1135,7 +1186,7 @@ legend {
   padding: 0;
   border: none;
   background: transparent;
-  color: #9aa4b2;
+  color: var(--app-text-muted, #9aa4b2);
   cursor: grab;
   text-align: center;
 }
@@ -1177,26 +1228,31 @@ legend {
   background-size: cover;
 }
 
+.preview-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
 .preview-sample {
   min-width: 0;
   overflow: hidden;
-  color: #fff;
+  color: var(--app-text, #e6e6e6);
   line-height: 1.2;
   text-overflow: ellipsis;
-  text-shadow: 0 1px 3px rgb(0 0 0 / 85%);
   white-space: nowrap;
 }
 
 .preview-meta {
   flex: none;
-  color: rgb(255 255 255 / 75%);
+  color: var(--app-text-muted, #9aa4b2);
   font-family: ui-monospace, monospace;
   font-size: 12px;
-  text-shadow: 0 1px 3px rgb(0 0 0 / 85%);
 }
 
 .hint {
-  color: #9aa4b2;
+  color: var(--app-text-muted, #9aa4b2);
   margin: 0;
   font-size: 12px;
 }

@@ -190,7 +190,7 @@ async function connected(): Promise<void> {
 .home {
   height: 100%;
   overflow-y: auto;
-  color: #e6e6e6;
+  color: var(--app-text, #e6e6e6);
 }
 
 .topbar {
@@ -241,7 +241,7 @@ async function connected(): Promise<void> {
   font-size: 14px;
   font-weight: 600;
   text-align: center;
-  color: #cbd5e1;
+  color: var(--app-text-soft, #cbd5e1);
 }
 
 .grid {
@@ -267,7 +267,7 @@ h1 {
 }
 
 .muted {
-  color: #9aa4b2;
+  color: var(--app-text-muted, #9aa4b2);
   margin: 4px 0 0;
 }
 

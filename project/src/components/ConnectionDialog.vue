@@ -185,7 +185,7 @@ onUnmounted(() => window.removeEventListener("keydown", onKeydown));
 
 .connection-form :deep(.n-form-item-label) {
   padding-bottom: 6px;
-  color: #9aa4b2;
+  color: var(--app-text-muted, #9aa4b2);
   font-size: 12px;
 }
 

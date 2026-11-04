@@ -188,7 +188,7 @@ function onShow(value: boolean): void {
 }
 
 .muted {
-  color: #9aa4b2;
+  color: var(--app-text-muted, #9aa4b2);
   margin: 0;
   font-size: 13px;
 }
