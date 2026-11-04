@@ -19,7 +19,7 @@ port: number,
  */
 display_name: string, 
 /**
- * 可选认证身份；凭据本身不进入 DTO。
+ * 可选认证身份（仅展示）；凭据通过 `addauth` 提供，不进入 DTO。首版仅接受 digest。
  */
 identity: Identity | null, 
 /**

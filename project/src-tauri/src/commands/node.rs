@@ -5,8 +5,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use base64::Engine;
 use tauri::State;
-use zkui_core::audit::AuditEntry;
+use zkui_core::audit::AuditEvent;
 use zkui_core::error::{AppResult, app};
+use zkui_core::ipc::audit::AuditOp;
 use zkui_core::ipc::node::{DeleteOutcome, DeletePreview, NodeCreateMode, NodeData, NodeStat};
 
 use crate::state::AppState;
@@ -62,17 +63,21 @@ pub async fn node_set(
         .manager
         .set_data(&connection_id, &path, data, expected_version)
         .await;
+    let generation = state.manager.generation_of(&connection_id)?;
+    let actor = state.manager.actor_of(&connection_id)?;
     match &result {
         Ok(stat) => {
-            let mut entry = AuditEntry::success("set", &connection_id, &path);
-            entry.before_version = Some(expected_version);
-            entry.after_version = Some(stat.version);
-            state.audit.record(entry)?;
+            state.audit.record(
+                AuditEvent::success(AuditOp::Set, &connection_id, generation, &actor, &path)
+                    .with_versions(expected_version, stat.version),
+            )?;
         }
         Err(error) => {
-            state.audit.record(AuditEntry::failure(
-                "set",
+            state.audit.record(AuditEvent::failure(
+                AuditOp::Set,
                 &connection_id,
+                generation,
+                &actor,
                 &path,
                 error.as_ref(),
             ))?;
@@ -95,16 +100,21 @@ pub async fn node_create(
         .manager
         .create_node(&connection_id, &path, data, mode, create_parents)
         .await;
+    let generation = state.manager.generation_of(&connection_id)?;
+    let actor = state.manager.actor_of(&connection_id)?;
     match &result {
         Ok(actual) => {
-            let mut entry = AuditEntry::success("create", &connection_id, actual);
-            entry.detail = Some(format!("mode={mode:?}"));
-            state.audit.record(entry)?;
+            state.audit.record(
+                AuditEvent::success(AuditOp::Create, &connection_id, generation, &actor, actual)
+                    .with_detail(format!("mode={mode:?}")),
+            )?;
         }
         Err(error) => {
-            state.audit.record(AuditEntry::failure(
-                "create",
+            state.audit.record(AuditEvent::failure(
+                AuditOp::Create,
                 &connection_id,
+                generation,
+                &actor,
                 &path,
                 error.as_ref(),
             ))?;
@@ -165,26 +175,39 @@ pub async fn node_delete(
         .manager
         .delete_node(&connection_id, &path, recursive)
         .await;
+    let generation = state.manager.generation_of(&connection_id)?;
+    let actor = state.manager.actor_of(&connection_id)?;
     match &result {
         Ok(outcome) => match &outcome.failed_error {
             Some(error) => {
-                let mut entry = AuditEntry::failure("delete", &connection_id, &path, error);
-                entry.detail = Some(format!(
-                    "deleted={}, unexecuted={}",
-                    outcome.deleted, outcome.unexecuted
-                ));
-                state.audit.record(entry)?;
+                state.audit.record(
+                    AuditEvent::failure(
+                        AuditOp::Delete,
+                        &connection_id,
+                        generation,
+                        &actor,
+                        &path,
+                        error,
+                    )
+                    .with_detail(format!(
+                        "deleted={}, unexecuted={}",
+                        outcome.deleted, outcome.unexecuted
+                    )),
+                )?;
             }
             None => {
-                let mut entry = AuditEntry::success("delete", &connection_id, &path);
-                entry.detail = Some(format!("deleted={}", outcome.deleted));
-                state.audit.record(entry)?;
+                state.audit.record(
+                    AuditEvent::success(AuditOp::Delete, &connection_id, generation, &actor, &path)
+                        .with_detail(format!("deleted={}", outcome.deleted)),
+                )?;
             }
         },
         Err(error) => {
-            state.audit.record(AuditEntry::failure(
-                "delete",
+            state.audit.record(AuditEvent::failure(
+                AuditOp::Delete,
                 &connection_id,
+                generation,
+                &actor,
                 &path,
                 error.as_ref(),
             ))?;

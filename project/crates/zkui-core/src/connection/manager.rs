@@ -89,6 +89,15 @@ impl ConnectionManager {
                 "port must be greater than 0",
             )));
         }
+        if request
+            .identity
+            .as_ref()
+            .is_some_and(|identity| identity.scheme != crate::connection::AuthScheme::Digest)
+        {
+            return Err(Box::new(app::invalid_argument(
+                "only digest authentication is supported in this release",
+            )));
+        }
         let endpoint = format!("{}:{}", request.host.trim(), request.port);
         let settings = self.settings_snapshot();
         let proxies = resolve_proxies(&request.host, request.proxy.as_ref(), &settings);
@@ -371,6 +380,28 @@ impl ConnectionManager {
             failed_error: None,
             unexecuted: 0,
         })
+    }
+
+    /// 当前 generation；连接不存在时返回错误。
+    pub fn generation_of(&self, connection_id: &str) -> AppResult<u64> {
+        let entries = self.entries.read().expect("connections lock poisoned");
+        entries
+            .get(connection_id)
+            .map(|entry| entry.handle.generation())
+            .ok_or_else(|| Box::new(app::not_found(connection_id)))
+    }
+
+    /// 当前认证身份的展示串；未认证返回空串。
+    pub fn actor_of(&self, connection_id: &str) -> AppResult<String> {
+        let entries = self.entries.read().expect("connections lock poisoned");
+        let entry = entries
+            .get(connection_id)
+            .ok_or_else(|| Box::new(app::not_found(connection_id)))?;
+        Ok(entry
+            .handle
+            .identity()
+            .map(|identity| format!("{}:{}", identity.scheme.as_str(), identity.display))
+            .unwrap_or_default())
     }
 
     pub(crate) fn client_for_command(&self, connection_id: &str) -> AppResult<Client> {

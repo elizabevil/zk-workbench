@@ -12,11 +12,17 @@ use super::state::ConnectionState;
 
 /// 连接句柄：持有客户端、generation、状态广播与身份。
 pub struct ConnectionHandle {
+    /// 逻辑连接 ID，仅在当前进程内唯一，用于前端引用与日志关联。
     id: String,
+    /// ZooKeeper 客户端（可克隆）；连接关闭后不可再用。
     client: Client,
+    /// 会话代数：每次断线重连或会话过期后递增，用于树/数据缓存失效。
     generation: AtomicU64,
+    /// 状态广播发送端；订阅者通过 `subscribe_state` 获取变化。
     state: watch::Sender<ConnectionState>,
+    /// 非秘密认证身份（仅展示）；未认证时为 None。
     identity: RwLock<Option<Identity>>,
+    /// 与服务端协商后的会话超时时间。
     session_timeout: Duration,
 }
 

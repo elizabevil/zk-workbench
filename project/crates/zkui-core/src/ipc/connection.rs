@@ -16,7 +16,7 @@ pub struct CreateConnection {
     pub port: u16,
     /// 展示用名称。
     pub display_name: String,
-    /// 可选认证身份；凭据本身不进入 DTO。
+    /// 可选认证身份（仅展示）；凭据通过 `addauth` 提供，不进入 DTO。首版仅接受 digest。
     pub identity: Option<Identity>,
     /// 可选代理；None 表示直连。
     #[serde(default)]

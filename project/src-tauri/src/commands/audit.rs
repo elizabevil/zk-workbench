@@ -13,7 +13,9 @@ pub fn audit_list(
     offset: u32,
     path_filter: Option<String>,
 ) -> AppResult<Vec<AuditRecord>> {
-    state.audit.list(limit, offset, path_filter.as_deref())
+    state
+        .audit
+        .list(limit, offset, path_filter.as_deref().unwrap_or(""))
 }
 
 #[tauri::command]

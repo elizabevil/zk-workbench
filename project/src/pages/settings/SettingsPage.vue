@@ -73,7 +73,7 @@ async function verifyAudit(): Promise<void> {
   const report = await auditVerify();
   auditMessage.value = report.ok
     ? t("settings.audit.verified", { count: report.checked })
-    : t("settings.audit.broken", { id: report.broken_at ?? "-" });
+    : t("settings.audit.broken", { id: report.broken_at });
 }
 
 async function clearAudit(): Promise<void> {

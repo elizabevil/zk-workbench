@@ -4,7 +4,7 @@
 
 use zookeeper_client::{Acl, AuthId, CreateMode, Permission, Stat};
 
-use crate::connection::ConnectionManager;
+use crate::connection::{AuthScheme, ConnectionManager};
 use crate::error::{AppResult, app};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -407,7 +407,14 @@ pub async fn execute(
             }
         }
         Command::AddAuth { scheme, auth } => {
-            client.auth(scheme, auth.as_bytes()).await?;
+            let scheme = AuthScheme::parse_scheme(scheme)
+                .ok_or_else(|| invalid("unknown auth scheme (digest/sasl/ip/x509)"))?;
+            if scheme != AuthScheme::Digest {
+                return Err(invalid(
+                    "only digest authentication is supported in this release",
+                ));
+            }
+            client.auth(scheme.as_str(), auth.as_bytes()).await?;
             Ok("Authenticated".to_string())
         }
         Command::Sync { path } => {
