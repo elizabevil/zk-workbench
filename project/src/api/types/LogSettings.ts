@@ -6,9 +6,9 @@ export type LogSettings = { level: string,
  */
 directory: string, 
 /**
- * 单个日志文件大小上限，默认 1 MiB。
+ * 单个日志文件大小上限（MB），默认 1。
  */
-max_size_bytes: bigint, 
+max_size_mb: bigint, 
 /**
  * 日志保留天数，默认 7 天。
  */

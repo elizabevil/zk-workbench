@@ -56,7 +56,7 @@ let suppressObserverUntil = 0;
 function scrollToSection(id: string): void {
   activeSection.value = id;
   suppressObserverUntil = Date.now() + 700;
-  const container = document.querySelector(".settings") as HTMLElement | null;
+  const container = document.querySelector(".settings-form") as HTMLElement | null;
   const target = document.getElementById(`settings-${id}`) as HTMLElement | null;
   if (!container || !target) {
     return;
@@ -68,6 +68,8 @@ const passwords = ref<Record<number, string>>({});
 const testTarget = ref("127.0.0.1:2181");
 const testMessage = ref("");
 const dragIndex = ref<number | null>(null);
+const proxySaved = ref("");
+const shortcutSaved = ref("");
 const shortcuts = ref<ShortcutMap>(loadShortcuts());
 const SHORTCUT_ACTIONS: ShortcutAction[] = ["edit", "create", "delete", "refresh", "jump"];
 
@@ -78,6 +80,10 @@ function captureShortcut(action: ShortcutAction, event: KeyboardEvent): void {
   }
   shortcuts.value[action] = binding;
   saveShortcuts(shortcuts.value);
+  shortcutSaved.value = t("settings.shortcuts.saved");
+  window.setTimeout(() => {
+    shortcutSaved.value = "";
+  }, 2000);
 }
 
 function resetShortcuts(): void {
@@ -89,7 +95,7 @@ onMounted(async () => {
   await store.load();
   paths.value = await appPaths();
   await nextTick();
-  const container = document.querySelector(".settings");
+  const container = document.querySelector(".settings-form");
   const fieldsets = Array.from(container?.querySelectorAll("fieldset") ?? []);
   fieldsets.forEach((element, index) => {
     element.id = `settings-${sections[index] ?? index}`;
@@ -159,6 +165,13 @@ function drop(index: number): void {
   }
   const [item] = profiles.splice(from, 1);
   profiles.splice(index, 0, item);
+}
+
+async function applyProxy(): Promise<void> {
+  await saveSettings();
+  const profiles = store.settings?.proxy.profiles ?? [];
+  const active = profiles.length ? `${profiles[0].kind}://${profiles[0].host}:${profiles[0].port}` : t("settings.proxy.direct");
+  proxySaved.value = t("settings.proxy.saved", { target: active });
 }
 
 async function saveSettings(): Promise<void> {
@@ -333,7 +346,11 @@ function removeProxy(index: number): void {
           </div>
         </li>
         </ul>
-        <button type="button" @click="addProxy">{{ t("settings.proxy.add") }}</button>
+        <div class="row-actions">
+          <button type="button" @click="addProxy">{{ t("settings.proxy.add") }}</button>
+          <button type="button" @click="applyProxy">{{ t("settings.proxy.apply") }}</button>
+        </div>
+        <p v-if="proxySaved" class="hint">{{ proxySaved }}</p>
         <label>
           {{ t("settings.proxy.testTarget") }}
           <input v-model="testTarget" />
@@ -348,11 +365,16 @@ function removeProxy(index: number): void {
           <span>{{ t(`settings.shortcuts.${action}`) }}</span>
           <input
             :value="shortcuts[action]"
+            :placeholder="t('settings.shortcuts.press')"
             readonly
             @keydown.prevent="captureShortcut(action, $event)"
+            @focus="shortcutSaved = ''"
           />
         </div>
-        <button type="button" @click="resetShortcuts">{{ t("settings.shortcuts.reset") }}</button>
+        <div class="row-actions">
+          <button type="button" @click="resetShortcuts">{{ t("settings.shortcuts.reset") }}</button>
+          <span v-if="shortcutSaved" class="hint">{{ shortcutSaved }}</span>
+        </div>
       </fieldset>
 
       <fieldset>
@@ -365,7 +387,7 @@ function removeProxy(index: number): void {
         <p class="hint">{{ t("settings.logs.restartHint") }}</p>
         <label>
           {{ t("settings.logs.maxSize") }}
-          <input v-model.number="store.settings.logs.max_size_bytes" min="4096" step="1024" type="number" />
+          <input v-model.number="store.settings.logs.max_size_mb" min="1" step="1" type="number" />
         </label>
         <label>
           {{ t("settings.logs.retention") }}
@@ -388,7 +410,7 @@ function removeProxy(index: number): void {
 <style scoped>
 .settings {
   height: 100%;
-  overflow-y: auto;
+  overflow: hidden;
   padding: 24px;
   display: flex;
   flex-direction: column;
@@ -407,15 +429,14 @@ function removeProxy(index: number): void {
   gap: 2%;
   min-height: 0;
   flex: 1;
+  overflow: hidden;
 }
 .settings-nav {
-  position: sticky;
-  top: 0;
-  align-self: flex-start;
   display: flex;
   flex-direction: column;
   gap: 4px;
   flex: 0 0 18%;
+  overflow-y: auto;
 }
 .settings-nav button {
   text-align: left;
@@ -433,9 +454,12 @@ function removeProxy(index: number): void {
 .settings-form {
   flex: 1;
   min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  padding-right: 4px;
 }
 .sections {
   display: grid;

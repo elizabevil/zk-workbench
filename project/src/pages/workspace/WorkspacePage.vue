@@ -673,6 +673,9 @@ function onDeleted(outcome: DeleteOutcome): void {
               <template v-else>
                 <div class="data-toolbar">
                   <span class="muted">{{ t("data.bytes") }}: {{ data.byte_len }}</span>
+                  <span class="muted">{{ t("data.encoding") }}: {{ data.is_text ? "UTF-8" : t("data.binary") }}</span>
+                  <span class="muted">{{ t("shell.version") }}: {{ stat?.version }}</span>
+                  <span class="muted">{{ t("shell.mtime") }}: {{ stat ? toRfc3339(stat.mtime) : "" }}</span>
                   <div class="format-group">
                     <button
                       v-for="option in FORMAT_OPTIONS"
@@ -720,8 +723,13 @@ function onDeleted(outcome: DeleteOutcome): void {
             </div>
 
             <dl v-else class="stat-grid">
+              <div><dt>{{ t("shell.czxid") }}</dt><dd class="mono">{{ stat?.czxid }}</dd></div>
+              <div><dt>{{ t("shell.mzxid") }}</dt><dd class="mono">{{ stat?.mzxid }}</dd></div>
+              <div><dt>{{ t("shell.ctime") }}</dt><dd>{{ stat ? toRfc3339(stat.ctime) : "" }}</dd></div>
+              <div><dt>{{ t("shell.mtime") }}</dt><dd>{{ stat ? toRfc3339(stat.mtime) : "" }}</dd></div>
               <div><dt>{{ t("shell.version") }}</dt><dd>{{ stat?.version }}</dd></div>
               <div><dt>{{ t("shell.cversion") }}</dt><dd>{{ stat?.cversion }}</dd></div>
+              <div><dt>{{ t("shell.aversion") }}</dt><dd>{{ stat?.aversion }}</dd></div>
               <div><dt>{{ t("shell.children") }}</dt><dd>{{ stat?.num_children }}</dd></div>
               <div><dt>{{ t("shell.dataLength") }}</dt><dd>{{ stat?.data_length }}</dd></div>
               <div>
@@ -730,7 +738,6 @@ function onDeleted(outcome: DeleteOutcome): void {
                   {{ stat?.ephemeral_owner === 0 ? t("shell.persistent") : stat?.ephemeral_owner }}
                 </dd>
               </div>
-              <div><dt>{{ t("shell.mtime") }}</dt><dd>{{ stat ? toRfc3339(stat.mtime) : "" }}</dd></div>
             </dl>
           </template>
         </div>
@@ -789,6 +796,14 @@ function onDeleted(outcome: DeleteOutcome): void {
           </li>
         </ul>
         <p v-if="timelineOpen && !timeline.length" class="muted">{{ t("shell.timelineEmpty") }}</p>
+        <button
+          v-if="timelineOpen"
+          type="button"
+          class="tiny audit-link"
+          @click="router.push('/audit')"
+        >
+          {{ t("shell.viewAudit") }}
+        </button>
       </aside>
     </div>
 
@@ -1234,6 +1249,9 @@ function onDeleted(outcome: DeleteOutcome): void {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.audit-link {
+  margin-top: 6px;
 }
 .history-line:hover {
   color: #fff;

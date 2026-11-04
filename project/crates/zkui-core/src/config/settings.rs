@@ -186,8 +186,8 @@ pub struct LogSettings {
     pub level: String,
     /// 为空表示使用默认的文档目录下 `zkui/logs`。
     pub directory: String,
-    /// 单个日志文件大小上限，默认 1 MiB。
-    pub max_size_bytes: u64,
+    /// 单个日志文件大小上限（MB），默认 1。
+    pub max_size_mb: u64,
     /// 日志保留天数，默认 7 天。
     pub retention_days: u32,
 }
@@ -197,7 +197,7 @@ impl Default for LogSettings {
         Self {
             level: DEFAULT_LOG_LEVEL.to_string(),
             directory: String::new(),
-            max_size_bytes: 1024 * 1024,
+            max_size_mb: 1,
             retention_days: 7,
         }
     }

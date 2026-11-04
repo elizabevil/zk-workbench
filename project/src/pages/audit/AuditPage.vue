@@ -11,6 +11,14 @@ import { toRfc3339 } from "@/utils/time";
 
 const { t } = useI18n();
 const router = useRouter();
+
+function goBack(): void {
+  if (window.history.length > 1) {
+    router.back();
+  } else {
+    void router.push("/");
+  }
+}
 const store = useSettingsStore();
 const rows = ref<AuditRecord[]>([]);
 const message = ref("");
@@ -70,7 +78,7 @@ onMounted(async () => {
         <h1>{{ t("settings.audit.title") }}</h1>
         <p class="hint">{{ t("settings.audit.hint") }}</p>
       </div>
-      <button type="button" @click="router.push('/')">{{ t("settings.back") }}</button>
+      <button type="button" @click="goBack">{{ t("settings.back") }}</button>
     </header>
 
     <section v-if="store.settings" class="bar">
