@@ -24,19 +24,19 @@ pub fn build(app: &AppHandle<Wry>, locale: zkui_core::config::Locale) -> tauri::
 
     let app_menu = Submenu::with_items(
         app,
-        labels.app,
+        &labels.app,
         true,
         &[
-            &MenuItem::with_id(app, ids::SETTINGS, labels.settings, true, None::<&str>)?,
-            &MenuItem::with_id(app, ids::ABOUT, about, true, None::<&str>)?,
+            &MenuItem::with_id(app, ids::SETTINGS, &labels.settings, true, None::<&str>)?,
+            &MenuItem::with_id(app, ids::ABOUT, &about, true, None::<&str>)?,
             &PredefinedMenuItem::separator(app)?,
-            &MenuItem::with_id(app, ids::CLOSE, labels.close, true, None::<&str>)?,
+            &MenuItem::with_id(app, ids::CLOSE, &labels.close, true, None::<&str>)?,
         ],
     )?;
 
     let edit_menu = Submenu::with_items(
         app,
-        labels.edit,
+        &labels.edit,
         true,
         &[
             &PredefinedMenuItem::undo(app, None)?,

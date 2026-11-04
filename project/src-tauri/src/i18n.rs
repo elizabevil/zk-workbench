@@ -1,34 +1,29 @@
-//! 后端菜单文案。与前端语言包对应，但不依赖前端。
+//! 后端文案：从内置 JSON 读取，避免在 Rust 代码里散落字面量。
 
+use std::sync::OnceLock;
+
+use serde::Deserialize;
 use zkui_core::config::Locale;
 
+#[derive(Debug, Clone, Deserialize)]
 pub struct MenuLabels {
-    pub app: &'static str,
-    pub edit: &'static str,
-    pub settings: &'static str,
-    pub about: &'static str,
-    pub close: &'static str,
+    pub app: String,
+    pub edit: String,
+    pub settings: String,
+    pub about: String,
+    pub close: String,
 }
 
-const ZH: MenuLabels = MenuLabels {
-    app: "应用",
-    edit: "编辑",
-    settings: "设置",
-    about: "关于 {name}",
-    close: "关闭窗口",
-};
-
-const EN: MenuLabels = MenuLabels {
-    app: "App",
-    edit: "Edit",
-    settings: "Settings",
-    about: "About {name}",
-    close: "Close Window",
-};
+static ZH: OnceLock<MenuLabels> = OnceLock::new();
+static EN: OnceLock<MenuLabels> = OnceLock::new();
 
 pub fn labels(locale: Locale) -> &'static MenuLabels {
     match locale {
-        Locale::ZhCn => &ZH,
-        Locale::EnUs => &EN,
+        Locale::ZhCn => ZH.get_or_init(|| load(include_str!("../i18n/menu.zh-CN.json"))),
+        Locale::EnUs => EN.get_or_init(|| load(include_str!("../i18n/menu.en-US.json"))),
     }
+}
+
+fn load(raw: &str) -> MenuLabels {
+    serde_json::from_str(raw).expect("menu i18n resource must be valid")
 }
