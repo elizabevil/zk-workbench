@@ -61,12 +61,43 @@ const retryPath = ref<string | null>(null);
 const toast = ref("");
 const jumpPath = ref("");
 const jumpInput = ref<HTMLInputElement | null>(null);
+const jumpCompletion = ref<{ prefix: string; index: number } | null>(null);
 const shortcuts = ref<ShortcutMap>(loadShortcuts());
 const toolsOpen = ref(false);
 const history = useHistoryStore();
-const historyOpen = ref(true);
 const timelineOpen = ref(true);
-const recentOpen = ref(true);
+const sideTab = ref<"recent" | "history">("recent");
+const treeWidth = ref(Number(localStorage.getItem("zkui.tree.width") ?? "22"));
+const inspectorWidth = ref(Number(localStorage.getItem("zkui.inspector.width") ?? "20"));
+
+function startResize(which: "tree" | "inspector", event: MouseEvent): void {
+  event.preventDefault();
+  const shell = document.querySelector(".shell") as HTMLElement | null;
+  if (!shell) {
+    return;
+  }
+  const rect = shell.getBoundingClientRect();
+  const move = (moveEvent: MouseEvent): void => {
+    const ratio =
+      which === "tree"
+        ? ((moveEvent.clientX - rect.left) / rect.width) * 100
+        : ((rect.right - moveEvent.clientX) / rect.width) * 100;
+    const clamped = Math.min(40, Math.max(12, ratio));
+    if (which === "tree") {
+      treeWidth.value = Math.round(clamped);
+      localStorage.setItem("zkui.tree.width", String(treeWidth.value));
+    } else {
+      inspectorWidth.value = Math.round(clamped);
+      localStorage.setItem("zkui.inspector.width", String(inspectorWidth.value));
+    }
+  };
+  const stop = (): void => {
+    window.removeEventListener("mousemove", move);
+    window.removeEventListener("mouseup", stop);
+  };
+  window.addEventListener("mousemove", move);
+  window.addEventListener("mouseup", stop);
+}
 const expandedPaths = ref<Set<string>>(new Set());
 const createDefaultPath = ref<string | undefined>(undefined);
 
@@ -326,6 +357,21 @@ function showAcl(): void {
   }
 }
 
+async function copyPath(): Promise<void> {
+  if (!selectedPath.value) {
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(selectedPath.value);
+    toast.value = t("data.pathCopied", { path: selectedPath.value });
+  } catch {
+    toast.value = t("data.copyFailed");
+  }
+  window.setTimeout(() => {
+    toast.value = "";
+  }, 2500);
+}
+
 async function copyAddress(): Promise<void> {
   if (!store.snapshot) {
     return;
@@ -338,6 +384,32 @@ async function copyAddress(): Promise<void> {
     toast.value = t("shell.copyFailed");
   }
   menuOpen.value = false;
+}
+
+async function completeJump(): Promise<void> {
+  const value = jumpPath.value;
+  const slash = value.lastIndexOf("/");
+  const rawParent = slash >= 0 ? value.slice(0, slash) : "";
+  const prefix = slash >= 0 ? value.slice(slash + 1) : value;
+  const parent = rawParent === "" ? "/" : rawParent.startsWith("/") ? rawParent : `/${rawParent}`;
+  if (!connectionId.value) {
+    return;
+  }
+  try {
+    const children = await nodeChildren(connectionId.value, parent);
+    const candidates = children
+      .filter((name) => name.startsWith(prefix))
+      .map((name) => `${parent === "/" ? "" : parent}/${name}`);
+    if (candidates.length === 0) {
+      return;
+    }
+    const index =
+      jumpCompletion.value?.prefix === value ? (jumpCompletion.value.index + 1) % candidates.length : 0;
+    jumpCompletion.value = { prefix: value, index };
+    jumpPath.value = candidates[index];
+  } catch {
+    // 补全失败不打断输入
+  }
 }
 
 function jump(): void {
@@ -397,6 +469,23 @@ onMounted(async () => {
 onUnmounted(() => window.removeEventListener("keydown", onKeydown));
 
 function onKeydown(event: KeyboardEvent): void {
+  if (event.key === "Escape") {
+    if (editorOpen.value || createOpen.value || deleteOpen.value || binaryOpen.value) {
+      editorOpen.value = false;
+      createOpen.value = false;
+      deleteOpen.value = false;
+      binaryOpen.value = false;
+    } else if (dialogOpen.value) {
+      dialogOpen.value = false;
+    } else if (menuOpen.value || toolsOpen.value) {
+      menuOpen.value = false;
+      toolsOpen.value = false;
+    } else {
+      void router.push("/");
+    }
+    event.preventDefault();
+    return;
+  }
   const target = event.target as HTMLElement | null;
   const typing =
     target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.tagName === "SELECT";
@@ -492,7 +581,7 @@ function onDeleted(outcome: DeleteOutcome): void {
 </script>
 
 <template>
-  <div class="shell">
+  <div class="shell" :style="{ '--tree-width': `${treeWidth}%`, '--inspector-width': `${inspectorWidth}%` }">
     <header class="topbar">
       <div class="conn">
         <button class="chip" type="button" @click="menuOpen = !menuOpen">
@@ -569,6 +658,7 @@ function onDeleted(outcome: DeleteOutcome): void {
             v-model="jumpPath"
             :aria-label="t('shell.path')"
             :placeholder="t('shell.jumpPlaceholder')"
+            @keydown.tab.prevent="completeJump"
           />
           <button type="submit" class="tiny">{{ t("shell.go") }}</button>
         </form>
@@ -594,6 +684,12 @@ function onDeleted(outcome: DeleteOutcome): void {
         </div>
         <p v-else class="muted">{{ t("shell.noConnection") }}</p>
       </aside>
+      <button
+        class="resizer"
+        type="button"
+        :aria-label="t('shell.resizeTree')"
+        @mousedown="startResize('tree', $event)"
+      />
 
       <section class="content">
         <div v-if="!selectedPath" class="placeholder">
@@ -603,7 +699,14 @@ function onDeleted(outcome: DeleteOutcome): void {
 
         <div v-else class="detail">
           <div class="detail-head">
-            <h2 class="path">{{ selectedPath }}</h2>
+            <button
+              type="button"
+              class="path"
+              :title="t('data.copyPath')"
+              @click="copyPath"
+            >
+              {{ selectedPath }}
+            </button>
             <div class="toolbar">
               <button type="button" class="tiny" @click="refresh">{{ t("data.refresh") }}</button>
               <button type="button" class="tiny" @click="openCreate">
@@ -722,26 +825,42 @@ function onDeleted(outcome: DeleteOutcome): void {
               <p class="hint">{{ t("data.aclReadOnly") }}</p>
             </div>
 
-            <dl v-else class="stat-grid">
-              <div><dt>{{ t("shell.czxid") }}</dt><dd class="mono">{{ stat?.czxid }}</dd></div>
-              <div><dt>{{ t("shell.mzxid") }}</dt><dd class="mono">{{ stat?.mzxid }}</dd></div>
-              <div><dt>{{ t("shell.ctime") }}</dt><dd>{{ stat ? toRfc3339(stat.ctime) : "" }}</dd></div>
-              <div><dt>{{ t("shell.mtime") }}</dt><dd>{{ stat ? toRfc3339(stat.mtime) : "" }}</dd></div>
-              <div><dt>{{ t("shell.version") }}</dt><dd>{{ stat?.version }}</dd></div>
-              <div><dt>{{ t("shell.cversion") }}</dt><dd>{{ stat?.cversion }}</dd></div>
-              <div><dt>{{ t("shell.aversion") }}</dt><dd>{{ stat?.aversion }}</dd></div>
-              <div><dt>{{ t("shell.children") }}</dt><dd>{{ stat?.num_children }}</dd></div>
-              <div><dt>{{ t("shell.dataLength") }}</dt><dd>{{ stat?.data_length }}</dd></div>
-              <div>
-                <dt>{{ t("shell.ephemeral") }}</dt>
-                <dd>
-                  {{ stat?.ephemeral_owner === 0 ? t("shell.persistent") : stat?.ephemeral_owner }}
-                </dd>
-              </div>
-            </dl>
+            <div v-else class="stat-groups">
+              <section class="stat-group">
+                <h3>{{ t("data.statVersion") }}</h3>
+                <dl class="stat-table">
+                  <div><dt>{{ t("shell.czxid") }}</dt><dd class="mono">{{ stat?.czxid }}</dd></div>
+                  <div><dt>{{ t("shell.mzxid") }}</dt><dd class="mono">{{ stat?.mzxid }}</dd></div>
+                  <div><dt>{{ t("shell.version") }}</dt><dd>{{ stat?.version }}</dd></div>
+                  <div><dt>{{ t("shell.cversion") }}</dt><dd>{{ stat?.cversion }}</dd></div>
+                  <div><dt>{{ t("shell.aversion") }}</dt><dd>{{ stat?.aversion }}</dd></div>
+                </dl>
+              </section>
+              <section class="stat-group">
+                <h3>{{ t("data.statTime") }}</h3>
+                <dl class="stat-table">
+                  <div><dt>{{ t("shell.ctime") }}</dt><dd>{{ stat ? toRfc3339(stat.ctime) : "" }}</dd></div>
+                  <div><dt>{{ t("shell.mtime") }}</dt><dd>{{ stat ? toRfc3339(stat.mtime) : "" }}</dd></div>
+                </dl>
+              </section>
+              <section class="stat-group">
+                <h3>{{ t("data.statStructure") }}</h3>
+                <dl class="stat-table">
+                  <div><dt>{{ t("shell.dataLength") }}</dt><dd>{{ stat?.data_length }}</dd></div>
+                  <div><dt>{{ t("shell.children") }}</dt><dd>{{ stat?.num_children }}</dd></div>
+                  <div><dt>{{ t("shell.ephemeral") }}</dt><dd>{{ stat?.ephemeral_owner === 0 ? t("shell.persistent") : stat?.ephemeral_owner }}</dd></div>
+                </dl>
+              </section>
+            </div>
           </template>
         </div>
       </section>
+      <button
+        class="resizer"
+        type="button"
+        :aria-label="t('shell.resizeInspector')"
+        @mousedown="startResize('inspector', $event)"
+      />
 
       <aside class="inspector">
         <div class="aside-head">{{ t("shell.inspector") }}</div>
@@ -751,40 +870,61 @@ function onDeleted(outcome: DeleteOutcome): void {
           <div><dt>{{ t("shell.cversion") }}</dt><dd>{{ stat.cversion }}</dd></div>
           <div><dt>{{ t("shell.children") }}</dt><dd>{{ stat.num_children }}</dd></div>
           <div><dt>{{ t("shell.dataLength") }}</dt><dd>{{ stat.data_length }}</dd></div>
-          <div><dt>{{ t("shell.ephemeral") }}</dt><dd>{{ stat.ephemeral_owner === 0 ? t("shell.persistent") : stat.ephemeral_owner }}</dd></div>
+          <div>
+            <dt>{{ t("shell.ephemeral") }}</dt>
+            <dd>{{ stat.ephemeral_owner === 0 ? t("shell.persistent") : stat.ephemeral_owner }}</dd>
+          </div>
           <div><dt>{{ t("shell.mtime") }}</dt><dd>{{ toRfc3339(stat.mtime) }}</dd></div>
         </dl>
-        <button type="button" class="aside-head section-toggle" @click="recentOpen = !recentOpen">
-          {{ t("shell.recentNodes") }} ({{ tabs.tabsFor(connectionId).length }})
-        </button>
-        <ul v-if="recentOpen && tabs.tabsFor(connectionId).length" class="timeline">
-          <li v-for="path in [...tabs.tabsFor(connectionId)].reverse()" :key="path">
-            <button type="button" class="history-line mono" :title="path" @click="select(path)">
-              {{ path }}
-            </button>
-            <button type="button" class="tiny" :aria-label="t('shell.closeTab')" @click="closeTab(path)">
-              ×
-            </button>
-          </li>
-        </ul>
-        <p v-if="recentOpen && !tabs.tabsFor(connectionId).length" class="muted">
-          {{ t("shell.recentEmpty") }}
-        </p>
 
-        <button type="button" class="aside-head section-toggle" @click="historyOpen = !historyOpen">
-          {{ t("shell.commandHistory") }} ({{ history.entries.length }})
-        </button>
-        <ul v-if="historyOpen" class="timeline">
-          <li v-for="(entry, index) in history.entries" :key="`${entry.ts}-${index}`">
-            <button type="button" class="history-line mono" @click="history.setDraft(entry.line)">
-              {{ entry.line }}
-            </button>
-            <span class="muted">{{ entry.ok ? "" : "!" }}</span>
-          </li>
-        </ul>
-        <p v-if="historyOpen && !history.entries.length" class="muted">
-          {{ t("shell.historyEmpty") }}
-        </p>
+        <div class="side-tabs">
+          <button
+            type="button"
+            :class="{ active: sideTab === 'recent' }"
+            @click="sideTab = 'recent'"
+          >
+            {{ t("shell.recentNodes") }} ({{ tabs.tabsFor(connectionId).length }})
+          </button>
+          <button
+            type="button"
+            :class="{ active: sideTab === 'history' }"
+            @click="sideTab = 'history'"
+          >
+            {{ t("shell.commandHistory") }} ({{ history.entries.length }})
+          </button>
+        </div>
+
+        <div class="side-body">
+          <template v-if="sideTab === 'recent'">
+            <ul v-if="tabs.tabsFor(connectionId).length" class="timeline">
+              <li v-for="path in [...tabs.tabsFor(connectionId)].reverse()" :key="path">
+                <button type="button" class="history-line mono" :title="path" @click="select(path)">
+                  {{ path }}
+                </button>
+                <button
+                  type="button"
+                  class="tiny"
+                  :aria-label="t('shell.closeTab')"
+                  @click="closeTab(path)"
+                >
+                  ×
+                </button>
+              </li>
+            </ul>
+            <p v-else class="muted">{{ t("shell.recentEmpty") }}</p>
+          </template>
+          <template v-else>
+            <ul v-if="history.entries.length" class="timeline">
+              <li v-for="(entry, index) in history.entries" :key="`${entry.ts}-${index}`">
+                <button type="button" class="history-line mono" @click="history.setDraft(entry.line)">
+                  {{ entry.line }}
+                </button>
+                <span class="muted">{{ entry.ok ? "" : "!" }}</span>
+              </li>
+            </ul>
+            <p v-else class="muted">{{ t("shell.historyEmpty") }}</p>
+          </template>
+        </div>
 
         <button type="button" class="aside-head section-toggle" @click="timelineOpen = !timelineOpen">
           {{ t("shell.timeline") }}
@@ -812,6 +952,7 @@ function onDeleted(outcome: DeleteOutcome): void {
       :connection-id="connectionId"
       :connection-name="store.snapshot?.display_name ?? ''"
       @refresh="refresh"
+      @history="sideTab = 'history'"
     />
 
     <footer class="statusbar">
@@ -1055,10 +1196,17 @@ function onDeleted(outcome: DeleteOutcome): void {
   justify-content: space-between;
   gap: 12px;
 }
+.path-button,
 .path {
   margin: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
   font-family: ui-monospace, monospace;
   font-size: 17px;
+  padding: 0;
+  text-align: left;
   word-break: break-all;
 }
 .toolbar {
@@ -1149,6 +1297,37 @@ function onDeleted(outcome: DeleteOutcome): void {
   color: #9aa4b2;
   font-size: 12px;
 }
+.stat-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.stat-group h3 {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #9aa4b2;
+}
+.stat-table {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 18px;
+  margin: 0;
+}
+.stat-table div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 3px 0;
+  border-bottom: 1px solid rgb(255 255 255 / 5%);
+  font-size: 12px;
+}
+.stat-table dt {
+  color: #9aa4b2;
+}
+.stat-table dd {
+  margin: 0;
+}
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -1197,12 +1376,50 @@ function onDeleted(outcome: DeleteOutcome): void {
   color: #9aa4b2;
 }
 .inspector {
-  flex: 0 0 20%;
+  flex: 0 0 var(--inspector-width, 20%);
   min-width: 12rem;
   padding: 12px;
   overflow: auto;
   border-left: 1px solid rgb(255 255 255 / 8%);
   background: rgb(10 13 16 / 70%);
+}
+.resizer {
+  flex: 0 0 5px;
+  cursor: col-resize;
+  background: transparent;
+}
+.resizer:hover {
+  background: rgb(255 255 255 / 10%);
+}
+.side-tabs {
+  display: flex;
+  gap: 4px;
+  margin-top: 14px;
+  border-bottom: 1px solid rgb(255 255 255 / 8%);
+}
+.side-tabs button {
+  flex: 1;
+  padding: 6px 4px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: #9aa4b2;
+  cursor: pointer;
+  font-size: 11px;
+}
+.side-tabs button.active {
+  color: #fff;
+  border-bottom-color: #22d3ee;
+}
+.side-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 6px 0;
+}
+.inspector {
+  display: flex;
+  flex-direction: column;
 }
 .inspector-grid {
   display: flex;

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { onMounted, onUnmounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 
@@ -65,10 +65,19 @@ async function saveRetention(): Promise<void> {
   message.value = t("settings.saved");
 }
 
+function onEscape(event: KeyboardEvent): void {
+  if (event.key === "Escape") {
+    goBack();
+  }
+}
+
 onMounted(async () => {
   await store.load();
   await load();
+  window.addEventListener("keydown", onEscape);
 });
+
+onUnmounted(() => window.removeEventListener("keydown", onEscape));
 </script>
 
 <template>

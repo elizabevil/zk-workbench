@@ -79,11 +79,17 @@ async function submit(): Promise<void> {
         </label>
         <label>
           {{ t("create.modeLabel") }}
-          <select v-model="mode">
-            <option v-for="item in modes" :key="item" :value="item">
-              {{ t(`create.mode.${item}`) }}
-            </option>
-          </select>
+          <div class="mode-group">
+            <label
+              v-for="item in modes"
+              :key="item"
+              class="mode-option"
+              :class="{ active: mode === item }"
+            >
+              <input v-model="mode" type="radio" :value="item" />
+              <span>{{ t(`create.mode.${item}`) }}</span>
+            </label>
+          </div>
         </label>
         <label>
           {{ t("create.data") }}
@@ -153,6 +159,31 @@ textarea {
 }
 textarea {
   font-family: ui-monospace, monospace;
+}
+.mode-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.mode-option {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid #2a323c;
+  border-radius: 6px;
+  background: #101418;
+  color: #e6edf3;
+  font-size: 12px;
+  cursor: pointer;
+}
+.mode-option.active {
+  border-color: #2563eb;
+  background: rgb(37 99 235 / 15%);
+}
+.mode-option input {
+  accent-color: #2563eb;
+  margin: 0;
 }
 .actions {
   display: flex;

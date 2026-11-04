@@ -15,6 +15,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   refresh: [];
+  history: [];
 }>();
 
 const { t } = useI18n();
@@ -134,7 +135,9 @@ function next(): void {
     <header class="head">
       <span>{{ t("command.title") }}</span>
       <div class="head-actions">
-        <span v-if="error" class="error">{{ t(error.message_key) }}</span>
+        <button type="button" class="tiny" @click="emit('history')">
+          {{ t("command.history") }} ({{ history.entries.length }})
+        </button>
       </div>
     </header>
 
@@ -156,13 +159,17 @@ function next(): void {
         {{ running ? t("command.running") : t("command.run") }}
       </button>
     </form>
+    <p v-if="error" class="error error-line">
+      {{ t(error.message_key) }}
+      <span v-if="error.fields.detail">：{{ error.fields.detail }}</span>
+    </p>
   </section>
 </template>
 
 <style scoped>
 .command {
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto 1fr auto auto;
   gap: 6px;
   height: 24vh;
   min-height: 150px;
@@ -195,7 +202,8 @@ function next(): void {
   border: 1px solid rgb(255 255 255 / 8%);
   background: rgb(16 20 24 / 85%);
   font-family: ui-monospace, monospace;
-  font-size: 12px;
+  font-size: 12.5px;
+  line-height: 1.55;
   white-space: pre-wrap;
 }
 .input-row {
@@ -225,6 +233,10 @@ button {
   font-size: 11px;
 }
 .error {
-  color: #ef4444;
+  color: #f87171;
+}
+.error-line {
+  margin: 0;
+  font-size: 12px;
 }
 </style>

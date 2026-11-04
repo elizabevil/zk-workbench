@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 
@@ -69,7 +69,11 @@ const testTarget = ref("127.0.0.1:2181");
 const testMessage = ref("");
 const dragIndex = ref<number | null>(null);
 const proxySaved = ref("");
+let autoSaveTimer = 0;
 const shortcutSaved = ref("");
+const autoSaved = ref("");
+let lastProxyJson = "";
+let settingsLoaded = false;
 const shortcuts = ref<ShortcutMap>(loadShortcuts());
 const SHORTCUT_ACTIONS: ShortcutAction[] = ["edit", "create", "delete", "refresh", "jump"];
 
@@ -90,6 +94,43 @@ function resetShortcuts(): void {
   shortcuts.value = { ...DEFAULT_SHORTCUTS };
   saveShortcuts(shortcuts.value);
 }
+
+function goBack(): void {
+  if (window.history.length > 1) {
+    router.back();
+  } else {
+    void router.push("/");
+  }
+}
+
+function onEscape(event: KeyboardEvent): void {
+  if (event.key === "Escape") {
+    goBack();
+  }
+}
+
+watch(
+  () => store.settings,
+  (value) => {
+    if (!value || !settingsLoaded) {
+      return;
+    }
+    const proxyJson = JSON.stringify(value.proxy);
+    if (proxyJson !== lastProxyJson) {
+      lastProxyJson = proxyJson;
+      return;
+    }
+    window.clearTimeout(autoSaveTimer);
+    autoSaveTimer = window.setTimeout(async () => {
+      await store.save();
+      autoSaved.value = t("settings.autoSaved");
+      window.setTimeout(() => {
+        autoSaved.value = "";
+      }, 1500);
+    }, 600);
+  },
+  { deep: true },
+);
 
 onMounted(async () => {
   await store.load();
@@ -116,9 +157,15 @@ onMounted(async () => {
   for (const fieldset of fieldsets) {
     observer.observe(fieldset);
   }
+  lastProxyJson = JSON.stringify(store.settings?.proxy);
+  settingsLoaded = true;
+  window.addEventListener("keydown", onEscape);
 });
 
-onUnmounted(() => observer?.disconnect());
+onUnmounted(() => {
+  observer?.disconnect();
+  window.removeEventListener("keydown", onEscape);
+});
 
 async function clearPassword(profile: ProxyProfile): Promise<void> {
   await proxyPasswordClear(profile.name);
@@ -450,6 +497,12 @@ function removeProxy(index: number): void {
 .settings-nav button.active {
   background: rgb(37 99 235 / 22%);
   color: #fff;
+}
+.saved-tip {
+  margin-left: 10px;
+  font-size: 12px;
+  font-weight: 400;
+  color: #34d399;
 }
 .settings-form {
   flex: 1;
