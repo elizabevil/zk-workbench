@@ -3,4 +3,4 @@
 /**
  * 新建或更新档案的入参；`id` 为空表示新建。
  */
-export type ProfileInput = { id: string | null, name: string, host: string, port: number, };
+export type ProfileInput = { id: string | null, name: string, host: string, port: number, group: string | null, };

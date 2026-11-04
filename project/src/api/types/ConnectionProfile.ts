@@ -3,4 +3,4 @@
 /**
  * 已保存的连接档案。
  */
-export type ConnectionProfile = { id: string, name: string, host: string, port: number, };
+export type ConnectionProfile = { id: string, name: string, host: string, port: number, group: string | null, };

@@ -16,6 +16,8 @@ pub struct ConnectionProfile {
     pub name: String,
     pub host: String,
     pub port: u16,
+    #[serde(default)]
+    pub group: Option<String>,
 }
 
 /// 新建或更新档案的入参；`id` 为空表示新建。
@@ -27,6 +29,8 @@ pub struct ProfileInput {
     pub name: String,
     pub host: String,
     pub port: u16,
+    #[serde(default)]
+    pub group: Option<String>,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -89,6 +93,7 @@ impl ProfileStore {
                 existing.name = input.name;
                 existing.host = input.host;
                 existing.port = input.port;
+                existing.group = input.group;
                 existing.clone()
             }
             None => {
@@ -98,6 +103,7 @@ impl ProfileStore {
                     name: input.name,
                     host: input.host,
                     port: input.port,
+                    group: input.group,
                 };
                 inner.profiles.push(profile.clone());
                 profile
@@ -179,6 +185,7 @@ mod tests {
             name: "local".to_string(),
             host: host.to_string(),
             port,
+            group: None,
         }
     }
 
@@ -199,6 +206,7 @@ mod tests {
                 name: "renamed".to_string(),
                 host: "192.168.11.5".to_string(),
                 port: 2182,
+                group: Some("prod".to_string()),
             })
             .expect("update");
         assert_eq!(updated.id, created.id);

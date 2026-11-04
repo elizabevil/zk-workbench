@@ -15,7 +15,30 @@ const profiles = useProfilesStore();
 const dialogOpen = ref(false);
 const editTarget = ref<ConnectionProfile | null>(null);
 
+const search = ref("");
 const hasProfiles = computed(() => profiles.profiles.length > 0);
+const filtered = computed(() => {
+  const keyword = search.value.trim().toLowerCase();
+  if (!keyword) {
+    return profiles.profiles;
+  }
+  return profiles.profiles.filter((profile) =>
+    [profile.name, profile.host, `${profile.host}:${profile.port}`, profile.group ?? ""]
+      .join(" ")
+      .toLowerCase()
+      .includes(keyword),
+  );
+});
+const groups = computed(() => {
+  const map = new Map<string, ConnectionProfile[]>();
+  for (const profile of filtered.value) {
+    const key = profile.group?.trim() || t("home.ungrouped");
+    const list = map.get(key) ?? [];
+    list.push(profile);
+    map.set(key, list);
+  }
+  return [...map.entries()].sort(([a], [b]) => a.localeCompare(b));
+});
 
 onMounted(async () => {
   await Promise.all([profiles.load(), connections.refresh()]);
@@ -89,13 +112,19 @@ async function connected(): Promise<void> {
           <h1>{{ t("home.title") }}</h1>
           <p class="muted">{{ t("home.subtitle") }}</p>
         </div>
-        <button type="button" class="primary" @click="create">
-          {{ t("home.new") }}
-        </button>
+        <div class="head-actions">
+          <input v-model="search" class="search" :placeholder="t('home.searchPlaceholder')" />
+          <button type="button" class="primary" @click="create">
+            {{ t("home.new") }}
+          </button>
+        </div>
       </div>
 
-      <div v-if="hasProfiles" class="grid">
-        <article v-for="profile in profiles.profiles" :key="profile.id" class="card">
+      <div v-if="hasProfiles" class="groups">
+        <section v-for="[groupName, items] in groups" :key="groupName" class="group">
+          <h2 class="group-title">{{ groupName }}</h2>
+          <div class="grid">
+            <article v-for="profile in items" :key="profile.id" class="card">
           <div class="card-head">
             <span class="dot" :data-state="sessionOf(profile)?.state ?? 'idle'" />
             <strong>{{ profile.name }}</strong>
@@ -115,7 +144,9 @@ async function connected(): Promise<void> {
               {{ t("home.delete") }}
             </button>
           </div>
-        </article>
+            </article>
+          </div>
+        </section>
       </div>
 
       <div v-else class="empty">
@@ -165,6 +196,33 @@ async function connected(): Promise<void> {
   max-width: 1080px;
   margin: 0 auto;
   padding: 32px 24px;
+}
+.head-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.search {
+  width: 220px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid rgb(255 255 255 / 12%);
+  background: rgb(16 20 24 / 70%);
+  color: inherit;
+}
+.group {
+  margin-bottom: 22px;
+}
+.group-title {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #cbd5e1;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
 }
 .section-head {
   display: flex;

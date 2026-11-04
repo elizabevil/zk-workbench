@@ -20,6 +20,7 @@ const profiles = useProfilesStore();
 const host = ref("127.0.0.1");
 const port = ref(2181);
 const displayName = ref("local");
+const group = ref("");
 const localError = ref("");
 const nameInput = ref<HTMLInputElement | null>(null);
 
@@ -32,10 +33,12 @@ watch(
         displayName.value = props.profile.name;
         host.value = props.profile.host;
         port.value = props.profile.port;
+        group.value = props.profile.group ?? "";
       } else {
         host.value = "127.0.0.1";
         port.value = 2181;
         displayName.value = "local";
+        group.value = "";
       }
       void nextTick(() => nameInput.value?.focus());
     }
@@ -58,6 +61,7 @@ async function submit(): Promise<void> {
     name,
     host: host.value.trim(),
     port: port.value,
+    group: group.value.trim() ? group.value.trim() : null,
   });
   if (!saved) {
     return;
@@ -94,6 +98,10 @@ async function submit(): Promise<void> {
         <label>
           {{ t("home.port") }}
           <input v-model.number="port" min="1" type="number" />
+        </label>
+        <label>
+          {{ t("home.group") }}
+          <input v-model="group" :placeholder="t('home.groupPlaceholder')" />
         </label>
 
         <p v-if="localError" class="error">{{ localError }}</p>
