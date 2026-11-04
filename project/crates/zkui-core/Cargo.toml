@@ -6,3 +6,8 @@ rust-version.workspace = true
 description = "ZK UI 领域核心：连接、会话、缓存、命令执行与错误模型"
 
 [dependencies]
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full"] }
+zookeeper-client = { version = "0.11", features = ["tokio"] }
+zookeeper-async = "5"
