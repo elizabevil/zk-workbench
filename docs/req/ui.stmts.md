@@ -83,3 +83,15 @@ REQ-UI-PERF-001   status: accepted   since: 2026-11-02   owner: 产品负责人
   标签：#performance #threshold
   验证：VER-UI-PERF-001
   来源：CHG-0017
+
+REQ-UI-TABS-001   status: accepted   since: 2026-11-02   owner: 产品负责人
+  语句：切换活动连接不得关闭已打开的数据标签；每个连接的标签集合必须独立保留，默认仅保留最近 3 个连接的标签；被移除连接的标签中存在未保存内容时，必须先提示用户处理。
+  标签：#capability #invariant #confirm
+  验证：VER-UI-TABS-001
+  来源：CHG-0018
+
+REQ-UI-INTL-001   status: accepted   since: 2026-11-02   owner: 产品负责人
+  语句：首版必须支持中文与英文切换；界面文案、菜单与错误提示必须来自语言包，不得硬编码；语言偏好必须本地保存并在重启后恢复。
+  标签：#capability #ux
+  验证：VER-UI-INTL-001
+  来源：CHG-0019

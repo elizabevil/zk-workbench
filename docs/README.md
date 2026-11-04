@@ -18,7 +18,7 @@
 | [conn.stmts.md](req/conn.stmts.md) | 连接与会话 | 16 |
 | [node.stmts.md](req/node.stmts.md) | 节点创建与删除 | 15 |
 | [data.stmts.md](req/data.stmts.md) | 数据格式与读写 | 12 |
-| [ui.stmts.md](req/ui.stmts.md) | 工作台与树浏览 | 12 |
+| [ui.stmts.md](req/ui.stmts.md) | 工作台与树浏览 | 14 |
 | [cli.stmts.md](req/cli.stmts.md) | 命令行与脚本（zkCli 语法） | 31 |
 | [auth.stmts.md](req/auth.stmts.md) | ACL 与身份 | 9 |
 | [ops.stmts.md](req/ops.stmts.md) | 巡检与追溯 | 5 |
@@ -54,6 +54,7 @@
 - [技术验证计划](04-test/test-plan.md)
 - [产品验证路线图](04-test/validation-roadmap.md)
 - [IPC 契约与文档同步](dec/ipc.md)
+- [工具链、配置分层与错误模型](dec/tooling.md)
 - [AI 协作规则](06-ai/collaboration.md)
 - [AI 代码生成规则入口](06-ai/code-generation.md)
 - [AI 通用代码与工程规则](06-ai/code-engineering.md)

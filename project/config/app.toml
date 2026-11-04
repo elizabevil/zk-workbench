@@ -1,0 +1,19 @@
+# 内嵌默认配置。用户目录下同名文件按字段覆盖，未提供的字段沿用本文件。
+[locale]
+default = "zh-CN"
+
+[logging]
+level = "info"
+# 实际路径由运行时解析为用户文档目录下与应用同名的子目录
+
+[ui]
+tab_retention_connections = 3
+tab_count_warn = 20
+command_area_default = "collapsed"
+
+[node]
+preview_bytes = 4096
+full_load_warn_bytes = 1048576
+
+[connection]
+default_save_scope = "never"

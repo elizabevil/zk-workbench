@@ -1,0 +1,8 @@
+[package]
+name = "zkui-core"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+description = "ZK UI 领域核心：连接、会话、缓存、命令执行与错误模型"
+
+[dependencies]
