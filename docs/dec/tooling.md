@@ -32,3 +32,9 @@ DEC-063   status: accepted   updated: 2026-11-02
   依据：负责人要求尽量遵循 ZK 错误码并加应用区分；前端按 `message_key` 做国际化。
   推翻条件：ZK 客户端库无法稳定暴露原生错误码。
   影响：错误类型定义在 `zkui-core`，前端不解析文案。
+
+DEC-064   status: accepted   updated: 2026-11-02
+  选择：IPC 的 TypeScript 类型由 `ts-rs` 从 Rust DTO 生成，前端不手写契约类型；生成产物放 `src/api/types/`，通过 justfile 命令刷新。
+  依据：负责人确认；避免 Rust 与 TS 两份契约漂移（`DEC-050`）。
+  推翻条件：ts-rs 无法表达所需类型（如带字段的枚举、联合类型）。
+  影响：DTO 需标注 `#[derive(TS)]`；类型生成加入代码侧 justfile。

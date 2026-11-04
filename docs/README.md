@@ -15,13 +15,13 @@
 
 | 文件 | 方向 | 语句数 |
 |---|---|---|
-| [conn.stmts.md](req/conn.stmts.md) | 连接与会话 | 16 |
+| [conn.stmts.md](req/conn.stmts.md) | 连接与会话 | 19 |
 | [node.stmts.md](req/node.stmts.md) | 节点创建与删除 | 15 |
 | [data.stmts.md](req/data.stmts.md) | 数据格式与读写 | 12 |
 | [ui.stmts.md](req/ui.stmts.md) | 工作台与树浏览 | 14 |
 | [cli.stmts.md](req/cli.stmts.md) | 命令行与脚本（zkCli 语法） | 31 |
 | [auth.stmts.md](req/auth.stmts.md) | ACL 与身份 | 9 |
-| [ops.stmts.md](req/ops.stmts.md) | 巡检与追溯 | 5 |
+| [ops.stmts.md](req/ops.stmts.md) | 巡检与追溯 | 10 |
 
 ## 叙述层（无约束力，可自由演进）
 
@@ -51,6 +51,7 @@
 - [产品路线图](01-product/roadmap.md)
 - [技术设计](02-design/tech-design.md)
 - [UI 设计说明](02-design/ui-design.md)
+- [代码实现结构与契约](02-design/implementation.md)
 - [技术验证计划](04-test/test-plan.md)
 - [产品验证路线图](04-test/validation-roadmap.md)
 - [IPC 契约与文档同步](dec/ipc.md)

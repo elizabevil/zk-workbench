@@ -95,3 +95,9 @@ REQ-UI-INTL-001   status: accepted   since: 2026-11-02   owner: 产品负责人
   标签：#capability #ux
   验证：VER-UI-INTL-001
   来源：CHG-0019
+
+REQ-UI-SETTINGS-001   status: accepted   since: 2026-11-02   owner: 产品负责人
+  语句：必须提供独立的设置页，至少包含语言、主题、通知、重试、任务行为、代理、可观测、审计与日志，并提供恢复默认设置的操作。
+  标签：#capability #ux
+  验证：VER-UI-SETTINGS-001
+  来源：CHG-0027

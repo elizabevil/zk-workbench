@@ -54,7 +54,7 @@ REQ-AUTH-CRED-004   status: accepted   since: 2026-11-02   owner: 产品负责�
   验证：VER-AUTH-CRED-004
   来源：CHG-0011
 
-REQ-AUTH-PRIV-001   status: accepted   since: 2026-11-02   owner: 产品负责人
+REQ-AUTH-PRIV-001   status: superseded   since: 2026-11-02   owner: 产品负责人   superseded-by: REQ-OPS-OBS-001
   语句：首版不得外发遥测、崩溃上报或使用数据；诊断信息只写入本地日志。
   标签：#security #constraint
   验证：VER-AUTH-PRIV-001

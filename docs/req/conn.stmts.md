@@ -107,3 +107,39 @@ REQ-CONN-COMPAT-001   status: accepted   since: 2026-11-02   owner: 产品负责
   标签：#capability #constraint #error
   验证：VER-CONN-COMPAT-001
   来源：CHG-0014
+
+REQ-CONN-PROXY-001   status: accepted   since: 2026-11-02   owner: 产品负责人
+  语句：首版必须支持 SOCKS5 与 HTTP CONNECT 代理；代理只作用于连接建立，不改变 ZooKeeper 操作语义。
+  标签：#capability
+  验证：VER-CONN-PROXY-001
+  来源：CHG-0026
+
+REQ-CONN-PROXY-002   status: accepted   since: 2026-11-02   owner: 产品负责人
+  语句：代理不可用或握手失败必须返回可分类错误并注明代理阶段，不得误报为集群故障；单个连接的代理失败不得影响其他连接。
+  标签：#error #invariant
+  验证：VER-CONN-PROXY-002
+  来源：CHG-0026
+
+REQ-CONN-PROXY-003   status: accepted   since: 2026-11-02   owner: 产品负责人
+  语句：代理凭据必须遵循四档保存范围，不得以明文写入配置文件或日志。
+  标签：#security #constraint
+  验证：VER-CONN-PROXY-003
+  来源：CHG-0026
+
+REQ-CONN-PROXY-004   status: accepted   since: 2026-11-02   owner: 产品负责人
+  语句：代理档案必须支持多条，并按配置顺序依次尝试；某条不可用时必须尝试下一条，全部失败才报错。
+  标签：#capability #error
+  验证：VER-CONN-PROXY-004
+  来源：CHG-0027
+
+REQ-CONN-PROXY-005   status: accepted   since: 2026-11-02   owner: 产品负责人
+  语句：必须支持 no_proxy 绕过列表，命中列表的主机不得经过代理；匹配至少支持精确主机与域名后缀。
+  标签：#capability #constraint
+  验证：VER-CONN-PROXY-005
+  来源：CHG-0027
+
+REQ-CONN-RETRY-001   status: accepted   since: 2026-11-02   owner: 产品负责人
+  语句：自动重连必须默认开启，最多尝试 5 次，重试间隔从 3 秒递增至上限 10 秒；这些参数必须可在设置中修改。
+  标签：#capability #ux
+  验证：VER-CONN-RETRY-001
+  来源：CHG-0027

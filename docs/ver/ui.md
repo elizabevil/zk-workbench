@@ -83,3 +83,8 @@ VER-UI-INTL-001   status: pending
   对应：REQ-UI-INTL-001
   步骤：切换中英文，检查主界面、原生菜单、错误提示与命令结果文案；重启后确认语言恢复。
   结果：未执行
+
+VER-UI-SETTINGS-001   status: pending
+  对应：REQ-UI-SETTINGS-001
+  步骤：打开设置页逐项检查九个分区；修改若干项后恢复默认并确认生效。
+  结果：未执行

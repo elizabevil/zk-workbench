@@ -38,3 +38,33 @@ VER-OPS-LOG-001   status: pending
   对应：REQ-OPS-LOG-001
   步骤：检查默认日志路径位于用户文档目录同名子目录；检索日志确认无凭据。
   结果：未执行
+
+VER-OPS-AUDIT-003   status: pending
+  对应：REQ-OPS-AUDIT-003
+  步骤：执行 create/set/delete/setAcl 与读取，确认仅变更操作入审计且字段完整。
+  结果：未执行
+
+VER-OPS-AUDIT-004   status: pending
+  对应：REQ-OPS-AUDIT-004
+  步骤：分批写入后校验哈希链；篡改一条记录后校验应失败；导出后节点历史与时间线一致。
+  结果：未执行
+
+VER-OPS-AUDIT-005   status: pending
+  对应：REQ-OPS-AUDIT-005
+  步骤：模拟磁盘只读或写满，确认操作不被阻塞且界面出现写入失败提示。
+  结果：未执行
+
+VER-OPS-OBS-001   status: pending
+  对应：REQ-OPS-OBS-001
+  步骤：默认启动检查无外发连接；开启 OTel 导出后能看到导出请求，关闭后停止。
+  结果：未执行
+
+VER-OPS-OBS-002   status: pending
+  对应：REQ-OPS-OBS-002
+  步骤：执行一组操作后检查指标：延迟分位、计数、缓存命中失效、重连次数均有数据且可复算。
+  结果：未执行
+
+VER-OPS-AUDIT-006   status: pending
+  对应：REQ-OPS-AUDIT-006
+  步骤：修改保留期并触发清理，确认二次确认展示待删范围；清理后保留期生效。
+  结果：未执行

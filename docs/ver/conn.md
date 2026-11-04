@@ -88,3 +88,33 @@ VER-CONN-COMPAT-001   status: pending
   对应：REQ-CONN-COMPAT-001
   步骤：分别连接 3.4、3.5、3.9 服务端，执行 getEphemerals、getAllChildrenNumber、config 等版本相关命令，确认不支持时返回明确错误而非静默忽略。
   结果：未执行
+
+VER-CONN-PROXY-001   status: pending
+  对应：REQ-CONN-PROXY-001
+  步骤：分别经 SOCKS5 与 HTTP CONNECT 连接 3.9 实例，确认可完成 get/set。
+  结果：未执行
+
+VER-CONN-PROXY-002   status: pending
+  对应：REQ-CONN-PROXY-002
+  步骤：构造代理拒绝、握手超时与认证失败，确认错误分类正确且其他连接不受影响。
+  结果：未执行
+
+VER-CONN-PROXY-003   status: pending
+  对应：REQ-CONN-PROXY-003
+  步骤：以四档范围保存代理凭据，检查配置与日志无明文。
+  结果：未执行
+
+VER-CONN-PROXY-004   status: pending
+  对应：REQ-CONN-PROXY-004
+  步骤：配置两条代理，第一条不可用、第二条可用，确认按顺序回退成功；两条都不可用时错误包含两条的失败原因。
+  结果：未执行
+
+VER-CONN-PROXY-005   status: pending
+  对应：REQ-CONN-PROXY-005
+  步骤：配置 no_proxy 精确主机与后缀，确认命中主机直连、未命中走代理。
+  结果：未执行
+
+VER-CONN-RETRY-001   status: pending
+  对应：REQ-CONN-RETRY-001
+  步骤：断开网络观察重连：默认开启、最多 5 次、间隔 3s 递增至 10s；修改参数后行为随之变化。
+  结果：未执行
