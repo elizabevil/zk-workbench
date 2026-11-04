@@ -524,6 +524,13 @@ function reloadData(): void {
   }
 }
 
+function manualRefresh(event: MouseEvent): void {
+  reloadData();
+  if (event.currentTarget instanceof HTMLElement) {
+    event.currentTarget.blur();
+  }
+}
+
 function refreshAll(): void {
   refresh();
   reloadData();
@@ -881,7 +888,7 @@ function onDeleted(outcome: DeleteOutcome): void {
               </button>
               <div class="toolbar">
                 <div :class="{active: autoRefreshSeconds !== undefined}" class="refresh-control">
-                  <NButton size="tiny" :title="t('data.refresh')" @click="reloadData">
+                  <NButton size="tiny" :title="t('data.refresh')" @click="manualRefresh">
                     <template #icon>
                       <svg aria-hidden="true" class="clock-icon" viewBox="0 0 16 16">
                         <circle cx="8" cy="8" r="5.5"/>
@@ -953,18 +960,11 @@ function onDeleted(outcome: DeleteOutcome): void {
                       </button>
                     </div>
                     <pre class="hex">{{ hexDump }}</pre>
-                    <p class="muted binary-meta">{{ t("data.bytes") }}: {{ data.byte_len }}</p>
                   </div>
                   <template v-else>
                     <pre v-if="format === 'raw'" class="text">{{ displayText || t("data.empty") }}</pre>
                     <pre v-else class="text hljs" v-html="highlighted"/>
                     <div class="data-toolbar">
-                      <span class="muted">{{ t("data.bytes") }}: {{ data.byte_len }}</span>
-                      <span class="muted">{{ t("data.encoding") }}: {{
-                          data.is_text ? "UTF-8" : t("data.binary")
-                        }}</span>
-                      <span class="muted">{{ t("shell.version") }}: {{ stat?.version }}</span>
-                      <span class="muted">{{ t("shell.mtime") }}: {{ stat ? toRfc3339(stat.mtime) : "" }}</span>
                       <div class="format-group">
                         <NButton
                           v-for="option in FORMAT_OPTIONS"
@@ -1231,6 +1231,14 @@ function onDeleted(outcome: DeleteOutcome): void {
         {{ t("shell.generation") }}: {{ store.snapshot?.generation }}
       </span>
       <div class="spacer"/>
+      <span v-if="stat" class="status-data">
+        <span>{{ t("data.bytes") }}: {{ data?.byte_len ?? stat.data_length }}</span>
+        <span>{{ t("data.encoding") }}: {{
+            data ? (data.is_text ? "UTF-8" : t("data.binary")) : "-"
+          }}</span>
+        <span>{{ t("shell.version") }}: {{ stat.version }}</span>
+        <span>{{ t("shell.mtime") }}: {{ toRfc3339(stat.mtime) }}</span>
+      </span>
       <span class="muted">{{ store.snapshot?.connection_id ?? "" }}</span>
     </footer>
 
@@ -2111,13 +2119,23 @@ function onDeleted(outcome: DeleteOutcome): void {
 .statusbar {
   display: flex;
   align-items: center;
-  gap: 16px;
-  height: 28px;
-  padding: 0 12px;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  min-height: 28px;
+  padding: 4px 12px;
   font-size: 12px;
   color: #9aa4b2;
   border-top: 1px solid rgb(255 255 255 / 8%);
   background: rgb(16 20 24 / 80%);
+}
+
+.status-data {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-left: auto;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
 }
 
 .toast {
