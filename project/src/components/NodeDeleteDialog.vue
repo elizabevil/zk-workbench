@@ -3,7 +3,7 @@ import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 
 import { type InvokeRejection, toAppError } from "@/api/client";
-import { nodeDelete, nodeDeletePreview } from "@/api/node";
+import { nodeDelete, nodeDeletePreview, nodeDeletePreviewCancel } from "@/api/node";
 import type { AppError } from "@/api/types/AppError";
 import type { DeleteOutcome } from "@/api/types/DeleteOutcome";
 import type { DeletePreview } from "@/api/types/DeletePreview";
@@ -13,6 +13,7 @@ const props = defineProps<{
   connectionId: string;
   path: string;
   hasChildren: boolean;
+  initialRecursive?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -25,6 +26,8 @@ const recursive = ref(false);
 const preview = ref<DeletePreview | null>(null);
 const loading = ref(false);
 const error = ref<AppError | null>(null);
+const requestId = ref("");
+const cancelled = ref(false);
 
 watch(
   () => [props.open, recursive.value] as const,
@@ -34,11 +37,23 @@ watch(
     }
     preview.value = null;
     error.value = null;
+    cancelled.value = false;
     loading.value = true;
+    requestId.value = crypto.randomUUID();
     try {
-      preview.value = await nodeDeletePreview(props.connectionId, props.path, recursive.value);
+      preview.value = await nodeDeletePreview(
+        props.connectionId,
+        props.path,
+        recursive.value,
+        requestId.value,
+      );
     } catch (raw) {
-      error.value = toAppError(raw as InvokeRejection);
+      const failure = toAppError(raw as InvokeRejection);
+      if (failure.kind === "cancelled") {
+        cancelled.value = true;
+      } else {
+        error.value = failure;
+      }
     } finally {
       loading.value = false;
     }
@@ -50,12 +65,18 @@ watch(
   () => props.open,
   (open) => {
     if (open) {
-      recursive.value = false;
+      recursive.value = props.initialRecursive ?? false;
     }
   },
 );
 
 const canConfirm = computed(() => !props.hasChildren || recursive.value);
+
+async function cancelPreview(): Promise<void> {
+  if (requestId.value) {
+    await nodeDeletePreviewCancel(requestId.value);
+  }
+}
 const totalLabel = computed(() => {
   if (!preview.value) {
     return "-";
@@ -90,7 +111,13 @@ async function confirm(): Promise<void> {
           <p class="muted">
             {{ t("delete.impact") }}: <strong>{{ totalLabel }}</strong>
           </p>
-          <p v-if="loading" class="muted">{{ t("delete.loading") }}</p>
+          <p v-if="loading" class="muted">
+            {{ t("delete.loading") }}
+            <button type="button" class="tiny" @click="cancelPreview">
+              {{ t("delete.cancelPreview") }}
+            </button>
+          </p>
+          <p v-else-if="cancelled" class="muted">{{ t("delete.cancelled") }}</p>
           <ul v-else-if="preview" class="paths">
             <li v-for="item in preview.paths" :key="item">{{ item }}</li>
           </ul>
@@ -181,6 +208,15 @@ button {
   color: #ef4444;
   margin: 0;
   font-size: 13px;
+}
+.tiny {
+  padding: 2px 8px;
+  border-radius: 5px;
+  border: 1px solid rgb(255 255 255 / 15%);
+  background: transparent;
+  color: #cbd5e1;
+  cursor: pointer;
+  font-size: 12px;
 }
 .muted {
   color: #9aa4b2;

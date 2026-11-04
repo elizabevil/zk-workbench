@@ -47,8 +47,18 @@ export function nodeDeletePreview(
   connectionId: string,
   path: string,
   recursive: boolean,
+  requestId: string,
 ): Promise<DeletePreview> {
-  return call<DeletePreview>("node_delete_preview", { connectionId, path, recursive });
+  return call<DeletePreview>("node_delete_preview", {
+    connectionId,
+    path,
+    recursive,
+    requestId,
+  });
+}
+
+export function nodeDeletePreviewCancel(requestId: string): Promise<boolean> {
+  return call<boolean>("node_delete_preview_cancel", { requestId });
 }
 
 export function nodeDelete(

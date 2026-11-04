@@ -1,5 +1,8 @@
 //! 节点读取与写入命令。
 
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
+
 use base64::Engine;
 use tauri::State;
 use zkui_core::audit::AuditEntry;
@@ -116,11 +119,39 @@ pub async fn node_delete_preview(
     connection_id: String,
     path: String,
     recursive: bool,
+    request_id: String,
 ) -> AppResult<DeletePreview> {
+    let cancel = Arc::new(AtomicBool::new(false));
     state
+        .preview_cancels
+        .lock()
+        .expect("preview cancels lock poisoned")
+        .insert(request_id.clone(), cancel.clone());
+    let result = state
         .manager
-        .delete_preview(&connection_id, &path, recursive)
-        .await
+        .delete_preview(&connection_id, &path, recursive, &cancel)
+        .await;
+    state
+        .preview_cancels
+        .lock()
+        .expect("preview cancels lock poisoned")
+        .remove(&request_id);
+    result
+}
+
+#[tauri::command]
+pub fn node_delete_preview_cancel(state: State<'_, AppState>, request_id: String) -> bool {
+    let cancels = state
+        .preview_cancels
+        .lock()
+        .expect("preview cancels lock poisoned");
+    match cancels.get(&request_id) {
+        Some(flag) => {
+            flag.store(true, Ordering::SeqCst);
+            true
+        }
+        None => false,
+    }
 }
 
 #[tauri::command]

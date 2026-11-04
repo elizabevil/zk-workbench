@@ -229,7 +229,7 @@ async fn create_set_read_delete_cycle() {
     assert_eq!(conflict.kind, ErrorKind::BadVersion);
 
     let preview = manager
-        .delete_preview(&id, &base, true)
+        .delete_preview(&id, &base, true, &std::sync::atomic::AtomicBool::new(false))
         .await
         .expect("预览失败");
     assert!(preview.total >= 2);

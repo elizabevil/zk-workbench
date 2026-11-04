@@ -48,6 +48,8 @@ const editorOpen = ref(false);
 const createOpen = ref(false);
 const deleteOpen = ref(false);
 const binaryOpen = ref(false);
+const deleteTarget = ref<string | null>(null);
+const retryPath = ref<string | null>(null);
 const toast = ref("");
 const jumpPath = ref("");
 
@@ -268,6 +270,19 @@ async function disconnect(): Promise<void> {
   }
 }
 
+function openDelete(): void {
+  deleteTarget.value = selectedPath.value;
+  deleteOpen.value = true;
+}
+
+function retryFailedSubtree(): void {
+  if (!retryPath.value) {
+    return;
+  }
+  deleteTarget.value = retryPath.value;
+  deleteOpen.value = true;
+}
+
 async function openBinaryEditor(): Promise<void> {
   if (data.value?.truncated && selectedPath.value) {
     await loadData(selectedPath.value, true);
@@ -292,6 +307,7 @@ function onCreated(actualPath: string): void {
 
 function onDeleted(outcome: DeleteOutcome): void {
   deleteOpen.value = false;
+  retryPath.value = outcome.failed_path ?? null;
   toast.value = outcome.failed_path
     ? t("delete.failed", { path: outcome.failed_path, done: outcome.deleted })
     : t("delete.done", { done: outcome.deleted });
@@ -401,7 +417,7 @@ function onDeleted(outcome: DeleteOutcome): void {
               >
                 {{ t("data.edit") }}
               </button>
-              <button type="button" class="tiny danger" @click="deleteOpen = true">
+              <button type="button" class="tiny danger" @click="openDelete">
                 {{ t("data.delete") }}
               </button>
             </div>
@@ -524,7 +540,12 @@ function onDeleted(outcome: DeleteOutcome): void {
       <span>{{ store.snapshot?.connection_id ?? "" }}</span>
     </footer>
 
-    <p v-if="toast" class="toast">{{ toast }}</p>
+    <p v-if="toast" class="toast">
+      {{ toast }}
+      <button v-if="retryPath" type="button" class="tiny" @click="retryFailedSubtree">
+        {{ t("delete.retryFailed") }}
+      </button>
+    </p>
 
     <ConnectionDialog :open="dialogOpen" @close="dialogOpen = false" @connected="onConnected" />
     <NodeEditor
@@ -557,11 +578,12 @@ function onDeleted(outcome: DeleteOutcome): void {
       @created="onCreated"
     />
     <NodeDeleteDialog
-      v-if="selectedPath"
+      v-if="deleteTarget"
       :open="deleteOpen"
       :connection-id="connectionId"
-      :path="selectedPath"
-      :has-children="(stat?.num_children ?? 0) > 0"
+      :path="deleteTarget"
+      :has-children="(stat?.num_children ?? 0) > 0 || retryPath !== null"
+      :initial-recursive="retryPath !== null"
       @close="deleteOpen = false"
       @deleted="onDeleted"
     />

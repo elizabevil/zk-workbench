@@ -1,5 +1,7 @@
 //! Tauri 侧共享状态。
 
+use std::collections::HashMap;
+use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 
 use zkui_core::audit::AuditStore;
@@ -20,6 +22,7 @@ pub struct AppState {
     pub profiles: Arc<ProfileStore>,
     pub manager: ConnectionManager,
     pub otel: Mutex<OtelRuntime>,
+    pub preview_cancels: Mutex<HashMap<String, Arc<AtomicBool>>>,
 }
 
 impl AppState {
@@ -34,6 +37,7 @@ impl AppState {
         let manager = ConnectionManager::with_settings(Some(settings.clone()));
         Self {
             otel: Mutex::new(OtelRuntime::default()),
+            preview_cancels: Mutex::new(HashMap::new()),
             settings,
             audit,
             profiles,

@@ -1,6 +1,7 @@
 //! 连接管理器：创建、关闭与快照。
 
 use std::collections::HashMap;
+use std::sync::atomic::AtomicBool;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, RwLock};
 use std::time::Instant;
@@ -308,6 +309,7 @@ impl ConnectionManager {
         connection_id: &str,
         path: &str,
         recursive: bool,
+        cancel: &AtomicBool,
     ) -> AppResult<DeletePreview> {
         if !recursive {
             return Ok(DeletePreview {
@@ -318,7 +320,7 @@ impl ConnectionManager {
             });
         }
         let (total, paths, truncated) =
-            collect_tree(&self.client_of(connection_id)?, path, 5000).await?;
+            collect_tree(&self.client_of(connection_id)?, path, 5000, cancel).await?;
         Ok(DeletePreview {
             path: path.to_string(),
             total,
@@ -591,11 +593,15 @@ async fn collect_tree(
     client: &Client,
     root: &str,
     limit: usize,
+    cancel: &AtomicBool,
 ) -> AppResult<(u64, Vec<String>, bool)> {
     let mut queue = std::collections::VecDeque::from([root.to_string()]);
     let mut paths = Vec::new();
     let mut total = 0u64;
     while let Some(path) = queue.pop_front() {
+        if cancel.load(std::sync::atomic::Ordering::Relaxed) {
+            return Err(Box::new(crate::error::app::cancelled()));
+        }
         total += 1;
         if paths.len() < limit {
             paths.push(path.clone());

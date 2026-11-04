@@ -121,3 +121,13 @@ pub fn otel_failed(detail: &str) -> AppError {
         },
     )
 }
+
+/// 操作被用户取消。
+pub fn cancelled() -> AppError {
+    AppError::new(
+        ErrorKind::Cancelled,
+        ErrorScope::App,
+        2009,
+        ErrorFields::default(),
+    )
+}

@@ -31,6 +31,7 @@ pub fn run() {
             commands::node::node_set,
             commands::node::node_create,
             commands::node::node_delete_preview,
+            commands::node::node_delete_preview_cancel,
             commands::node::node_delete,
             commands::profile::profile_list,
             commands::profile::profile_save,
