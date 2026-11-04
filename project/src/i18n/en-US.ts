@@ -131,6 +131,13 @@ export default {
     history: "History",
   },
   shell: {
+    commandHistory: "Action history",
+    historyEmpty: "No commands in this session",
+    expandAll: "Expand all",
+    collapseAll: "Collapse all",
+    expanded: "Expanded {count} nodes",
+    newChild: "New child",
+    deleteNode: "Delete node",
     tools: "Tools",
     connection: "Connection",
     generation: "Generation",

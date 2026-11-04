@@ -51,9 +51,18 @@ const sections = [
 ] as const;
 const activeSection = ref<string>("general");
 let observer: IntersectionObserver | undefined;
+let suppressObserverUntil = 0;
 
 function scrollToSection(id: string): void {
-  document.getElementById(`settings-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  activeSection.value = id;
+  suppressObserverUntil = Date.now() + 700;
+  const container = document.querySelector(".settings") as HTMLElement | null;
+  const target = document.getElementById(`settings-${id}`) as HTMLElement | null;
+  if (!container || !target) {
+    return;
+  }
+  const top = target.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop;
+  container.scrollTo({ top: top - 8, behavior: "smooth" });
 }
 const passwords = ref<Record<number, string>>({});
 const testTarget = ref("127.0.0.1:2181");
@@ -87,6 +96,9 @@ onMounted(async () => {
   });
   observer = new IntersectionObserver(
     (entries) => {
+      if (Date.now() < suppressObserverUntil) {
+        return;
+      }
       for (const entry of entries) {
         if (entry.isIntersecting) {
           activeSection.value = (entry.target.id || "").replace("settings-", "");

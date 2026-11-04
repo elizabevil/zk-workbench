@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 
 import { type InvokeRejection, toAppError } from "@/api/client";
@@ -12,6 +12,7 @@ const props = defineProps<{
   path: string;
   depth: number;
   selectedPath: string | null;
+  expandedPaths: Set<string>;
 }>();
 
 const { t } = useI18n();
@@ -19,20 +20,18 @@ const localError = ref(false);
 const emit = defineEmits<{
   select: [path: string];
   dblclick: [path: string];
+  toggle: [path: string];
+  create: [path: string];
+  delete: [path: string];
   error: [error: AppError];
 }>();
 
-const expanded = ref(false);
 const loading = ref(false);
 const children = ref<string[] | null>(null);
+const expanded = computed(() => props.expandedPaths.has(props.path));
 
-async function toggle(): Promise<void> {
-  if (expanded.value) {
-    expanded.value = false;
-    return;
-  }
-  expanded.value = true;
-  if (children.value !== null) {
+async function load(): Promise<void> {
+  if (loading.value || children.value !== null) {
     return;
   }
   loading.value = true;
@@ -41,11 +40,24 @@ async function toggle(): Promise<void> {
     children.value = await nodeChildren(props.connectionId, props.path);
   } catch (raw) {
     localError.value = true;
-    const error = toAppError(raw as InvokeRejection);
-    emit("error", error);
+    emit("error", toAppError(raw as InvokeRejection));
   } finally {
     loading.value = false;
   }
+}
+
+watch(
+  expanded,
+  (open) => {
+    if (open) {
+      void load();
+    }
+  },
+  { immediate: true },
+);
+
+function toggle(): void {
+  emit("toggle", props.path);
 }
 
 function childPath(name: string): string {
@@ -55,7 +67,11 @@ function childPath(name: string): string {
 
 <template>
   <div class="node">
-    <div class="row" :class="{ selected: path === selectedPath }" :style="{ paddingLeft: `${depth * 14}px` }">
+    <div
+      class="row"
+      :class="{ selected: path === selectedPath }"
+      :style="{ paddingLeft: `${depth * 14}px` }"
+    >
       <button class="twist" type="button" @click="toggle">
         {{ expanded ? "▾" : "▸" }}
       </button>
@@ -68,9 +84,22 @@ function childPath(name: string): string {
         {{ name }}
       </button>
       <span v-if="loading" class="muted">…</span>
-      <button v-else-if="localError" class="retry" type="button" @click="toggle">
+      <button v-else-if="localError" class="retry" type="button" @click="load">
         {{ t("shell.retry") }}
       </button>
+      <div class="row-actions">
+        <button type="button" :title="t('shell.newChild')" @click.stop="emit('create', path)">
+          +
+        </button>
+        <button
+          v-if="path !== '/'"
+          type="button"
+          :title="t('shell.deleteNode')"
+          @click.stop="emit('delete', path)"
+        >
+          ×
+        </button>
+      </div>
     </div>
 
     <div v-if="expanded">
@@ -82,8 +111,12 @@ function childPath(name: string): string {
         :path="childPath(child)"
         :depth="depth + 1"
         :selected-path="selectedPath"
+        :expanded-paths="expandedPaths"
         @select="emit('select', $event)"
         @dblclick="emit('dblclick', $event)"
+        @toggle="emit('toggle', $event)"
+        @create="emit('create', $event)"
+        @delete="emit('delete', $event)"
         @error="emit('error', $event)"
       />
       <div
@@ -96,48 +129,3 @@ function childPath(name: string): string {
     </div>
   </div>
 </template>
-
-<style scoped>
-.row {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  min-height: 26px;
-}
-.twist,
-.label {
-  background: transparent;
-  border: none;
-  color: inherit;
-  cursor: pointer;
-  padding: 2px 4px;
-}
-.twist {
-  width: 18px;
-  color: #9aa4b2;
-}
-.label {
-  font-family: ui-monospace, monospace;
-  font-size: 13px;
-  text-align: left;
-}
-.label:hover {
-  color: #93c5fd;
-}
-.retry {
-  border: none;
-  background: transparent;
-  color: #f87171;
-  cursor: pointer;
-  font-size: 11px;
-}
-.muted {
-  color: #9aa4b2;
-  font-size: 12px;
-}
-.empty {
-  min-height: 22px;
-  display: flex;
-  align-items: center;
-}
-</style>

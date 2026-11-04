@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 
 import { type InvokeRejection, toAppError } from "@/api/client";
 import { COMMAND_NAMES, commandExecute, commandPreview } from "@/api/command";
 import { nodeChildren } from "@/api/node";
 import type { AppError } from "@/api/types/AppError";
+import { useHistoryStore } from "@/stores/history";
 
 const props = defineProps<{
   connectionId: string;
@@ -21,10 +22,9 @@ const input = ref("");
 const output = ref("");
 const running = ref(false);
 const error = ref<AppError | null>(null);
-const history = ref<string[]>([]);
+const history = useHistoryStore();
 const cursor = ref(-1);
 const completion = ref<{ prefix: string; index: number } | null>(null);
-const historyOpen = ref(false);
 
 const canRun = computed(() => input.value.trim().length > 0 && !running.value);
 
@@ -84,22 +84,38 @@ async function run(): Promise<void> {
       return;
     }
     output.value = await commandExecute(props.connectionId, line);
-    history.value = [mask(line), ...history.value.filter((item) => item !== mask(line))].slice(0, 100);
+    history.push(mask(line), true);
     cursor.value = -1;
     emit("refresh");
   } catch (raw) {
-    error.value = toAppError(raw as InvokeRejection);
+    const failure = toAppError(raw as InvokeRejection);
+    error.value = failure;
+    const detail = failure.fields.detail ? `: ${failure.fields.detail}` : "";
+    output.value = `${t(failure.message_key)}${detail}`;
+    history.push(mask(line), false);
   } finally {
     running.value = false;
   }
 }
 
+watch(
+  () => history.draft,
+  (line) => {
+    if (line) {
+      input.value = line;
+      history.setDraft("");
+      void run();
+    }
+  },
+);
+
 function previous(): void {
-  if (history.value.length === 0) {
+  const items = history.entries;
+  if (items.length === 0) {
     return;
   }
-  cursor.value = Math.min(cursor.value + 1, history.value.length - 1);
-  input.value = history.value[cursor.value] ?? "";
+  cursor.value = Math.min(cursor.value + 1, items.length - 1);
+  input.value = items[cursor.value]?.line ?? "";
 }
 
 function next(): void {
@@ -109,12 +125,7 @@ function next(): void {
     return;
   }
   cursor.value -= 1;
-  input.value = history.value[cursor.value] ?? "";
-}
-
-function rerun(line: string): void {
-  input.value = line;
-  void run();
+  input.value = history.entries[cursor.value]?.line ?? "";
 }
 </script>
 
@@ -124,26 +135,11 @@ function rerun(line: string): void {
       <span>{{ t("command.title") }}</span>
       <div class="head-actions">
         <span v-if="error" class="error">{{ t(error.message_key) }}</span>
-        <button type="button" class="tiny" @click="historyOpen = !historyOpen">
-          {{ t("command.history") }} ({{ history.length }})
-        </button>
       </div>
     </header>
 
     <div class="body">
       <pre class="output">{{ output || t("command.emptyOutput") }}</pre>
-      <aside v-if="historyOpen" class="history">
-        <span class="muted">{{ t("command.history") }}</span>
-        <button
-          v-for="(item, index) in history"
-          :key="`${item}-${index}`"
-          type="button"
-          class="history-item"
-          @click="rerun(item)"
-        >
-          {{ item }}
-        </button>
-      </aside>
     </div>
 
     <form class="input-row" @submit.prevent="run">
@@ -201,32 +197,6 @@ function rerun(line: string): void {
   font-family: ui-monospace, monospace;
   font-size: 12px;
   white-space: pre-wrap;
-}
-.history {
-  flex: 0 0 26%;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  overflow: auto;
-  padding: 4px 6px;
-  border-left: 1px solid rgb(255 255 255 / 8%);
-}
-.history-item {
-  text-align: left;
-  padding: 3px 6px;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  color: #cbd5e1;
-  font-family: ui-monospace, monospace;
-  font-size: 11px;
-  cursor: pointer;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.history-item:hover {
-  background: rgb(255 255 255 / 8%);
 }
 .input-row {
   display: flex;

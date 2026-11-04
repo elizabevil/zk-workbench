@@ -8,7 +8,7 @@ import { useRouter } from "vue-router";
 import { isMap, isSeq, parseDocument } from "yaml";
 import { auditList } from "@/api/audit";
 import { type InvokeRejection, toAppError } from "@/api/client";
-import { nodeAcl, nodeData, nodeStat } from "@/api/node";
+import { nodeAcl, nodeChildren, nodeData, nodeStat } from "@/api/node";
 import type { AclEntry } from "@/api/types/AclEntry";
 import type { AppError } from "@/api/types/AppError";
 import type { AuditRecord } from "@/api/types/AuditRecord";
@@ -24,6 +24,7 @@ import NodeDeleteDialog from "@/components/NodeDeleteDialog.vue";
 import NodeEditor from "@/components/NodeEditor.vue";
 import TreeNodeItem from "@/components/TreeNodeItem.vue";
 import { useConnectionStore } from "@/stores/connection";
+import { useHistoryStore } from "@/stores/history";
 import { useTabsStore } from "@/stores/tabs";
 import { decodeUtf8Base64, hexPreview } from "@/utils/encoding";
 import { normalizePath } from "@/utils/path";
@@ -62,6 +63,93 @@ const jumpPath = ref("");
 const jumpInput = ref<HTMLInputElement | null>(null);
 const shortcuts = ref<ShortcutMap>(loadShortcuts());
 const toolsOpen = ref(false);
+const history = useHistoryStore();
+const historyOpen = ref(true);
+const timelineOpen = ref(true);
+const expandedPaths = ref<Set<string>>(new Set());
+const createDefaultPath = ref<string | undefined>(undefined);
+
+function expandedKey(id: string): string {
+  return `zkui.tree.expanded.${id}`;
+}
+
+function loadExpanded(id: string): void {
+  try {
+    const raw = localStorage.getItem(expandedKey(id));
+    expandedPaths.value = new Set<string>(raw ? (JSON.parse(raw) as string[]) : []);
+  } catch {
+    expandedPaths.value = new Set<string>();
+  }
+}
+
+function persistExpanded(): void {
+  if (connectionId.value) {
+    localStorage.setItem(expandedKey(connectionId.value), JSON.stringify([...expandedPaths.value]));
+  }
+}
+
+function toggleExpanded(path: string): void {
+  const next = new Set(expandedPaths.value);
+  if (next.has(path)) {
+    next.delete(path);
+  } else {
+    next.add(path);
+  }
+  expandedPaths.value = next;
+  persistExpanded();
+}
+
+async function expandAll(): Promise<void> {
+  if (!connectionId.value) {
+    return;
+  }
+  const next = new Set<string>(["/"]);
+  const queue = ["/"];
+  let count = 0;
+  while (queue.length > 0 && count < 2000) {
+    const current = queue.shift();
+    if (!current) {
+      break;
+    }
+    try {
+      const children = await nodeChildren(connectionId.value, current);
+      count += children.length;
+      for (const child of children) {
+        const path = current === "/" ? `/${child}` : `${current}/${child}`;
+        next.add(path);
+        queue.push(path);
+      }
+    } catch {
+      // 忽略不可读子树
+    }
+  }
+  expandedPaths.value = next;
+  persistExpanded();
+  toast.value = t("shell.expanded", { count });
+  window.setTimeout(() => {
+    toast.value = "";
+  }, 3000);
+}
+
+function collapseAll(): void {
+  expandedPaths.value = new Set<string>();
+  persistExpanded();
+}
+
+function createFromTree(path: string): void {
+  createDefaultPath.value = path === "/" ? "/" : `${path}/`;
+  createOpen.value = true;
+}
+
+function deleteFromTree(path: string): void {
+  deleteTarget.value = path;
+  deleteOpen.value = true;
+}
+
+function openCreate(): void {
+  createDefaultPath.value = undefined;
+  createOpen.value = true;
+}
 const FORMAT_OPTIONS = [
   { value: "raw" as const, label: t("data.formatRaw") },
   { value: "json" as const, label: "JSON" },
@@ -301,6 +389,7 @@ onMounted(async () => {
   }
   selectedPath.value = "/";
   void loadStat("/");
+  loadExpanded(connectionId.value);
   window.addEventListener("keydown", onKeydown);
 });
 
@@ -381,6 +470,9 @@ function onSaved(stat: NodeStat): void {
 function onCreated(actualPath: string): void {
   createOpen.value = false;
   toast.value = t("create.created", { path: actualPath });
+  window.setTimeout(() => {
+    toast.value = "";
+  }, 3500);
   treeKey.value += 1;
   select(actualPath);
 }
@@ -463,7 +555,11 @@ function onDeleted(outcome: DeleteOutcome): void {
       <aside class="tree">
         <div class="aside-head">
           <span>{{ t("shell.tree") }}</span>
-          <button type="button" class="tiny" @click="refresh">{{ t("shell.refresh") }}</button>
+          <div class="tree-actions">
+            <button type="button" class="tiny" @click="expandAll">{{ t("shell.expandAll") }}</button>
+            <button type="button" class="tiny" @click="collapseAll">{{ t("shell.collapseAll") }}</button>
+            <button type="button" class="tiny" @click="refresh">{{ t("shell.refresh") }}</button>
+          </div>
         </div>
         <form class="jump" @submit.prevent="jump">
           <input
@@ -482,8 +578,12 @@ function onDeleted(outcome: DeleteOutcome): void {
             path="/"
             :depth="0"
             :selected-path="selectedPath"
+            :expanded-paths="expandedPaths"
             @select="select"
             @dblclick="openEditorAt"
+            @toggle="toggleExpanded"
+            @create="createFromTree"
+            @delete="deleteFromTree"
             @error="dataError = $event"
           />
         </div>
@@ -501,7 +601,7 @@ function onDeleted(outcome: DeleteOutcome): void {
             <h2 class="path">{{ selectedPath }}</h2>
             <div class="toolbar">
               <button type="button" class="tiny" @click="refresh">{{ t("data.refresh") }}</button>
-              <button type="button" class="tiny" @click="createOpen = true">
+              <button type="button" class="tiny" @click="openCreate">
                 {{ t("data.create") }}
               </button>
               <button
@@ -663,14 +763,31 @@ function onDeleted(outcome: DeleteOutcome): void {
           <div><dt>{{ t("shell.ephemeral") }}</dt><dd>{{ stat.ephemeral_owner === 0 ? t("shell.persistent") : stat.ephemeral_owner }}</dd></div>
           <div><dt>{{ t("shell.mtime") }}</dt><dd>{{ toRfc3339(stat.mtime) }}</dd></div>
         </dl>
-        <div class="aside-head timeline-head">{{ t("shell.timeline") }}</div>
-        <ul v-if="timeline.length" class="timeline">
+        <button type="button" class="aside-head section-toggle" @click="historyOpen = !historyOpen">
+          {{ t("shell.commandHistory") }} ({{ history.entries.length }})
+        </button>
+        <ul v-if="historyOpen" class="timeline">
+          <li v-for="(entry, index) in history.entries" :key="`${entry.ts}-${index}`">
+            <button type="button" class="history-line mono" @click="history.setDraft(entry.line)">
+              {{ entry.line }}
+            </button>
+            <span class="muted">{{ entry.ok ? "" : "!" }}</span>
+          </li>
+        </ul>
+        <p v-if="historyOpen && !history.entries.length" class="muted">
+          {{ t("shell.historyEmpty") }}
+        </p>
+
+        <button type="button" class="aside-head section-toggle" @click="timelineOpen = !timelineOpen">
+          {{ t("shell.timeline") }}
+        </button>
+        <ul v-if="timelineOpen && timeline.length" class="timeline">
           <li v-for="entry in timeline" :key="entry.id">
             <span class="mono">{{ entry.op }}</span>
             <span class="muted">{{ toRfc3339(entry.ts) }}</span>
           </li>
         </ul>
-        <p v-else class="muted">{{ t("shell.timelineEmpty") }}</p>
+        <p v-if="timelineOpen && !timeline.length" class="muted">{{ t("shell.timelineEmpty") }}</p>
       </aside>
     </div>
 
@@ -694,7 +811,7 @@ function onDeleted(outcome: DeleteOutcome): void {
       <span class="muted">{{ store.snapshot?.connection_id ?? "" }}</span>
     </footer>
 
-    <p v-if="toast" class="toast">
+    <p v-if="toast" class="toast" role="status">
       {{ toast }}
       <button v-if="retryPath" type="button" class="tiny" @click="retryFailedSubtree">
         {{ t("delete.retryFailed") }}
@@ -727,7 +844,7 @@ function onDeleted(outcome: DeleteOutcome): void {
     <NodeCreateDialog
       :open="createOpen"
       :connection-id="connectionId"
-      :default-path="defaultChildPath"
+      :default-path="createDefaultPath ?? defaultChildPath"
       @close="createOpen = false"
       @created="onCreated"
     />
@@ -884,6 +1001,10 @@ function onDeleted(outcome: DeleteOutcome): void {
   color: inherit;
   font-family: ui-monospace, monospace;
   font-size: 12px;
+}
+.tree-actions {
+  display: flex;
+  gap: 4px;
 }
 .tree-scroll {
   flex: 1;
@@ -1089,8 +1210,32 @@ function onDeleted(outcome: DeleteOutcome): void {
 .mono {
   font-family: ui-monospace, monospace;
 }
-.timeline-head {
+.section-toggle {
   margin-top: 16px;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  color: #9aa4b2;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 4px 0;
+}
+.history-line {
+  border: none;
+  background: transparent;
+  color: #cbd5e1;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+  max-width: 75%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.history-line:hover {
+  color: #fff;
+  text-decoration: underline;
 }
 .timeline {
   margin: 0;
@@ -1153,15 +1298,15 @@ function onDeleted(outcome: DeleteOutcome): void {
 }
 .toast {
   position: fixed;
-  bottom: 40px;
-  left: 50%;
-  transform: translateX(-50%);
+  top: 64px;
+  right: 16px;
+  max-width: 32rem;
+  z-index: 50;
   padding: 8px 14px;
   border-radius: 6px;
   background: #1d242c;
   border: 1px solid #2a323c;
   font-size: 13px;
-  z-index: 50;
 }
 .muted {
   color: #9aa4b2;

@@ -130,6 +130,13 @@ export default {
     history: "历史",
   },
   shell: {
+    commandHistory: "操作历史",
+    historyEmpty: "本次会话还没有执行命令",
+    expandAll: "展开全部",
+    collapseAll: "收起全部",
+    expanded: "已展开 {count} 个节点",
+    newChild: "新建子节点",
+    deleteNode: "删除节点",
     tools: "工具",
     connection: "连接",
     generation: "会话代数",
