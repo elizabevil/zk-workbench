@@ -7,6 +7,7 @@ import { nodeCreate } from "@/api/node";
 import type { AppError } from "@/api/types/AppError";
 import type { NodeCreateMode } from "@/api/types/NodeCreateMode";
 import { encodeUtf8Base64 } from "@/utils/encoding";
+import { normalizePath } from "@/utils/path";
 
 const props = defineProps<{
   open: boolean;
@@ -53,7 +54,7 @@ async function submit(): Promise<void> {
   try {
     const actual = await nodeCreate(
       props.connectionId,
-      path.value,
+      normalizePath(path.value),
       encodeUtf8Base64(data.value),
       mode.value,
       createParents.value,

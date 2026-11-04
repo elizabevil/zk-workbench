@@ -11,12 +11,14 @@ const props = defineProps<{
   name: string;
   path: string;
   depth: number;
+  selectedPath: string | null;
 }>();
 
 const { t } = useI18n();
 const localError = ref(false);
 const emit = defineEmits<{
   select: [path: string];
+  dblclick: [path: string];
   error: [error: AppError];
 }>();
 
@@ -53,11 +55,16 @@ function childPath(name: string): string {
 
 <template>
   <div class="node">
-    <div class="row" :style="{ paddingLeft: `${depth * 14}px` }">
+    <div class="row" :class="{ selected: path === selectedPath }" :style="{ paddingLeft: `${depth * 14}px` }">
       <button class="twist" type="button" @click="toggle">
         {{ expanded ? "▾" : "▸" }}
       </button>
-      <button class="label" type="button" @click="emit('select', path)">
+      <button
+        class="label"
+        type="button"
+        @click="emit('select', path)"
+        @dblclick="emit('dblclick', path)"
+      >
         {{ name }}
       </button>
       <span v-if="loading" class="muted">…</span>
@@ -74,7 +81,9 @@ function childPath(name: string): string {
         :name="child"
         :path="childPath(child)"
         :depth="depth + 1"
+        :selected-path="selectedPath"
         @select="emit('select', $event)"
+        @dblclick="emit('dblclick', $event)"
         @error="emit('error', $event)"
       />
       <div

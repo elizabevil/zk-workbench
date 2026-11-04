@@ -2,7 +2,7 @@
 import hljs from "highlight.js/lib/core";
 import jsonLanguage from "highlight.js/lib/languages/json";
 import yamlLanguage from "highlight.js/lib/languages/yaml";
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 import { isMap, isSeq, parseDocument } from "yaml";
@@ -26,6 +26,8 @@ import TreeNodeItem from "@/components/TreeNodeItem.vue";
 import { useConnectionStore } from "@/stores/connection";
 import { useTabsStore } from "@/stores/tabs";
 import { decodeUtf8Base64, hexPreview } from "@/utils/encoding";
+import { normalizePath } from "@/utils/path";
+import { loadShortcuts, matchesShortcut, type ShortcutMap } from "@/utils/shortcuts";
 import { toRfc3339 } from "@/utils/time";
 
 hljs.registerLanguage("json", jsonLanguage);
@@ -57,6 +59,14 @@ const deleteTarget = ref<string | null>(null);
 const retryPath = ref<string | null>(null);
 const toast = ref("");
 const jumpPath = ref("");
+const jumpInput = ref<HTMLInputElement | null>(null);
+const shortcuts = ref<ShortcutMap>(loadShortcuts());
+const toolsOpen = ref(false);
+const FORMAT_OPTIONS = [
+  { value: "raw" as const, label: t("data.formatRaw") },
+  { value: "json" as const, label: "JSON" },
+  { value: "yaml" as const, label: "YAML" },
+];
 const loadToken = ref(0);
 const timeline = ref<AuditRecord[]>([]);
 
@@ -170,17 +180,25 @@ async function loadStat(path: string): Promise<void> {
   }
 }
 
-function select(path: string): void {
-  selectedPath.value = path;
+async function select(path: string): Promise<void> {
+  const canonical = normalizePath(path);
+  selectedPath.value = canonical;
   activeTab.value = "data";
   format.value = "raw";
   acls.value = null;
   aclError.value = null;
   if (connectionId.value) {
-    tabs.open(connectionId.value, path);
+    tabs.open(connectionId.value, canonical);
   }
-  void loadStat(path);
-  void loadTimeline(path);
+  await loadStat(canonical);
+  void loadTimeline(canonical);
+}
+
+async function openEditorAt(path: string): Promise<void> {
+  await select(path);
+  if (data.value?.is_text && !data.value.truncated) {
+    editorOpen.value = true;
+  }
 }
 
 function closeTab(path: string): void {
@@ -234,13 +252,10 @@ async function copyAddress(): Promise<void> {
 }
 
 function jump(): void {
-  const raw = jumpPath.value.trim();
-  if (!raw) {
+  if (!jumpPath.value.trim()) {
     return;
   }
-  const normalized = raw.startsWith("/") ? raw : `/${raw}`;
-  const path = normalized.length > 1 ? normalized.replace(/\/+$/, "") : "/";
-  select(path);
+  void select(normalizePath(jumpPath.value));
 }
 
 function loadFull(): void {
@@ -286,7 +301,36 @@ onMounted(async () => {
   }
   selectedPath.value = "/";
   void loadStat("/");
+  window.addEventListener("keydown", onKeydown);
 });
+
+onUnmounted(() => window.removeEventListener("keydown", onKeydown));
+
+function onKeydown(event: KeyboardEvent): void {
+  const target = event.target as HTMLElement | null;
+  const typing =
+    target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.tagName === "SELECT";
+  if (typing && !event.ctrlKey && !event.metaKey) {
+    return;
+  }
+  const map = shortcuts.value;
+  if (matchesShortcut(event, map.jump)) {
+    event.preventDefault();
+    jumpInput.value?.focus();
+  } else if (matchesShortcut(event, map.edit) && selectedPath.value) {
+    event.preventDefault();
+    void openEditorAt(selectedPath.value);
+  } else if (matchesShortcut(event, map.create)) {
+    event.preventDefault();
+    createOpen.value = true;
+  } else if (matchesShortcut(event, map.delete) && selectedPath.value) {
+    event.preventDefault();
+    deleteTarget.value = selectedPath.value;
+  } else if (matchesShortcut(event, map.refresh)) {
+    event.preventDefault();
+    refresh();
+  }
+}
 
 function switchTo(snapshot: ConnectionSnapshot): void {
   store.activate(snapshot.connection_id);
@@ -401,15 +445,18 @@ function onDeleted(outcome: DeleteOutcome): void {
       </div>
 
       <div class="spacer" />
-      <button type="button" class="ghost" @click="router.push('/audit')">
-        {{ t("home.audit") }}
-      </button>
-      <button type="button" class="ghost" @click="router.push('/observability')">
-        {{ t("home.observability") }}
-      </button>
-      <button type="button" class="ghost" @click="router.push('/settings')">
-        {{ t("home.settings") }}
-      </button>
+      <div class="tools">
+        <button type="button" class="ghost" @click="toolsOpen = !toolsOpen">
+          {{ t("shell.tools") }} ▾
+        </button>
+        <div v-if="toolsOpen" class="tools-menu">
+          <button type="button" @click="router.push('/audit')">{{ t("home.audit") }}</button>
+          <button type="button" @click="router.push('/observability')">
+            {{ t("home.observability") }}
+          </button>
+          <button type="button" @click="router.push('/settings')">{{ t("home.settings") }}</button>
+        </div>
+      </div>
     </header>
 
     <div class="body">
@@ -419,7 +466,12 @@ function onDeleted(outcome: DeleteOutcome): void {
           <button type="button" class="tiny" @click="refresh">{{ t("shell.refresh") }}</button>
         </div>
         <form class="jump" @submit.prevent="jump">
-          <input v-model="jumpPath" :placeholder="t('shell.jumpPlaceholder')" />
+          <input
+            ref="jumpInput"
+            v-model="jumpPath"
+            :aria-label="t('shell.path')"
+            :placeholder="t('shell.jumpPlaceholder')"
+          />
           <button type="submit" class="tiny">{{ t("shell.go") }}</button>
         </form>
         <div v-if="connectionId" class="tree-scroll">
@@ -429,7 +481,9 @@ function onDeleted(outcome: DeleteOutcome): void {
             name="/"
             path="/"
             :depth="0"
+            :selected-path="selectedPath"
             @select="select"
+            @dblclick="openEditorAt"
             @error="dataError = $event"
           />
         </div>
@@ -535,11 +589,17 @@ function onDeleted(outcome: DeleteOutcome): void {
               <template v-else>
                 <div class="data-toolbar">
                   <span class="muted">{{ t("data.bytes") }}: {{ data.byte_len }}</span>
-                  <select v-model="format" class="format-select">
-                    <option value="raw">{{ t("data.formatRaw") }}</option>
-                    <option value="json">JSON</option>
-                    <option value="yaml">YAML</option>
-                  </select>
+                  <div class="format-group">
+                    <button
+                      v-for="option in FORMAT_OPTIONS"
+                      :key="option.value"
+                      type="button"
+                      :class="{ active: format === option.value }"
+                      @click="format = option.value"
+                    >
+                      {{ option.label }}
+                    </button>
+                  </div>
                   <template v-if="data.truncated">
                     <span class="warn">{{ t("data.truncated") }}</span>
                     <button type="button" class="tiny" @click="loadFull">
@@ -1043,6 +1103,34 @@ function onDeleted(outcome: DeleteOutcome): void {
   justify-content: space-between;
   padding: 3px 0;
   border-bottom: 1px solid rgb(255 255 255 / 5%);
+}
+.tools {
+  position: relative;
+}
+.tools-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  display: flex;
+  flex-direction: column;
+  min-width: 10rem;
+  padding: 4px;
+  border: 1px solid #2a323c;
+  border-radius: 6px;
+  background: #161b22;
+  z-index: 20;
+}
+.tools-menu button {
+  text-align: left;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.tools-menu button:hover {
+  background: rgb(255 255 255 / 8%);
 }
 .statusbar .state {
   display: flex;

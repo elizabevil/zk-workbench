@@ -11,6 +11,14 @@ import type { ProxyProfile } from "@/api/types/ProxyProfile";
 import { LOCALES } from "@/i18n/locale";
 import { NOTIFICATION_LEVELS, PROXY_KINDS } from "@/settings/constants";
 import { useSettingsStore } from "@/stores/settings";
+import {
+  DEFAULT_SHORTCUTS,
+  eventToBinding,
+  loadShortcuts,
+  type ShortcutAction,
+  type ShortcutMap,
+  saveShortcuts,
+} from "@/utils/shortcuts";
 
 const { t } = useI18n();
 const router = useRouter();
@@ -38,6 +46,7 @@ const sections = [
   "retry",
   "task",
   "proxy",
+  "shortcuts",
   "logs",
 ] as const;
 const activeSection = ref<string>("general");
@@ -50,6 +59,22 @@ const passwords = ref<Record<number, string>>({});
 const testTarget = ref("127.0.0.1:2181");
 const testMessage = ref("");
 const dragIndex = ref<number | null>(null);
+const shortcuts = ref<ShortcutMap>(loadShortcuts());
+const SHORTCUT_ACTIONS: ShortcutAction[] = ["edit", "create", "delete", "refresh", "jump"];
+
+function captureShortcut(action: ShortcutAction, event: KeyboardEvent): void {
+  const binding = eventToBinding(event);
+  if (!binding) {
+    return;
+  }
+  shortcuts.value[action] = binding;
+  saveShortcuts(shortcuts.value);
+}
+
+function resetShortcuts(): void {
+  shortcuts.value = { ...DEFAULT_SHORTCUTS };
+  saveShortcuts(shortcuts.value);
+}
 
 onMounted(async () => {
   await store.load();
@@ -305,6 +330,20 @@ function removeProxy(index: number): void {
       </fieldset>
 
       <fieldset>
+        <legend>{{ t("settings.shortcuts.title") }}</legend>
+        <p class="hint">{{ t("settings.shortcuts.hint") }}</p>
+        <div v-for="action in SHORTCUT_ACTIONS" :key="action" class="shortcut-row">
+          <span>{{ t(`settings.shortcuts.${action}`) }}</span>
+          <input
+            :value="shortcuts[action]"
+            readonly
+            @keydown.prevent="captureShortcut(action, $event)"
+          />
+        </div>
+        <button type="button" @click="resetShortcuts">{{ t("settings.shortcuts.reset") }}</button>
+      </fieldset>
+
+      <fieldset>
         <legend>{{ t("settings.logs.title") }}</legend>
         <p class="hint">{{ t("settings.logs.hint") }}</p>
         <label>
@@ -411,6 +450,15 @@ label.inline {
   flex-direction: row;
   align-items: center;
   gap: 8px;
+}
+.shortcut-row {
+  display: grid;
+  grid-template-columns: 40% 1fr;
+  align-items: center;
+  gap: 12px;
+}
+.shortcut-row input {
+  font-family: ui-monospace, monospace;
 }
 .proxy-list {
   display: flex;
