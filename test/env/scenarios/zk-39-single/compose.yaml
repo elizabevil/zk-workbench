@@ -2,14 +2,14 @@ name: zkui-zk-39-single
 
 services:
   zk:
-    image: zookeeper:3.9
+    image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/library/zookeeper:3.9.5
     container_name: zkui-zk-39-single
     ports:
       - "2181:2181"
     environment:
       ZOO_4LW_COMMANDS_WHITELIST: "*"
     healthcheck:
-      test: ["CMD-SHELL", "zkServer.sh status"]
+      test: [ "CMD-SHELL", "zkServer.sh status" ]
       interval: 5s
       timeout: 5s
       retries: 12

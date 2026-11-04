@@ -2,7 +2,7 @@ name: zkui-zk-39-cluster
 
 services:
   zk1:
-    image: zookeeper:3.9
+    image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/library/zookeeper:3.9.5
     container_name: zkui-zk1
     ports:
       - "2211:2181"
@@ -11,13 +11,13 @@ services:
       ZOO_SERVERS: "server.1=zk1:2888:3888;2181 server.2=zk2:2888:3888;2181 server.3=zk3:2888:3888;2181"
       ZOO_4LW_COMMANDS_WHITELIST: "*"
     healthcheck:
-      test: ["CMD-SHELL", "zkServer.sh status"]
+      test: [ "CMD-SHELL", "zkServer.sh status" ]
       interval: 5s
       timeout: 5s
       retries: 20
 
   zk2:
-    image: zookeeper:3.9
+    image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/library/zookeeper:3.9.5
     container_name: zkui-zk2
     ports:
       - "2212:2181"
@@ -26,13 +26,13 @@ services:
       ZOO_SERVERS: "server.1=zk1:2888:3888;2181 server.2=zk2:2888:3888;2181 server.3=zk3:2888:3888;2181"
       ZOO_4LW_COMMANDS_WHITELIST: "*"
     healthcheck:
-      test: ["CMD-SHELL", "zkServer.sh status"]
+      test: [ "CMD-SHELL", "zkServer.sh status" ]
       interval: 5s
       timeout: 5s
       retries: 20
 
   zk3:
-    image: zookeeper:3.9
+    image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/library/zookeeper:3.9.5
     container_name: zkui-zk3
     ports:
       - "2213:2181"
@@ -41,7 +41,7 @@ services:
       ZOO_SERVERS: "server.1=zk1:2888:3888;2181 server.2=zk2:2888:3888;2181 server.3=zk3:2888:3888;2181"
       ZOO_4LW_COMMANDS_WHITELIST: "*"
     healthcheck:
-      test: ["CMD-SHELL", "zkServer.sh status"]
+      test: [ "CMD-SHELL", "zkServer.sh status" ]
       interval: 5s
       timeout: 5s
       retries: 20

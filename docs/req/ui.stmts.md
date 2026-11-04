@@ -101,3 +101,9 @@ REQ-UI-SETTINGS-001   status: accepted   since: 2026-11-02   owner: 产品负责
   标签：#capability #ux
   验证：VER-UI-SETTINGS-001
   来源：CHG-0027
+
+REQ-UI-SHELL-001   status: accepted   since: 2026-11-03   owner: 产品负责人
+  语句：应用启动必须进入连接主页；连接成功后进入工作区，工作区左上角必须显示当前连接，并支持切换连接与断开。
+  标签：#ux #capability
+  验证：VER-UI-SHELL-001
+  来源：CHG-0034

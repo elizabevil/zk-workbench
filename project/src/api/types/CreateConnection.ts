@@ -7,9 +7,13 @@ import type { ProxyProfile } from "./ProxyProfile";
  */
 export type CreateConnection = { 
 /**
- * `host:port` 或逗号分隔的集群列表。
+ * 集群地址的主机部分。
  */
-endpoint: string, 
+host: string, 
+/**
+ * 集群地址的端口部分。
+ */
+port: number, 
 /**
  * 展示用名称。
  */

@@ -28,7 +28,7 @@ DEC-062   status: proposed   updated: 2026-11-02
   影响：`project/Cargo.toml` 变为 workspace 根；迁移现有脚手架代码。
 
 DEC-063   status: accepted   updated: 2026-11-02
-  选择：错误模型以 ZooKeeper 原生错误码为基座（与 Java 客户端 `KeeperException.Code` 一一对应），应用与 IPC 侧使用带前缀的 `kind`：`zk_*`、`app_*`、`ipc_*`，并携带 `scope`、`code`、结构化字段与 `message_key`；原始异常文本只进日志与详情，不作为协议。
+  选择：错误模型以 ZooKeeper 原生错误码为基座（与 Java 客户端 `KeeperException.Code` 一一对应）；`scope` 表示域（`zk` / `app` / `proxy` / `ipc`），`kind` 只表示域内错误类型、不带前缀；`message_key` 由 `error.<scope>.<kind>` 生成，另带 `code` 与结构化字段；原始异常文本只进日志与详情，不作为协议。
   依据：负责人要求尽量遵循 ZK 错误码并加应用区分；前端按 `message_key` 做国际化。
   推翻条件：ZK 客户端库无法稳定暴露原生错误码。
   影响：错误类型定义在 `zkui-core`，前端不解析文案。

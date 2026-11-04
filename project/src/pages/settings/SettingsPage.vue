@@ -3,12 +3,14 @@ import { computed, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 
-import { appPaths } from "../../api/app";
-import { proxyPasswordClear, proxyPasswordSet, proxyTest } from "../../api/proxy";
-import type { AppPaths } from "../../api/types/AppPaths";
-import type { ProxyProfile } from "../../api/types/ProxyProfile";
-import { useSettingsStore } from "../../stores/settings";
-import { LOCALES } from "../../i18n/locale";
+import { appPaths } from "@/api/app";
+import { type InvokeRejection, toAppError } from "@/api/client";
+import { proxyPasswordClear, proxyPasswordSet, proxyTest } from "@/api/proxy";
+import type { AppPaths } from "@/api/types/AppPaths";
+import type { ProxyProfile } from "@/api/types/ProxyProfile";
+import { LOCALES } from "@/i18n/locale";
+import { NOTIFICATION_LEVELS, PROXY_KINDS } from "@/settings/constants";
+import { useSettingsStore } from "@/stores/settings";
 
 const { t } = useI18n();
 const router = useRouter();
@@ -63,13 +65,20 @@ async function clearPassword(profile: ProxyProfile): Promise<void> {
   await proxyPasswordClear(profile.name);
 }
 
+async function resetSettings(): Promise<void> {
+  if (!window.confirm(t("settings.resetConfirm"))) {
+    return;
+  }
+  await store.reset();
+}
+
 async function testProxy(profile: ProxyProfile): Promise<void> {
   try {
     await proxyTest(profile, testTarget.value);
     testMessage.value = t("settings.proxy.testOk");
   } catch (raw) {
-    const error = raw as { message_key?: string };
-    testMessage.value = error.message_key ? t(error.message_key) : String(raw);
+    const error = toAppError(raw as InvokeRejection);
+    testMessage.value = t(error.message_key);
   }
 }
 
@@ -121,14 +130,22 @@ function removeProxy(index: number): void {
       </fieldset>
 
       <fieldset>
+        <legend>{{ t("settings.appearance.title") }}</legend>
+        <label>
+          {{ t("settings.appearance.background") }}
+          <input v-model="store.settings.appearance.background" />
+        </label>
+        <div class="preview" :style="{ background: store.settings.appearance.background }" />
+      </fieldset>
+
+      <fieldset>
         <legend>{{ t("settings.notifications.title") }}</legend>
         <label>
           {{ t("settings.notifications.desktop") }}
           <select v-model="store.settings.notifications.desktop">
-            <option value="off">off</option>
-            <option value="errors">errors</option>
-            <option value="warnings">warnings</option>
-            <option value="all">all</option>
+            <option v-for="level in NOTIFICATION_LEVELS" :key="level" :value="level">
+              {{ level }}
+            </option>
           </select>
         </label>
         <label class="inline">
@@ -182,8 +199,9 @@ function removeProxy(index: number): void {
         <div v-for="(profile, index) in store.settings.proxy.profiles" :key="index" class="proxy-row">
           <input v-model="profile.name" :placeholder="t('settings.proxy.name')" />
           <select v-model="profile.kind">
-            <option value="socks5">SOCKS5</option>
-            <option value="http_connect">HTTP CONNECT</option>
+            <option v-for="kind in PROXY_KINDS" :key="kind" :value="kind">
+              {{ kind }}
+            </option>
           </select>
           <input v-model="profile.host" :placeholder="t('settings.proxy.host')" />
           <input v-model.number="profile.port" :placeholder="t('settings.proxy.port')" type="number" />
@@ -220,6 +238,8 @@ function removeProxy(index: number): void {
           {{ t("settings.audit.retention") }}
           <input v-model.number="store.settings.audit.retention_days" min="1" type="number" />
         </label>
+        <button disabled type="button">{{ t("settings.audit.clear") }}</button>
+        <p class="hint">{{ t("settings.audit.clearHint") }}</p>
       </fieldset>
 
       <fieldset>
@@ -254,7 +274,7 @@ function removeProxy(index: number): void {
 
       <div class="actions">
         <button :disabled="store.saving" type="submit">{{ t("settings.save") }}</button>
-        <button type="button" @click="store.reset()">{{ t("settings.reset") }}</button>
+        <button type="button" @click="resetSettings">{{ t("settings.resetConfig") }}</button>
       </div>
     </form>
   </section>
@@ -313,6 +333,11 @@ label.inline {
 .actions {
   display: flex;
   gap: 12px;
+}
+.preview {
+  height: 48px;
+  border: 1px solid #2a323c;
+  border-radius: 6px;
 }
 .hint {
   color: #9aa4b2;

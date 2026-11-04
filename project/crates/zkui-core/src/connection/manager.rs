@@ -17,6 +17,8 @@ use crate::transport::{RelayHandle, no_proxy, proxy::ProxyProfile, relay};
 struct Entry {
     handle: Arc<ConnectionHandle>,
     display_name: String,
+    host: String,
+    port: u16,
     _relay: Option<RelayHandle>,
 }
 
@@ -64,13 +66,17 @@ impl ConnectionManager {
 
     /// 建立连接并启动状态监听任务。
     pub async fn create(&self, request: CreateConnection) -> AppResult<ConnectionSnapshot> {
-        if request.endpoint.trim().is_empty() {
+        if request.host.trim().is_empty() {
+            return Err(Box::new(app::invalid_argument("host must not be empty")));
+        }
+        if request.port == 0 {
             return Err(Box::new(app::invalid_argument(
-                "endpoint must not be empty",
+                "port must be greater than 0",
             )));
         }
+        let endpoint = format!("{}:{}", request.host.trim(), request.port);
         let settings = self.settings_snapshot();
-        let proxies = resolve_proxies(&request, &settings);
+        let proxies = resolve_proxies(&request.host, request.proxy.as_ref(), &settings);
         let attempts = if settings.retry.auto_reconnect {
             settings.retry.max_attempts.max(1)
         } else {
@@ -81,7 +87,7 @@ impl ConnectionManager {
         let mut established: Option<(Client, Option<RelayHandle>)> = None;
         'attempts: for attempt in 0..attempts {
             for proxy in &proxies {
-                match self.try_connect(&request.endpoint, proxy.as_ref()).await {
+                match self.try_connect(&endpoint, proxy.as_ref()).await {
                     Ok(pair) => {
                         established = Some(pair);
                         break 'attempts;
@@ -115,7 +121,9 @@ impl ConnectionManager {
 
         let snapshot = ConnectionSnapshot {
             connection_id: id.clone(),
-            display_name: request.display_name,
+            display_name: request.display_name.clone(),
+            host: request.host.clone(),
+            port: request.port,
             state: handle.state(),
             generation: handle.generation(),
             identity: handle.identity(),
@@ -130,6 +138,8 @@ impl ConnectionManager {
                 Entry {
                     handle,
                     display_name: snapshot.display_name.clone(),
+                    host: request.host.clone(),
+                    port: request.port,
                     _relay: relay,
                 },
             );
@@ -188,11 +198,33 @@ impl ConnectionManager {
         Ok(ConnectionSnapshot {
             connection_id: entry.handle.id().to_string(),
             display_name: entry.display_name.clone(),
+            host: entry.host.clone(),
+            port: entry.port,
             state: entry.handle.state(),
             generation: entry.handle.generation(),
             identity: entry.handle.identity(),
             session_timeout_ms: entry.handle.session_timeout().as_millis() as u64,
         })
+    }
+
+    /// 列出全部连接快照，按连接 id 排序。
+    pub fn list(&self) -> Vec<ConnectionSnapshot> {
+        let entries = self.entries.read().expect("connections lock poisoned");
+        let mut snapshots: Vec<ConnectionSnapshot> = entries
+            .values()
+            .map(|entry| ConnectionSnapshot {
+                connection_id: entry.handle.id().to_string(),
+                display_name: entry.display_name.clone(),
+                host: entry.host.clone(),
+                port: entry.port,
+                state: entry.handle.state(),
+                generation: entry.handle.generation(),
+                identity: entry.handle.identity(),
+                session_timeout_ms: entry.handle.session_timeout().as_millis() as u64,
+            })
+            .collect();
+        snapshots.sort_by(|a, b| a.connection_id.cmp(&b.connection_id));
+        snapshots
     }
 
     /// 校验请求携带的 generation 是否仍是最新。
@@ -263,15 +295,18 @@ fn map_session_state(state: SessionState) -> ConnectionState {
     }
 }
 
-fn resolve_proxies(request: &CreateConnection, settings: &Settings) -> Vec<Option<ProxyProfile>> {
-    if let Some(profile) = &request.proxy {
+fn resolve_proxies(
+    host: &str,
+    override_proxy: Option<&ProxyProfile>,
+    settings: &Settings,
+) -> Vec<Option<ProxyProfile>> {
+    if let Some(profile) = override_proxy {
         return vec![Some(profile.clone())];
     }
     if !settings.proxy.enabled {
         return vec![None];
     }
-    let host = first_host(&request.endpoint);
-    if no_proxy::matches(&host, &settings.proxy.no_proxy) {
+    if no_proxy::matches(host, &settings.proxy.no_proxy) {
         return vec![None];
     }
     if settings.proxy.profiles.is_empty() {
@@ -284,14 +319,4 @@ fn resolve_proxies(request: &CreateConnection, settings: &Settings) -> Vec<Optio
         .iter()
         .map(|profile| Some(profile.clone()))
         .collect()
-}
-
-fn first_host(endpoint: &str) -> String {
-    endpoint
-        .split(',')
-        .next()
-        .unwrap_or(endpoint)
-        .rsplit_once(':')
-        .map(|(host, _)| host.to_string())
-        .unwrap_or_else(|| endpoint.to_string())
 }

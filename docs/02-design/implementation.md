@@ -125,7 +125,7 @@ src/
 ### 5.4 数据与错误
 
 - 节点数据：`data_b64` + `is_text` + `byte_len`；文本视图由前端按 `is_text` 解码，原始字节始终保留。
-- 错误：`{ kind, code, scope, message_key, fields }`；`kind` 用 `zk_*` / `app_*` / `ipc_*` 前缀，`message_key` 由前端 i18n 渲染（`DEC-063`）。
+- 错误：`{ kind, code, scope, message_key, fields }`；`scope` 表示域（`zk` / `app` / `proxy` / `ipc`），`kind` 为域内类型，`message_key` 固定为 `error.<scope>.<kind>`，由前端 i18n 渲染（`DEC-063`）。
 - generation：依赖旧缓存状态的请求必须携带，服务端不匹配即拒绝（`REQ-CONN-GEN-001`）。
 
 ## 6. 文件拆分阈值

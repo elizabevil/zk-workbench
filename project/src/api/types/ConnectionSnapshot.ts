@@ -5,4 +5,4 @@ import type { Identity } from "./Identity";
 /**
  * 连接快照。
  */
-export type ConnectionSnapshot = { connection_id: string, display_name: string, state: ConnectionState, generation: number, identity: Identity | null, session_timeout_ms: number, };
+export type ConnectionSnapshot = { connection_id: string, display_name: string, host: string, port: number, state: ConnectionState, generation: number, identity: Identity | null, session_timeout_ms: number, };

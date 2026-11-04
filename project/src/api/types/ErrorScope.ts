@@ -3,4 +3,4 @@
 /**
  * 错误来源范围。
  */
-export type ErrorScope = "zk" | "app" | "ipc";
+export type ErrorScope = "zk" | "app" | "proxy" | "ipc";

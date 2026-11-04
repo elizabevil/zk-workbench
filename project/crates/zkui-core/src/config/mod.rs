@@ -7,7 +7,7 @@ pub mod store;
 
 pub use locale::Locale;
 pub use settings::{
-    AuditSettings, GeneralSettings, LogSettings, NotificationSettings, ObservabilitySettings,
-    OtelSettings, ProxySettings, RetrySettings, Settings, TaskSettings,
+    AppearanceSettings, AuditSettings, GeneralSettings, LogSettings, NotificationSettings,
+    ObservabilitySettings, OtelSettings, ProxySettings, RetrySettings, Settings, TaskSettings,
 };
 pub use store::SettingsStore;

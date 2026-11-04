@@ -10,7 +10,7 @@ use crate::transport::ProxyProfile;
 /// 全部应用设置。
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, TS)]
 #[serde(default)]
-#[ts(export, export_to = "../../../src/api/types/")]
+#[ts(export)]
 pub struct Settings {
     pub general: GeneralSettings,
     pub notifications: NotificationSettings,
@@ -20,11 +20,12 @@ pub struct Settings {
     pub audit: AuditSettings,
     pub observability: ObservabilitySettings,
     pub logs: LogSettings,
+    pub appearance: AppearanceSettings,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(default)]
-#[ts(export, export_to = "../../../src/api/types/")]
+#[ts(export)]
 pub struct GeneralSettings {
     pub locale: Locale,
     pub theme: String,
@@ -43,7 +44,7 @@ impl Default for GeneralSettings {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(default)]
-#[ts(export, export_to = "../../../src/api/types/")]
+#[ts(export)]
 pub struct NotificationSettings {
     /// off | errors | warnings | all
     pub desktop: String,
@@ -63,7 +64,7 @@ impl Default for NotificationSettings {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(default)]
-#[ts(export, export_to = "../../../src/api/types/")]
+#[ts(export)]
 pub struct RetrySettings {
     pub auto_reconnect: bool,
     pub max_attempts: u32,
@@ -94,14 +95,14 @@ impl RetrySettings {
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, TS)]
 #[serde(default)]
-#[ts(export, export_to = "../../../src/api/types/")]
+#[ts(export)]
 pub struct TaskSettings {
     pub continue_on_error: bool,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, TS)]
 #[serde(default)]
-#[ts(export, export_to = "../../../src/api/types/")]
+#[ts(export)]
 pub struct ProxySettings {
     pub enabled: bool,
     pub no_proxy: Vec<String>,
@@ -109,16 +110,32 @@ pub struct ProxySettings {
     pub profiles: Vec<ProxyProfile>,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(default)]
+#[ts(export)]
+pub struct AppearanceSettings {
+    /// 页面背景，接受任意 CSS background 值。
+    pub background: String,
+}
+
+impl Default for AppearanceSettings {
+    fn default() -> Self {
+        Self {
+            background: "linear-gradient(135deg, #7c3aed, #2563eb)".to_string(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, TS)]
 #[serde(default)]
-#[ts(export, export_to = "../../../src/api/types/")]
+#[ts(export)]
 pub struct ObservabilitySettings {
     pub otel: OtelSettings,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(default)]
-#[ts(export, export_to = "../../../src/api/types/")]
+#[ts(export)]
 pub struct OtelSettings {
     pub enabled: bool,
     pub endpoint: String,
@@ -140,7 +157,7 @@ impl Default for OtelSettings {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(default)]
-#[ts(export, export_to = "../../../src/api/types/")]
+#[ts(export)]
 pub struct LogSettings {
     pub level: String,
 }
@@ -155,7 +172,7 @@ impl Default for LogSettings {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(default)]
-#[ts(export, export_to = "../../../src/api/types/")]
+#[ts(export)]
 pub struct AuditSettings {
     pub retention_days: u32,
 }

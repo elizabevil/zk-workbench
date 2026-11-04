@@ -6,11 +6,7 @@ use ts_rs::TS;
 /// 连接状态，至少覆盖创建中、连接中、已连接、断开或重连中、会话过期、关闭。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
 #[serde(rename_all = "snake_case")]
-#[ts(
-    rename_all = "snake_case",
-    export,
-    export_to = "../../../src/api/types/"
-)]
+#[ts(rename_all = "snake_case", export)]
 pub enum ConnectionState {
     Creating,
     Connecting,

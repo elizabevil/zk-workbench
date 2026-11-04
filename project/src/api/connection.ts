@@ -12,6 +12,10 @@ export function connectionSnapshot(connectionId: string): Promise<ConnectionSnap
   return call<ConnectionSnapshot>("connection_snapshot", { connectionId });
 }
 
+export function connectionList(): Promise<ConnectionSnapshot[]> {
+  return call<ConnectionSnapshot[]>("connection_list");
+}
+
 export function connectionClose(connectionId: string): Promise<void> {
   return call<void>("connection_close", { connectionId });
 }

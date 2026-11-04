@@ -4,7 +4,7 @@ use super::{AppError, ErrorFields, ErrorKind, ErrorScope};
 
 pub fn invalid_path(path: &str) -> AppError {
     AppError::new(
-        ErrorKind::AppInvalidPath,
+        ErrorKind::InvalidPath,
         ErrorScope::App,
         2001,
         ErrorFields {
@@ -16,7 +16,7 @@ pub fn invalid_path(path: &str) -> AppError {
 
 pub fn not_found(connection_id: &str) -> AppError {
     AppError::new(
-        ErrorKind::AppNotFound,
+        ErrorKind::NotFound,
         ErrorScope::App,
         2002,
         ErrorFields {
@@ -28,7 +28,7 @@ pub fn not_found(connection_id: &str) -> AppError {
 
 pub fn closed(connection_id: &str) -> AppError {
     AppError::new(
-        ErrorKind::AppClosed,
+        ErrorKind::Closed,
         ErrorScope::App,
         2003,
         ErrorFields {
@@ -40,7 +40,7 @@ pub fn closed(connection_id: &str) -> AppError {
 
 pub fn invalid_argument(detail: &str) -> AppError {
     AppError::new(
-        ErrorKind::IpcInvalidArgument,
+        ErrorKind::InvalidArgument,
         ErrorScope::Ipc,
         3001,
         ErrorFields {
@@ -52,7 +52,7 @@ pub fn invalid_argument(detail: &str) -> AppError {
 
 pub fn stale_generation(connection_id: &str, expected: u64, actual: u64) -> AppError {
     AppError::new(
-        ErrorKind::IpcStaleGeneration,
+        ErrorKind::StaleGeneration,
         ErrorScope::Ipc,
         3002,
         ErrorFields {
@@ -67,14 +67,14 @@ pub fn stale_generation(connection_id: &str, expected: u64, actual: u64) -> AppE
 /// 代理阶段失败。`stage` 取值：connect / handshake / relay。
 pub fn proxy_failed(stage: &str, detail: &str) -> AppError {
     let kind = if stage == "handshake" {
-        ErrorKind::ProxyHandshake
+        ErrorKind::Handshake
     } else {
-        ErrorKind::ProxyConnect
+        ErrorKind::Connect
     };
-    let code = if stage == "handshake" { 2005 } else { 2004 };
+    let code = if stage == "handshake" { 4002 } else { 4001 };
     AppError::new(
         kind,
-        ErrorScope::App,
+        ErrorScope::Proxy,
         code,
         ErrorFields {
             detail: Some(format!("{stage}: {detail}")),
@@ -86,7 +86,7 @@ pub fn proxy_failed(stage: &str, detail: &str) -> AppError {
 /// 系统凭据存储不可用。
 pub fn secret_store_failed(detail: &str) -> AppError {
     AppError::new(
-        ErrorKind::AppSecretStore,
+        ErrorKind::SecretStore,
         ErrorScope::App,
         2006,
         ErrorFields {

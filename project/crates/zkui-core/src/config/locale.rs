@@ -5,7 +5,7 @@ use ts_rs::TS;
 
 /// 支持的语言。序列化值与 BCP 47 一致，前端直接使用。
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../../../src/api/types/")]
+#[ts(export)]
 pub enum Locale {
     #[default]
     #[serde(rename = "zh-CN")]

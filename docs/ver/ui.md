@@ -88,3 +88,8 @@ VER-UI-SETTINGS-001   status: pending
   对应：REQ-UI-SETTINGS-001
   步骤：打开设置页逐项检查九个分区；修改若干项后恢复默认并确认生效。
   结果：未执行
+
+VER-UI-SHELL-001   status: pending
+  对应：REQ-UI-SHELL-001
+  步骤：启动应用确认进入主页；新建连接成功后确认进入工作区；检查左上角连接信息、切换与断开。
+  结果：未执行

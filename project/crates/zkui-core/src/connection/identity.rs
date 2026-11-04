@@ -5,7 +5,7 @@ use ts_rs::TS;
 
 /// 当前连接实际使用的认证身份。只保留展示信息，不包含凭据。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../../../src/api/types/")]
+#[ts(export)]
 pub struct Identity {
     /// 认证 scheme，例如 `digest`。
     pub scheme: String,

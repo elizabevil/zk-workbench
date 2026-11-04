@@ -6,11 +6,7 @@ use ts_rs::TS;
 /// 代理协议。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
-#[ts(
-    rename_all = "snake_case",
-    export,
-    export_to = "../../../src/api/types/"
-)]
+#[ts(rename_all = "snake_case", export)]
 pub enum ProxyKind {
     Socks5,
     HttpConnect,
@@ -18,7 +14,7 @@ pub enum ProxyKind {
 
 /// 单条代理档案。`password` 只存在于内存，持久化时写入系统凭据存储。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../../../src/api/types/")]
+#[ts(export)]
 pub struct ProxyProfile {
     pub name: String,
     pub kind: ProxyKind,

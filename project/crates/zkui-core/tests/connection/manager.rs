@@ -8,8 +8,13 @@ fn endpoint() -> String {
 }
 
 fn request() -> CreateConnection {
+    let endpoint = endpoint();
+    let (host, port) = endpoint
+        .rsplit_once(':')
+        .expect("endpoint must be host:port");
     CreateConnection {
-        endpoint: endpoint(),
+        host: host.to_string(),
+        port: port.parse().expect("port must be numeric"),
         display_name: "spike".to_string(),
         identity: None,
         proxy: None,
@@ -63,9 +68,9 @@ async fn create_snapshot_and_close() {
 async fn empty_endpoint_is_rejected() {
     let manager = ConnectionManager::new();
     let mut request = request();
-    request.endpoint = "  ".to_string();
+    request.host = "  ".to_string();
     let error = manager.create(request).await.expect_err("空地址应失败");
-    assert_eq!(error.kind, zkui_core::error::ErrorKind::IpcInvalidArgument);
+    assert_eq!(error.kind, zkui_core::error::ErrorKind::InvalidArgument);
 }
 
 #[tokio::test]
