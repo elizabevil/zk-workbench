@@ -60,6 +60,7 @@ pub fn message_key_for(kind: ErrorKind) -> &'static str {
         ErrorKind::AppClosed => "error.app.closed",
         ErrorKind::ProxyConnect => "error.proxy.connect",
         ErrorKind::ProxyHandshake => "error.proxy.handshake",
+        ErrorKind::AppSecretStore => "error.app.secret_store",
         ErrorKind::IpcInvalidArgument => "error.ipc.invalid_argument",
         ErrorKind::IpcStaleGeneration => "error.ipc.stale_generation",
     }

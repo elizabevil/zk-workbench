@@ -1,5 +1,61 @@
 export default {
   app: { title: "ZK UI" },
+  settings: {
+    title: "Settings",
+    open: "Settings",
+    back: "Back",
+    loading: "Loading…",
+    save: "Save",
+    reset: "Reset to defaults",
+    general: {
+      title: "General",
+      locale: "Language",
+      theme: "Theme",
+      restore: "Restore last connection on start",
+    },
+    notifications: {
+      title: "Notifications",
+      desktop: "Desktop notifications",
+      commandFinished: "Command finished",
+      sound: "Sound",
+    },
+    retry: {
+      title: "Retry",
+      autoReconnect: "Auto reconnect",
+      maxAttempts: "Max attempts",
+      initial: "Initial interval (ms)",
+      max: "Max interval (ms)",
+    },
+    task: { title: "Task", continueOnError: "Continue on error (skip failed items)" },
+    proxy: {
+      title: "Proxy",
+      enabled: "Enable proxy",
+      noProxy: "Bypass list (one per line)",
+      name: "Name",
+      host: "Host",
+      port: "Port",
+      username: "Username",
+      password: "Password",
+      setPassword: "Set password",
+      clearPassword: "Clear",
+      test: "Test",
+      testTarget: "Test target",
+      testOk: "Proxy connection succeeded",
+
+      add: "Add proxy",
+      remove: "Remove",
+    },
+    audit: { title: "Audit", retention: "Retention days" },
+    observability: {
+      title: "Observability",
+      hint: "Off by default; when enabled, data is sent to the endpoint above.",
+    },
+    logs: {
+      title: "Logs",
+      hint: "Logs go to a same-named folder under the user's Documents directory.",
+    },
+  },
+
   workbench: {
     title: "Connection",
     endpoint: "Cluster endpoint",
@@ -48,6 +104,7 @@ export default {
       invalid_path: "Invalid path",
       not_found: "Connection not found",
       closed: "Connection closed",
+      secret_store: "System credential store unavailable",
     },
     ipc: {
       invalid_argument: "Invalid argument",

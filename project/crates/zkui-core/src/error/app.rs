@@ -82,3 +82,16 @@ pub fn proxy_failed(stage: &str, detail: &str) -> AppError {
         },
     )
 }
+
+/// 系统凭据存储不可用。
+pub fn secret_store_failed(detail: &str) -> AppError {
+    AppError::new(
+        ErrorKind::AppSecretStore,
+        ErrorScope::App,
+        2006,
+        ErrorFields {
+            detail: Some(detail.to_string()),
+            ..Default::default()
+        },
+    )
+}

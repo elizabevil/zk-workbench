@@ -15,6 +15,14 @@ pub fn run() {
             commands::connection::connection_create,
             commands::connection::connection_snapshot,
             commands::connection::connection_close,
+            commands::settings::settings_get,
+            commands::settings::settings_save,
+            commands::settings::settings_reset,
+            commands::proxy::proxy_test,
+            commands::proxy::proxy_password_set,
+            commands::proxy::proxy_password_clear,
+            commands::proxy::proxy_password_has,
+            commands::proxy::app_paths,
         ])
         .setup(|app| {
             events::spawn_forwarder(app.handle().clone());

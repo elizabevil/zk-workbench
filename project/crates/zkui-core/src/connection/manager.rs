@@ -9,9 +9,10 @@ use zookeeper_client::{Client, SessionState};
 
 use super::handle::ConnectionHandle;
 use super::state::ConnectionState;
-use crate::error::{AppResult, app};
+use crate::config::{Settings, SettingsStore};
+use crate::error::{AppError, AppResult, app};
 use crate::ipc::connection::{ConnectionSnapshot, ConnectionStateEvent, CreateConnection};
-use crate::transport::{RelayHandle, relay};
+use crate::transport::{RelayHandle, no_proxy, proxy::ProxyProfile, relay};
 
 struct Entry {
     handle: Arc<ConnectionHandle>,
@@ -21,6 +22,7 @@ struct Entry {
 
 /// 连接管理器。同一管理器下的连接互相隔离。
 pub struct ConnectionManager {
+    settings: Option<std::sync::Arc<SettingsStore>>,
     entries: RwLock<HashMap<String, Entry>>,
     events: broadcast::Sender<ConnectionStateEvent>,
     next_id: AtomicU64,
@@ -34,12 +36,25 @@ impl Default for ConnectionManager {
 
 impl ConnectionManager {
     pub fn new() -> Self {
+        Self::with_settings(None)
+    }
+
+    /// 使用共享设置存储；传 None 时使用默认设置。
+    pub fn with_settings(settings: Option<std::sync::Arc<SettingsStore>>) -> Self {
         let (events, _) = broadcast::channel(256);
         Self {
+            settings,
             entries: RwLock::new(HashMap::new()),
             events,
             next_id: AtomicU64::new(1),
         }
+    }
+
+    fn settings_snapshot(&self) -> Settings {
+        self.settings
+            .as_ref()
+            .map(|store| store.snapshot())
+            .unwrap_or_default()
     }
 
     /// 订阅连接状态事件。
@@ -52,15 +67,39 @@ impl ConnectionManager {
         if request.endpoint.trim().is_empty() {
             return Err(Box::new(app::invalid_argument("endpoint 不能为空")));
         }
-        let (connect_endpoint, relay) = match request.proxy.clone() {
-            Some(profile) => {
-                let relay = relay::start(request.endpoint.clone(), profile).await?;
-                (relay.endpoint(), Some(relay))
-            }
-            None => (request.endpoint.clone(), None),
+        let settings = self.settings_snapshot();
+        let proxies = resolve_proxies(&request, &settings);
+        let attempts = if settings.retry.auto_reconnect {
+            settings.retry.max_attempts.max(1)
+        } else {
+            1
         };
 
-        let client = self.connect_with_retry(&connect_endpoint).await?;
+        let mut last_error: Option<Box<AppError>> = None;
+        let mut established: Option<(Client, Option<RelayHandle>)> = None;
+        'attempts: for attempt in 0..attempts {
+            for proxy in &proxies {
+                match self.try_connect(&request.endpoint, proxy.as_ref()).await {
+                    Ok(pair) => {
+                        established = Some(pair);
+                        break 'attempts;
+                    }
+                    Err(error) => last_error = Some(error),
+                }
+            }
+            if attempt + 1 < attempts {
+                let delay = settings.retry.delay_for(attempt);
+                tracing::warn!(
+                    attempt = attempt + 1,
+                    delay_ms = delay,
+                    "连接失败，准备重试"
+                );
+                tokio::time::sleep(std::time::Duration::from_millis(delay)).await;
+            }
+        }
+        let (client, relay) = established.ok_or_else(|| {
+            last_error.unwrap_or_else(|| Box::new(app::invalid_argument("无法建立连接")))
+        })?;
         let id = format!("conn-{}", self.next_id.fetch_add(1, Ordering::SeqCst));
         let handle = Arc::new(ConnectionHandle::new(
             id.clone(),
@@ -94,26 +133,28 @@ impl ConnectionManager {
         Ok(snapshot)
     }
 
-    async fn connect_with_retry(&self, endpoint: &str) -> AppResult<Client> {
-        const DELAYS_MS: [u64; 4] = [3000, 6000, 10000, 10000];
-        let mut last_error = None;
-        for attempt in 0..5 {
-            match Client::connect(endpoint).await {
-                Ok(client) => return Ok(client),
-                Err(error) => {
-                    last_error = Some(error);
-                    if let Some(delay) = DELAYS_MS.get(attempt) {
-                        tracing::warn!(
-                            attempt = attempt + 1,
-                            delay_ms = delay,
-                            "连接失败，准备重试"
-                        );
-                        tokio::time::sleep(std::time::Duration::from_millis(*delay)).await;
-                    }
+    async fn try_connect(
+        &self,
+        endpoint: &str,
+        proxy: Option<&ProxyProfile>,
+    ) -> AppResult<(Client, Option<RelayHandle>)> {
+        match proxy {
+            Some(profile) => {
+                let mut profile = profile.clone();
+                if profile.username.is_some() && profile.password.is_none() {
+                    profile.password = crate::secrets::get_proxy_password(&profile.name)?;
+                }
+                let relay = relay::start(endpoint.to_string(), profile).await?;
+                match Client::connect(&relay.endpoint()).await {
+                    Ok(client) => Ok((client, Some(relay))),
+                    Err(error) => Err(Box::new(error.into())),
                 }
             }
+            None => match Client::connect(endpoint).await {
+                Ok(client) => Ok((client, None)),
+                Err(error) => Err(Box::new(error.into())),
+            },
         }
-        Err(Box::new(last_error.expect("至少尝试一次").into()))
     }
 
     /// 关闭连接并广播关闭事件。
@@ -216,4 +257,37 @@ fn map_session_state(state: SessionState) -> ConnectionState {
         SessionState::Closed => ConnectionState::Closed,
         SessionState::AuthFailed => ConnectionState::Expired,
     }
+}
+
+fn resolve_proxies(request: &CreateConnection, settings: &Settings) -> Vec<Option<ProxyProfile>> {
+    if let Some(profile) = &request.proxy {
+        return vec![Some(profile.clone())];
+    }
+    if !settings.proxy.enabled {
+        return vec![None];
+    }
+    let host = first_host(&request.endpoint);
+    if no_proxy::matches(&host, &settings.proxy.no_proxy) {
+        return vec![None];
+    }
+    if settings.proxy.profiles.is_empty() {
+        return vec![None];
+    }
+    // 代理启用时只尝试配置的档案：全部失败即报错，不静默回退直连。
+    settings
+        .proxy
+        .profiles
+        .iter()
+        .map(|profile| Some(profile.clone()))
+        .collect()
+}
+
+fn first_host(endpoint: &str) -> String {
+    endpoint
+        .split(',')
+        .next()
+        .unwrap_or(endpoint)
+        .rsplit_once(':')
+        .map(|(host, _)| host.to_string())
+        .unwrap_or_else(|| endpoint.to_string())
 }

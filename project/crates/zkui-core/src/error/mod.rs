@@ -54,6 +54,7 @@ pub enum ErrorKind {
     AppClosed,
     ProxyConnect,
     ProxyHandshake,
+    AppSecretStore,
     IpcInvalidArgument,
     IpcStaleGeneration,
 }

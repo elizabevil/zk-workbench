@@ -26,7 +26,9 @@ pub struct ProxyProfile {
     pub port: u16,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub username: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    /// 仅存在于内存；配置文件与 DTO 不包含该字段。
+    #[serde(skip)]
+    #[ts(skip)]
     pub password: Option<String>,
 }
 

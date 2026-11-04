@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
+import { useRouter } from "vue-router";
 
 import { listenConnectionState } from "../../api/events";
 import { useConnectionStore } from "../../stores/connection";
 
 const { t } = useI18n();
+const router = useRouter();
 const store = useConnectionStore();
 
 const endpoint = ref("127.0.0.1:2181");
@@ -33,7 +35,10 @@ async function connect(): Promise<void> {
 
 <template>
   <section class="workbench">
-    <h1>{{ t("app.title") }}</h1>
+    <header class="header">
+      <h1>{{ t("app.title") }}</h1>
+      <button type="button" @click="router.push('/settings')">{{ t("settings.open") }}</button>
+    </header>
 
     <form class="form" @submit.prevent="connect">
       <label>

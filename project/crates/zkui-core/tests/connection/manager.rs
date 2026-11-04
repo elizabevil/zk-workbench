@@ -82,3 +82,80 @@ async fn create_connection_through_socks5() {
     assert_eq!(snapshot.state, ConnectionState::Connected);
     manager.close(&snapshot.connection_id).expect("关闭失败");
 }
+
+fn settings_store(
+    settings: zkui_core::config::Settings,
+) -> (
+    std::sync::Arc<zkui_core::config::SettingsStore>,
+    std::path::PathBuf,
+) {
+    let dir = std::env::temp_dir().join(format!("zkui-test-{}", std::process::id()));
+    let path = dir.join("app.toml");
+    let store = zkui_core::config::SettingsStore::with_path(path.clone());
+    store.save(settings).expect("保存测试设置失败");
+    (std::sync::Arc::new(store), dir)
+}
+
+fn proxy_at(
+    endpoint: &str,
+    kind: zkui_core::transport::ProxyKind,
+) -> zkui_core::transport::ProxyProfile {
+    let (host, port) = endpoint.rsplit_once(':').expect("代理地址必须是 host:port");
+    zkui_core::transport::ProxyProfile {
+        name: format!("{kind:?}"),
+        kind,
+        host: host.to_string(),
+        port: port.parse().expect("代理端口非法"),
+        username: None,
+        password: None,
+    }
+}
+
+#[tokio::test]
+#[ignore = "需要 ZooKeeper 与代理环境"]
+async fn proxy_profiles_fallback_in_order() {
+    let Some(proxy) = std::env::var("ZK_PROXY_ENDPOINT").ok() else {
+        eprintln!("未设置 ZK_PROXY_ENDPOINT，跳过");
+        return;
+    };
+    let mut settings = zkui_core::config::Settings::default();
+    settings.proxy.enabled = true;
+    settings.proxy.profiles = vec![
+        proxy_at("127.0.0.1:1", zkui_core::transport::ProxyKind::Socks5),
+        proxy_at(&proxy, zkui_core::transport::ProxyKind::Socks5),
+    ];
+    let (store, dir) = settings_store(settings);
+    let manager = ConnectionManager::with_settings(Some(store));
+    let snapshot = manager
+        .create(request())
+        .await
+        .expect("应按顺序回退到第二条代理");
+    assert_eq!(snapshot.state, ConnectionState::Connected);
+    manager.close(&snapshot.connection_id).expect("关闭失败");
+    let _ = std::fs::remove_dir_all(dir);
+}
+
+#[tokio::test]
+#[ignore = "需要 ZooKeeper 环境"]
+async fn no_proxy_bypasses_configured_proxy() {
+    let mut settings = zkui_core::config::Settings::default();
+    settings.proxy.enabled = true;
+    settings.proxy.profiles = vec![proxy_at(
+        "127.0.0.1:1",
+        zkui_core::transport::ProxyKind::Socks5,
+    )];
+    let host = endpoint()
+        .rsplit_once(':')
+        .map(|(host, _)| host.to_string())
+        .unwrap();
+    settings.proxy.no_proxy = vec![host];
+    let (store, dir) = settings_store(settings);
+    let manager = ConnectionManager::with_settings(Some(store));
+    let snapshot = manager
+        .create(request())
+        .await
+        .expect("no_proxy 应绕过代理直连");
+    assert_eq!(snapshot.state, ConnectionState::Connected);
+    manager.close(&snapshot.connection_id).expect("关闭失败");
+    let _ = std::fs::remove_dir_all(dir);
+}

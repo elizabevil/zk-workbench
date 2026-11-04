@@ -1,0 +1,322 @@
+<script setup lang="ts">
+import { computed, onMounted, ref } from "vue";
+import { useI18n } from "vue-i18n";
+import { useRouter } from "vue-router";
+
+import { appPaths } from "../../api/app";
+import { proxyPasswordClear, proxyPasswordSet, proxyTest } from "../../api/proxy";
+import type { AppPaths } from "../../api/types/AppPaths";
+import type { ProxyProfile } from "../../api/types/ProxyProfile";
+import { useSettingsStore } from "../../stores/settings";
+
+const { t } = useI18n();
+const router = useRouter();
+const store = useSettingsStore();
+
+const noProxyText = computed({
+  get: () => store.settings?.proxy.no_proxy.join("\n") ?? "",
+  set: (value: string) => {
+    if (!store.settings) {
+      return;
+    }
+    store.settings.proxy.no_proxy = value
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
+  },
+});
+
+const paths = ref<AppPaths | null>(null);
+const passwords = ref<Record<number, string>>({});
+const testTarget = ref("127.0.0.1:2181");
+const testMessage = ref("");
+
+onMounted(async () => {
+  await store.load();
+  paths.value = await appPaths();
+});
+
+function moveProxy(index: number, delta: number): void {
+  const profiles = store.settings?.proxy.profiles;
+  if (!profiles) {
+    return;
+  }
+  const target = index + delta;
+  if (target < 0 || target >= profiles.length) {
+    return;
+  }
+  const [item] = profiles.splice(index, 1);
+  profiles.splice(target, 0, item);
+}
+
+async function setPassword(index: number, profile: ProxyProfile): Promise<void> {
+  const password = passwords.value[index];
+  if (!password) {
+    return;
+  }
+  await proxyPasswordSet(profile.name, password);
+  passwords.value[index] = "";
+}
+
+async function clearPassword(profile: ProxyProfile): Promise<void> {
+  await proxyPasswordClear(profile.name);
+}
+
+async function testProxy(profile: ProxyProfile): Promise<void> {
+  try {
+    await proxyTest(profile, testTarget.value);
+    testMessage.value = t("settings.proxy.testOk");
+  } catch (raw) {
+    const error = raw as { message_key?: string };
+    testMessage.value = error.message_key ? t(error.message_key) : String(raw);
+  }
+}
+
+function addProxy(): void {
+  const profile: ProxyProfile = {
+    name: `proxy-${store.settings?.proxy.profiles.length ?? 0 + 1}`,
+    kind: "socks5",
+    host: "",
+    port: 1080,
+    username: null,
+  };
+  store.settings?.proxy.profiles.push(profile);
+}
+
+function removeProxy(index: number): void {
+  store.settings?.proxy.profiles.splice(index, 1);
+}
+</script>
+
+<template>
+  <section class="settings">
+    <header class="header">
+      <h1>{{ t("settings.title") }}</h1>
+      <button type="button" @click="router.push('/')">{{ t("settings.back") }}</button>
+    </header>
+
+    <p v-if="store.error" class="error">{{ t(store.error.message_key) }}</p>
+    <p v-if="!store.settings">{{ t("settings.loading") }}</p>
+
+    <form v-if="store.settings" class="sections" @submit.prevent="store.save()">
+      <fieldset>
+        <legend>{{ t("settings.general.title") }}</legend>
+        <label>
+          {{ t("settings.general.locale") }}
+          <select v-model="store.settings.general.locale">
+            <option value="zh-CN">中文</option>
+            <option value="en-US">English</option>
+          </select>
+        </label>
+        <label>
+          {{ t("settings.general.theme") }}
+          <input v-model="store.settings.general.theme" />
+        </label>
+        <label class="inline">
+          <input v-model="store.settings.general.restore_last_connection" type="checkbox" />
+          {{ t("settings.general.restore") }}
+        </label>
+      </fieldset>
+
+      <fieldset>
+        <legend>{{ t("settings.notifications.title") }}</legend>
+        <label>
+          {{ t("settings.notifications.desktop") }}
+          <select v-model="store.settings.notifications.desktop">
+            <option value="off">off</option>
+            <option value="errors">errors</option>
+            <option value="warnings">warnings</option>
+            <option value="all">all</option>
+          </select>
+        </label>
+        <label class="inline">
+          <input v-model="store.settings.notifications.command_finished" type="checkbox" />
+          {{ t("settings.notifications.commandFinished") }}
+        </label>
+        <label class="inline">
+          <input v-model="store.settings.notifications.sound" type="checkbox" />
+          {{ t("settings.notifications.sound") }}
+        </label>
+      </fieldset>
+
+      <fieldset>
+        <legend>{{ t("settings.retry.title") }}</legend>
+        <label class="inline">
+          <input v-model="store.settings.retry.auto_reconnect" type="checkbox" />
+          {{ t("settings.retry.autoReconnect") }}
+        </label>
+        <label>
+          {{ t("settings.retry.maxAttempts") }}
+          <input v-model.number="store.settings.retry.max_attempts" min="1" type="number" />
+        </label>
+        <label>
+          {{ t("settings.retry.initial") }}
+          <input v-model.number="store.settings.retry.initial_interval_ms" min="100" type="number" />
+        </label>
+        <label>
+          {{ t("settings.retry.max") }}
+          <input v-model.number="store.settings.retry.max_interval_ms" min="100" type="number" />
+        </label>
+      </fieldset>
+
+      <fieldset>
+        <legend>{{ t("settings.task.title") }}</legend>
+        <label class="inline">
+          <input v-model="store.settings.task.continue_on_error" type="checkbox" />
+          {{ t("settings.task.continueOnError") }}
+        </label>
+      </fieldset>
+
+      <fieldset>
+        <legend>{{ t("settings.proxy.title") }}</legend>
+        <label class="inline">
+          <input v-model="store.settings.proxy.enabled" type="checkbox" />
+          {{ t("settings.proxy.enabled") }}
+        </label>
+        <label>
+          {{ t("settings.proxy.noProxy") }}
+          <textarea v-model="noProxyText" rows="3" />
+        </label>
+        <div v-for="(profile, index) in store.settings.proxy.profiles" :key="index" class="proxy-row">
+          <input v-model="profile.name" :placeholder="t('settings.proxy.name')" />
+          <select v-model="profile.kind">
+            <option value="socks5">SOCKS5</option>
+            <option value="http_connect">HTTP CONNECT</option>
+          </select>
+          <input v-model="profile.host" :placeholder="t('settings.proxy.host')" />
+          <input v-model.number="profile.port" :placeholder="t('settings.proxy.port')" type="number" />
+          <input v-model="profile.username" :placeholder="t('settings.proxy.username')" />
+          <input
+            v-model="passwords[index]"
+            :placeholder="t('settings.proxy.password')"
+            type="password"
+          />
+          <div class="row-actions">
+            <button type="button" @click="moveProxy(index, -1)">↑</button>
+            <button type="button" @click="moveProxy(index, 1)">↓</button>
+            <button type="button" @click="setPassword(index, profile)">
+              {{ t("settings.proxy.setPassword") }}
+            </button>
+            <button type="button" @click="clearPassword(profile)">
+              {{ t("settings.proxy.clearPassword") }}
+            </button>
+            <button type="button" @click="testProxy(profile)">{{ t("settings.proxy.test") }}</button>
+            <button type="button" @click="removeProxy(index)">{{ t("settings.proxy.remove") }}</button>
+          </div>
+        </div>
+        <button type="button" @click="addProxy">{{ t("settings.proxy.add") }}</button>
+        <label>
+          {{ t("settings.proxy.testTarget") }}
+          <input v-model="testTarget" />
+        </label>
+        <p v-if="testMessage" class="hint">{{ testMessage }}</p>
+      </fieldset>
+
+      <fieldset>
+        <legend>{{ t("settings.audit.title") }}</legend>
+        <label>
+          {{ t("settings.audit.retention") }}
+          <input v-model.number="store.settings.audit.retention_days" min="1" type="number" />
+        </label>
+      </fieldset>
+
+      <fieldset>
+        <legend>{{ t("settings.observability.title") }}</legend>
+        <label class="inline">
+          <input v-model="store.settings.observability.otel.enabled" type="checkbox" />
+          {{ t("settings.observability.otlp") }}
+        </label>
+        <label>
+          {{ t("settings.observability.endpoint") }}
+          <input v-model="store.settings.observability.otel.endpoint" />
+        </label>
+        <label>
+          {{ t("settings.observability.sampleRatio") }}
+          <input
+            v-model.number="store.settings.observability.otel.sample_ratio"
+            max="1"
+            min="0"
+            step="0.1"
+            type="number"
+          />
+        </label>
+        <p class="hint">{{ t("settings.observability.hint") }}</p>
+      </fieldset>
+
+      <fieldset>
+        <legend>{{ t("settings.logs.title") }}</legend>
+        <p class="hint">{{ t("settings.logs.hint") }}</p>
+        <p v-if="paths" class="hint">{{ t("settings.logs.config") }}: {{ paths.config_path }}</p>
+        <p v-if="paths" class="hint">{{ t("settings.logs.dir") }}: {{ paths.log_dir }}</p>
+      </fieldset>
+
+      <div class="actions">
+        <button :disabled="store.saving" type="submit">{{ t("settings.save") }}</button>
+        <button type="button" @click="store.reset()">{{ t("settings.reset") }}</button>
+      </div>
+    </form>
+  </section>
+</template>
+
+
+<style scoped>
+.settings {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.sections {
+  display: grid;
+  gap: 16px;
+  max-width: 900px;
+}
+fieldset {
+  border: 1px solid #2a323c;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
+}
+legend {
+  padding: 0 6px;
+}
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+label.inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+.proxy-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 90px 1fr 1fr;
+  align-items: start;
+  gap: 6px;
+}
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.actions {
+  display: flex;
+  gap: 12px;
+}
+.hint {
+  color: #9aa4b2;
+  margin: 0;
+}
+.error {
+  color: #ef4444;
+}
+</style>
