@@ -45,6 +45,13 @@ export default {
   editor: {
     title: "编辑数据",
     versionHint: "读取版本：{version}，保存将使用该版本做 CAS。",
+    find: "查找",
+    replaceWith: "替换为",
+    next: "下一个",
+    replace: "替换",
+    replaceAll: "全部替换",
+    confirmReplaceAll: "替换全部 {count} 处？可用撤销还原。",
+    undo: "撤销替换",
     preview: "预览变更",
     back: "返回编辑",
     confirm: "确认保存",

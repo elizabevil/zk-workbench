@@ -28,6 +28,10 @@ const draft = ref("");
 const showDiff = ref(false);
 const saving = ref(false);
 const error = ref<AppError | null>(null);
+const find = ref("");
+const replaceWith = ref("");
+const editorEl = ref<HTMLTextAreaElement | null>(null);
+const undoSnapshot = ref<string | null>(null);
 
 watch(
   () => props.open,
@@ -42,6 +46,61 @@ watch(
 
 const diff = computed(() => diffLines(props.originalText, draft.value));
 const changed = computed(() => diff.value.some((line) => line.kind !== "same"));
+const matchCount = computed(() => {
+  if (!find.value) {
+    return 0;
+  }
+  return draft.value.split(find.value).length - 1;
+});
+
+function findNext(): void {
+  const element = editorEl.value;
+  if (!element || !find.value) {
+    return;
+  }
+  const start = element.selectionEnd;
+  const index = draft.value.indexOf(find.value, start);
+  const position = index >= 0 ? index : draft.value.indexOf(find.value);
+  if (position < 0) {
+    return;
+  }
+  element.focus();
+  element.setSelectionRange(position, position + find.value.length);
+}
+
+function replaceCurrent(): void {
+  const element = editorEl.value;
+  if (!element || !find.value) {
+    return;
+  }
+  const selected = element.value.slice(element.selectionStart, element.selectionEnd);
+  const start = selected === find.value ? element.selectionStart : element.selectionStart;
+  const index = selected === find.value ? start : draft.value.indexOf(find.value, start);
+  if (index < 0) {
+    return;
+  }
+  draft.value = draft.value.slice(0, index) + replaceWith.value + draft.value.slice(index + find.value.length);
+  findNext();
+}
+
+function replaceAll(): void {
+  if (!find.value) {
+    return;
+  }
+  if (!window.confirm(t("editor.confirmReplaceAll", { count: matchCount.value }))) {
+    return;
+  }
+  undoSnapshot.value = draft.value;
+  draft.value = draft.value.split(find.value).join(replaceWith.value);
+}
+
+function undoReplace(): void {
+  if (undoSnapshot.value === null) {
+    return;
+  }
+  draft.value = undoSnapshot.value;
+  undoSnapshot.value = null;
+}
 
 async function save(): Promise<void> {
   saving.value = true;
@@ -72,7 +131,28 @@ async function save(): Promise<void> {
         </header>
 
         <template v-if="!showDiff">
-          <textarea v-model="draft" class="editor" spellcheck="false" />
+          <div class="find-bar">
+            <input v-model="find" :placeholder="t('editor.find')" @keydown.enter.prevent="findNext" />
+            <button type="button" class="tiny" :disabled="!find" @click="findNext">
+              {{ t("editor.next") }} ({{ matchCount }})
+            </button>
+            <input v-model="replaceWith" :placeholder="t('editor.replaceWith')" />
+            <button type="button" class="tiny" :disabled="!find" @click="replaceCurrent">
+              {{ t("editor.replace") }}
+            </button>
+            <button type="button" class="tiny" :disabled="!find" @click="replaceAll">
+              {{ t("editor.replaceAll") }}
+            </button>
+            <button
+              type="button"
+              class="tiny"
+              :disabled="undoSnapshot === null"
+              @click="undoReplace"
+            >
+              {{ t("editor.undo") }}
+            </button>
+          </div>
+          <textarea ref="editorEl" v-model="draft" class="editor" spellcheck="false" />
           <p class="muted">{{ t("editor.versionHint", { version }) }}</p>
         </template>
 
@@ -158,6 +238,32 @@ h2 {
   color: #9aa4b2;
   font-family: ui-monospace, monospace;
   font-size: 12px;
+}
+.find-bar {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.find-bar input {
+  padding: 5px 8px;
+  border-radius: 5px;
+  border: 1px solid #2a323c;
+  background: #101418;
+  color: inherit;
+  font-size: 12px;
+}
+.tiny {
+  padding: 4px 8px;
+  border-radius: 5px;
+  border: 1px solid #2a323c;
+  background: #1d242c;
+  color: #cbd5e1;
+  cursor: pointer;
+  font-size: 12px;
+}
+.tiny:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 .editor {
   min-height: 300px;

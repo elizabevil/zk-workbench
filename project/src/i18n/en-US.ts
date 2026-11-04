@@ -45,6 +45,13 @@ export default {
   editor: {
     title: "Edit data",
     versionHint: "Read version: {version}; saving uses this version for CAS.",
+    find: "Find",
+    replaceWith: "Replace with",
+    next: "Next",
+    replace: "Replace",
+    replaceAll: "Replace all",
+    confirmReplaceAll: "Replace all {count} occurrences? You can undo.",
+    undo: "Undo replace",
     preview: "Preview changes",
     back: "Back",
     confirm: "Save",
