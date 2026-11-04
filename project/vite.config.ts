@@ -13,6 +13,8 @@ export default defineConfig(() => ({
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
+      // 消息对象在构建期已确定，使用 runtime-only 版本，避免打包模板编译器。
+      "vue-i18n": "vue-i18n/dist/vue-i18n.runtime.esm-bundler.js",
     },
   },
 

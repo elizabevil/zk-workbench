@@ -11,7 +11,7 @@ base64 = "0.23.1"
 dirs = "7.0.0"
 hex = "0.4.3"
 keyring = "4.2.0"
-opentelemetry-proto = { version = "0.33.1", features = ["gen-tonic-messages"] }
+opentelemetry-proto = { version = "0.33.1", default-features = false, features = ["gen-tonic-messages", "metrics"] }
 prost = "0.14.4"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
 rusqlite = { version = "0.41.1", features = ["bundled"] }
