@@ -2,6 +2,7 @@
 
 mod commands;
 mod events;
+mod logging;
 mod otel;
 mod state;
 
@@ -9,6 +10,7 @@ use state::AppState;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    logging::init();
     tauri::Builder::default()
         .manage(AppState::new())
         .invoke_handler(tauri::generate_handler![
