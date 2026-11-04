@@ -35,6 +35,7 @@ const editorOpen = ref(false);
 const createOpen = ref(false);
 const deleteOpen = ref(false);
 const toast = ref("");
+const jumpPath = ref("");
 
 const connectionId = computed(() => store.snapshot?.connection_id ?? "");
 const stat = computed<NodeStat | null>(() => data.value?.stat ?? null);
@@ -82,6 +83,30 @@ function select(path: string): void {
   activeTab.value = "data";
   formatted.value = false;
   void loadData(path);
+}
+
+async function copyAddress(): Promise<void> {
+  if (!store.snapshot) {
+    return;
+  }
+  const address = `${store.snapshot.host}:${store.snapshot.port}`;
+  try {
+    await navigator.clipboard.writeText(address);
+    toast.value = t("shell.copied", { address });
+  } catch {
+    toast.value = t("shell.copyFailed");
+  }
+  menuOpen.value = false;
+}
+
+function jump(): void {
+  const raw = jumpPath.value.trim();
+  if (!raw) {
+    return;
+  }
+  const normalized = raw.startsWith("/") ? raw : `/${raw}`;
+  const path = normalized.length > 1 ? normalized.replace(/\/+$/, "") : "/";
+  select(path);
 }
 
 function refresh(): void {
@@ -194,6 +219,14 @@ function onDeleted(outcome: DeleteOutcome): void {
             <span class="muted">{{ item.host }}:{{ item.port }}</span>
           </button>
           <div class="sep" />
+          <button
+            v-if="store.snapshot"
+            type="button"
+            class="menu-item"
+            @click="copyAddress"
+          >
+            {{ t("shell.copyAddress") }}
+          </button>
           <button type="button" class="menu-item" @click="dialogOpen = true; menuOpen = false">
             {{ t("shell.newConnection") }}
           </button>
@@ -218,6 +251,10 @@ function onDeleted(outcome: DeleteOutcome): void {
           <span>{{ t("shell.tree") }}</span>
           <button type="button" class="tiny" @click="refresh">{{ t("shell.refresh") }}</button>
         </div>
+        <form class="jump" @submit.prevent="jump">
+          <input v-model="jumpPath" :placeholder="t('shell.jumpPlaceholder')" />
+          <button type="submit" class="tiny">{{ t("shell.go") }}</button>
+        </form>
         <div v-if="connectionId" class="tree-scroll">
           <TreeNodeItem
             :key="`${connectionId}-${store.snapshot?.generation ?? 0}-${treeKey}`"
@@ -489,6 +526,22 @@ function onDeleted(outcome: DeleteOutcome): void {
 .tiny.danger {
   color: #f87171;
   border-color: rgb(248 113 113 / 40%);
+}
+.jump {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.jump input {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 7px;
+  border-radius: 5px;
+  border: 1px solid #2a323c;
+  background: #101418;
+  color: inherit;
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
 }
 .tree-scroll {
   flex: 1;
