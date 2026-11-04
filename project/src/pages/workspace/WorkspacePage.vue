@@ -999,7 +999,8 @@ function onDeleted(outcome: DeleteOutcome): void {
   color: #9aa4b2;
 }
 .inspector {
-  width: 260px;
+  flex: 0 0 20%;
+  min-width: 12rem;
   padding: 12px;
   overflow: auto;
   border-left: 1px solid rgb(255 255 255 / 8%);
