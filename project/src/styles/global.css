@@ -27,3 +27,19 @@ body {
   color: #e6e6e6;
   font-family: system-ui, sans-serif;
 }
+
+/* 全局黑色半透明面板，透明度来自外观设置。 */
+.topbar,
+.tree-pane,
+.content,
+.inspector,
+.command,
+.statusbar,
+.settings-nav,
+.settings-form fieldset,
+.home .card,
+.home .empty,
+.profile-card {
+  background: var(--panel-bg) !important;
+  backdrop-filter: blur(2px);
+}

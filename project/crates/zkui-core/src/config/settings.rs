@@ -138,14 +138,42 @@ pub struct ProxySettings {
 #[serde(default)]
 #[ts(export)]
 pub struct AppearanceSettings {
-    /// 页面背景，接受任意 CSS background 值。
-    pub background: String,
+    /// 背景类型：纯色、线性渐变、本地图片。
+    pub mode: BackgroundMode,
+    /// 纯色模式颜色，CSS 颜色值。
+    pub color: String,
+    /// 渐变起始颜色。
+    pub gradient_from: String,
+    /// 渐变结束颜色。
+    pub gradient_to: String,
+    /// 渐变角度（度）。
+    pub gradient_angle: i32,
+    /// 本地背景图片路径。
+    pub image_path: String,
+    /// 面板背景黑色透明度，0-100，默认 50。
+    pub panel_opacity: u8,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+#[ts(rename_all = "snake_case", export)]
+pub enum BackgroundMode {
+    Solid,
+    #[default]
+    Gradient,
+    Image,
 }
 
 impl Default for AppearanceSettings {
     fn default() -> Self {
         Self {
-            background: "linear-gradient(135deg, #7c3aed, #2563eb)".to_string(),
+            mode: BackgroundMode::Gradient,
+            color: "#101418".to_string(),
+            gradient_from: "#7c3aed".to_string(),
+            gradient_to: "#2563eb".to_string(),
+            gradient_angle: 135,
+            image_path: String::new(),
+            panel_opacity: 50,
         }
     }
 }

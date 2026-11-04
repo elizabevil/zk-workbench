@@ -4,6 +4,7 @@ import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 
 import { appPaths } from "@/api/app";
+import { backgroundImageLoad, backgroundImageStore } from "@/api/appearance";
 import { type InvokeRejection, toAppError } from "@/api/client";
 import { proxyPasswordClear, proxyPasswordSet, proxyTest } from "@/api/proxy";
 import type { AppPaths } from "@/api/types/AppPaths";
@@ -71,6 +72,64 @@ const dragIndex = ref<number | null>(null);
 const proxySaved = ref("");
 let autoSaveTimer = 0;
 const shortcutSaved = ref("");
+const previewImage = ref("");
+
+watch(
+  () => [store.settings?.appearance.mode, store.settings?.appearance.image_path] as const,
+  async ([mode, path]) => {
+    if (mode === "image" && path) {
+      try {
+        previewImage.value = await backgroundImageLoad(path);
+      } catch {
+        previewImage.value = "";
+      }
+    } else {
+      previewImage.value = "";
+    }
+  },
+  { immediate: true },
+);
+
+const appearancePreview = computed(() => {
+  const appearance = store.settings?.appearance;
+  if (!appearance) {
+    return {};
+  }
+  if (appearance.mode === "solid") {
+    return { background: appearance.color };
+  }
+  if (appearance.mode === "image" && previewImage.value) {
+    return { background: `url("${previewImage.value}") center / cover` };
+  }
+  return {
+    background: `linear-gradient(${appearance.gradient_angle}deg, ${appearance.gradient_from}, ${appearance.gradient_to})`,
+  };
+});
+
+async function pickBackground(event: Event): Promise<void> {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file || !store.settings) {
+    return;
+  }
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+  const base64 = dataUrl.slice(dataUrl.indexOf(",") + 1);
+  const extension = file.name.split(".").pop()?.toLowerCase() ?? "png";
+  const path = await backgroundImageStore(base64, extension);
+  store.settings.appearance.image_path = path;
+  store.settings.appearance.mode = "image";
+}
+
+function clearBackground(): void {
+  if (store.settings) {
+    store.settings.appearance.image_path = "";
+  }
+}
 const autoSaved = ref("");
 let lastProxyJson = "";
 let settingsLoaded = false;
@@ -290,10 +349,44 @@ function removeProxy(index: number): void {
       <fieldset>
         <legend>{{ t("settings.appearance.title") }}</legend>
         <label>
-          {{ t("settings.appearance.background") }}
-          <input v-model="store.settings.appearance.background" />
+          {{ t("settings.appearance.mode") }}
+          <select v-model="store.settings.appearance.mode">
+            <option value="solid">{{ t("settings.appearance.solid") }}</option>
+            <option value="gradient">{{ t("settings.appearance.gradient") }}</option>
+            <option value="image">{{ t("settings.appearance.image") }}</option>
+          </select>
         </label>
-        <div class="preview" :style="{ background: store.settings.appearance.background }" />
+        <label v-if="store.settings.appearance.mode === 'solid'">
+          {{ t("settings.appearance.color") }}
+          <input v-model="store.settings.appearance.color" type="color" />
+        </label>
+        <template v-if="store.settings.appearance.mode === 'gradient'">
+          <label>
+            {{ t("settings.appearance.from") }}
+            <input v-model="store.settings.appearance.gradient_from" type="color" />
+          </label>
+          <label>
+            {{ t("settings.appearance.to") }}
+            <input v-model="store.settings.appearance.gradient_to" type="color" />
+          </label>
+          <label>
+            {{ t("settings.appearance.angle") }}
+            <input v-model.number="store.settings.appearance.gradient_angle" max="360" min="0" type="number" />
+          </label>
+        </template>
+        <template v-if="store.settings.appearance.mode === 'image'">
+          <label>
+            {{ t("settings.appearance.imageFile") }}
+            <input accept="image/png,image/jpeg,image/webp,image/gif" type="file" @change="pickBackground" />
+          </label>
+          <p class="hint">{{ store.settings.appearance.image_path || t("settings.appearance.noImage") }}</p>
+          <button type="button" @click="clearBackground">{{ t("settings.appearance.clearImage") }}</button>
+        </template>
+        <label>
+          {{ t("settings.appearance.panelOpacity") }}
+          <input v-model.number="store.settings.appearance.panel_opacity" max="100" min="0" type="range" />
+        </label>
+        <div class="preview" :style="appearancePreview" />
       </fieldset>
 
       <fieldset>

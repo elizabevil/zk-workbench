@@ -31,6 +31,8 @@ pub fn run() {
             commands::connection::connection_snapshot,
             commands::connection::connection_close,
             commands::app::app_info,
+            commands::appearance::background_image_store,
+            commands::appearance::background_image_load,
             commands::connection::connection_list,
             commands::metrics::metrics_snapshot,
             commands::audit::audit_list,
