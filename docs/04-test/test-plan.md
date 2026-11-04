@@ -1,4 +1,34 @@
+---
+doc_id: TEST-PLAN
+title: 技术验证与测试计划
+status: active
+owner: 产品负责人
+version: 0.1
+last-updated: 2026-11-02
+---
+
 # 技术验证与测试计划
+
+> 用例与实测结果记录在 `ver/` 的各域文件（`ver/node.md`、`ver/conn.md`、`ver/data.md`、`ver/ui.md`、`ver/cli.md`、`ver/auth.md`、`ver/ops.md`）。本文件只保留待回答的验证问题与故障场景，不记录执行结果。
+
+## 测试环境
+
+环境编排在 `test/env/`，只负责启动与销毁，不执行用例；说明见 `test/env/README.md`。
+
+```bash
+just --justfile test/env/justfile list
+just --justfile test/env/justfile up zk-39-single
+just --justfile test/env/justfile down zk-39-single
+```
+
+| 场景 | 镜像 | 端口 | 用途 |
+|---|---|---|---|
+| `zk-39-single` | zookeeper:3.9 | 2181 | 首版主环境 |
+| `zk-35-single` | zookeeper:3.5 | 2182 | 3.5 兼容性 |
+| `zk-34-single` | zookeeper:3.4.14 | 2183 | 最低版本 3.4 |
+| `zk-39-cluster` | zookeeper:3.9 ×3 | 2211/2212/2213 | 集群与会话重建 |
+
+运行时按 `docker compose` → `podman compose` → `podman-compose` 顺序探测；`down` 使用 `-v` 清理数据卷。
 
 本文件定义当前阶段需回答的可行性问题。结果必须记录实际依赖版本、环境、步骤、观察结果和结论；计划本身不是通过证据。
 
@@ -30,3 +60,8 @@ Windows、macOS、Linux 分别验证虚拟滚动树、编辑器、大节点预�
 - 两个客户端并发修改同一节点，验证 CAS 冲突反馈。
 - 一个连接断开或关闭，确认其他连接状态与缓存不受影响。
 - 搜索或刷新过程中用户切换连接或取消操作。
+- 删除影响预览遍历被用户取消，或预览后树被其他客户端修改，确认时如何重新校验。
+- 递归删除执行中途失败：按「已完成 / 失败 / 未执行」分项报告，并只重试失败子树。
+- 创建节点时父路径不存在：报错、显式勾选创建缺失父路径、中间节点为持久节点。
+- 创建顺序节点后服务端返回完整路径，界面定位到实际路径而非用户输入。
+- 临时节点创建后会话过期或重连：父节点列表与节点存在性按 generation 刷新。

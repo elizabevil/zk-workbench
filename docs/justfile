@@ -3,14 +3,7 @@
 # 在仓库根目录执行 just --list 可看到全部命令。
 
 mkdir:
-    mkdir -p "prompts"
-    mkdir -p '00-raw'
-    mkdir -p '01-context'
-    mkdir -p '02-product'
-    mkdir -p '03-design'
-    mkdir -p '04-decisions'
-    mkdir -p '05-tasks'
-    mkdir -p '99-archive'
+    mkdir -p '01-product' '02-design' '03-specs' '04-test' '05-changes' '06-ai/prompts' 'prompts' 'req' 'dec' 'ver'
 
 mkdir-prompts:
     #!/usr/bin/env bash
@@ -29,3 +22,307 @@ mkdir-prompts:
 
 project:
     just --justfile ../justfile --list
+
+# 重新生成 locks.yml（accepted 语句正文 hash）。非语义修订后必须执行并单独提交。
+lock:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    shopt -s nullglob
+    files=(req/*.stmts.md)
+    if [ ${#files[@]} -eq 0 ]; then
+      echo "没有 req/*.stmts.md，跳过"
+      exit 0
+    fi
+    tmp="$(mktemp)"
+    while IFS=$'\t' read -r id text; do
+      h="$(printf '%s' "$text" | sed -E 's/[[:space:]]+$//' | sha256sum | awk '{print $1}')"
+      printf '%s: sha256:%s\n' "$id" "$h"
+    done < <(awk '/^REQ-[A-Z]+-[A-Z]+-[0-9][0-9][0-9]/ { id=$1 }
+                  /^  语句：/ { s=$0; sub(/^  语句：/,"",s); printf "%s\t%s\n", id, s }' "${files[@]}") > "$tmp"
+    mv "$tmp" locks.yml
+    echo "locks.yml 已生成，共 $(wc -l < locks.yml) 条"
+
+# 文档门禁：叙述层残留、frontmatter、链接、语句语法/标签/术语/技术中立/hash/supersede 链。
+# 期望输出末行为 RESULT: PASS；任一项 FAIL 时以非零码退出。
+check:
+    #!/usr/bin/env bash
+    set -uo pipefail
+    shopt -s nullglob
+    fail=0
+    req_files=(req/*.stmts.md)
+
+    echo "== 1/15 他项目与废弃路径残留（99-archive 除外）=="
+    hits="$(grep -rnE 'envsub|docs/07-serialization|docs/04-decisions|docs/05-tasks|docs/06-review|\bgo test\b|Benchmark\*|--include=\*\.go' \
+              --include='*.md' . 2>/dev/null | grep -v '^\./99-archive/' || true)"
+    if [ -n "$hits" ]; then
+      printf '%s\n' "$hits"
+      echo "FAIL: 存在他项目或废弃目录引用"
+      fail=1
+    else
+      echo "PASS"
+    fi
+
+    echo "== 2/15 frontmatter 完整性（prompts/、README.md、ai-first.md 除外）=="
+    bad=0
+    while IFS= read -r f; do
+      case "$f" in ./prompts/*|./README.md|./ai-first.md) continue ;; esac
+      if ! head -1 "$f" | grep -qx -- '---'; then
+        echo "FAIL: 缺少 frontmatter 起始行 $f"
+        bad=1
+        continue
+      fi
+      for key in doc_id title status; do
+        head -10 "$f" | grep -qE "^${key}:" || { echo "FAIL: 缺少 ${key} $f"; bad=1; }
+      done
+    done < <(find . -name '*.md' -not -path './99-archive/*' | sort)
+    if [ "$bad" -eq 0 ]; then echo "PASS"; else fail=1; fi
+
+    echo "== 3/15 本地 Markdown 链接可达性 =="
+    broken=0
+    while IFS= read -r hit; do
+      file="${hit%%:*}"
+      rest="${hit#*:}"
+      line="${rest%%:*}"
+      target="${rest#*:}"
+      target="${target#](}"
+      case "$target" in http*|mailto:*|/\*) continue ;; esac
+      [ -e "$(dirname "$file")/$target" ] || {
+        echo "FAIL: 断链 $file:$line -> $target"
+        broken=1
+      }
+    done < <(grep -rnoE '\]\([^)#:]+\.md' --include='*.md' . 2>/dev/null | grep -v '^\./99-archive/' || true)
+    if [ "$broken" -eq 0 ]; then echo "PASS"; else fail=1; fi
+
+    echo "== 4/15 REQ 语法与 ID 唯一 =="
+    bad=0
+    if [ ${#req_files[@]} -eq 0 ]; then
+      echo "SKIP: 无 req/*.stmts.md"
+    else
+      mapfile -t ids < <(grep -hoE '^REQ-[A-Z]+-[A-Z]+-[0-9][0-9][0-9]' "${req_files[@]}")
+      dups="$(printf '%s\n' "${ids[@]}" | sort | uniq -d)"
+      if [ -n "$dups" ]; then
+        echo "FAIL: 重复 ID"
+        printf '%s\n' "$dups"
+        bad=1
+      fi
+      while IFS= read -r l; do
+        echo "$l" | grep -qE '^REQ-[A-Z]+-[A-Z]+-[0-9][0-9][0-9][[:space:]]+status: (draft|proposed|accepted|superseded|withdrawn)' \
+          || { echo "FAIL: 语句头语法错误：$l"; bad=1; }
+        echo "$l" | grep -q 'since: ' || { echo "FAIL: 缺少 since：$l"; bad=1; }
+        echo "$l" | grep -q 'owner: ' || { echo "FAIL: 缺少 owner：$l"; bad=1; }
+      done < <(grep -hE '^REQ-' "${req_files[@]}")
+    fi
+    if [ "$bad" -eq 0 ]; then echo "PASS"; else fail=1; fi
+
+    echo "== 5/15 标签合法 =="
+    bad=0
+    allowed="capability constraint invariant error security danger confirm preview performance threshold ux deferred waived"
+    if [ ${#req_files[@]} -gt 0 ]; then
+      while IFS= read -r t; do
+        case " $allowed " in
+          *" $t "*) ;;
+          *) echo "FAIL: 未定义标签 #$t"; bad=1 ;;
+        esac
+      done < <(grep -hE '^[[:space:]]+标签：' "${req_files[@]}" | grep -oE '#[a-z]+' | tr -d '#' | sort -u)
+    fi
+    if [ "$bad" -eq 0 ]; then echo "PASS"; else fail=1; fi
+
+    echo "== 6/15 术语引用存在 =="
+    bad=0
+    if [ ${#req_files[@]} -gt 0 ]; then
+      if [ ! -f glossary.md ]; then
+        echo "FAIL: 缺少 glossary.md"
+        bad=1
+      else
+        mapfile -t defined < <(grep -oE '^TERM [a-z0-9._-]+' glossary.md | awk '{print $2}' | sort -u)
+        while IFS= read -r u; do
+          printf '%s\n' "${defined[@]}" | grep -qx "$u" || { echo "FAIL: 术语未定义 term=$u"; bad=1; }
+        done < <(grep -rhoE '\{\{[a-z0-9._-]+\}\}' "${req_files[@]}" | tr -d '{}' | sort -u)
+      fi
+    fi
+    if [ "$bad" -eq 0 ]; then echo "PASS"; else fail=1; fi
+
+    echo "== 7/15 req/ 技术词扫描 =="
+    bad=0
+    if [ ${#req_files[@]} -gt 0 ]; then
+      tech='Rust|Tauri|Vue|Vite|WebView|npm|pnpm|cargo|SQLite|zookeeper-client|zookeeper-async|keyring|CodeMirror|Monaco|Pinia'
+      thits="$(grep -rnwiE "$tech" "${req_files[@]}" 2>/dev/null || true)"
+      if [ -n "$thits" ]; then
+        printf '%s\n' "$thits"
+        echo "FAIL: req/ 出现实现栈词汇"
+        bad=1
+      fi
+    fi
+    if [ "$bad" -eq 0 ]; then echo "PASS"; else fail=1; fi
+
+    echo "== 8/15 accepted 语句 hash 匹配 =="
+    bad=0
+    if [ ${#req_files[@]} -gt 0 ]; then
+      if [ ! -f locks.yml ]; then
+        echo "FAIL: 缺少 locks.yml（运行 just lock）"
+        bad=1
+      else
+        while IFS=$'\t' read -r id text; do
+          st="$(grep -hE "^${id}[[:space:]]" "${req_files[@]}" | sed -nE 's/.*status: ([a-z]+).*/\1/p')"
+          [ "$st" = "accepted" ] || continue
+          got="$(printf '%s' "$text" | sed -E 's/[[:space:]]+$//' | sha256sum | awk '{print $1}')"
+          want="$(sed -nE "s/^${id}: sha256:([0-9a-f]+)$/\1/p" locks.yml)"
+          if [ -z "$want" ]; then
+            echo "FAIL: $id 未登记 hash"
+            bad=1
+          elif [ "$got" != "$want" ]; then
+            echo "FAIL: $id 正文已变更（accepted 条款不可修改，请新开 ID 并 supersede）"
+            bad=1
+          fi
+        done < <(awk '/^REQ-[A-Z]+-[A-Z]+-[0-9][0-9][0-9]/ { id=$1 }
+                      /^  语句：/ { s=$0; sub(/^  语句：/,"",s); printf "%s\t%s\n", id, s }' "${req_files[@]}")
+      fi
+    fi
+    if [ "$bad" -eq 0 ]; then echo "PASS"; else fail=1; fi
+
+    echo "== 9/15 supersede 链完整 =="
+    bad=0
+    if [ ${#req_files[@]} -gt 0 ]; then
+      while IFS= read -r l; do
+        id="$(echo "$l" | awk '{print $1}')"
+        echo "$l" | grep -q 'status: superseded' || continue
+        sup="$(echo "$l" | sed -nE 's/.*superseded-by: (REQ-[A-Z]+-[A-Z]+-[0-9][0-9][0-9]).*/\1/p')"
+        if [ -z "$sup" ]; then
+          echo "FAIL: $id 已 superseded 但缺少 superseded-by"
+          bad=1
+        elif ! grep -qhE "^${sup}[[:space:]]" "${req_files[@]}"; then
+          echo "FAIL: $id 指向不存在的 $sup"
+          bad=1
+        fi
+      done < <(grep -hE '^REQ-' "${req_files[@]}")
+    fi
+    if [ "$bad" -eq 0 ]; then echo "PASS"; else fail=1; fi
+
+    echo "== 10/15 VER 语法、ID 唯一与引用存在 =="
+    bad=0
+    shopt -s nullglob
+    ver_files=(ver/*.md)
+    dec_files=(dec/*.md)
+    if [ ${#ver_files[@]} -eq 0 ]; then
+      echo "SKIP: 无 ver/*.md"
+    else
+      while IFS= read -r l; do
+        echo "$l" | grep -qE '^VER-[A-Z]+-[A-Z]+-[0-9][0-9][0-9][[:space:]]+status: (pending|passed|failed|stale)' \
+          || { echo "FAIL: 用例头语法错误：$l"; bad=1; }
+      done < <(grep -hE '^VER-' "${ver_files[@]}")
+      mapfile -t vids < <(grep -hoE '^VER-[A-Z]+-[A-Z]+-[0-9][0-9][0-9]' "${ver_files[@]}")
+      vdups="$(printf '%s\n' "${vids[@]}" | sort | uniq -d)"
+      if [ -n "$vdups" ]; then
+        echo "FAIL: 重复 VER ID"
+        printf '%s\n' "$vdups"
+        bad=1
+      fi
+      while IFS= read -r rid; do
+        grep -qhE "^${rid}[[:space:]]" "${req_files[@]}" "${dec_files[@]}" 2>/dev/null \
+          || { echo "FAIL: 用例引用了不存在的 ${rid}"; bad=1; }
+      done < <(grep -hE '^[[:space:]]+对应：' "${ver_files[@]}" | grep -oE '(REQ|DEC)-[A-Z0-9-]+' | sort -u)
+      mapfile -t covered < <(grep -hE '^[[:space:]]+对应：' "${ver_files[@]}" | grep -oE 'REQ-[A-Z]+-[A-Z]+-[0-9][0-9][0-9]' | sort -u)
+      while IFS= read -r rid; do
+        printf '%s\n' "${covered[@]}" | grep -qx "$rid" \
+          || { echo "FAIL: accepted 语句缺少用例 $rid"; bad=1; }
+      done < <(grep -hE '^REQ-.*status: accepted' "${req_files[@]}" | awk '{print $1}')
+    fi
+    if [ "$bad" -eq 0 ]; then echo "PASS"; else fail=1; fi
+
+    echo "== 11/15 用例状态与结果一致 =="
+    bad=0
+    if [ ${#ver_files[@]} -gt 0 ]; then
+      ver_records() {
+        awk '
+          function flush() { if (id ~ /^VER-/) printf "%s\t%s\t%s\t%s\n", id, st, ref, res; id=""; st=""; ref=""; res="" }
+          /^VER-[A-Z]+-[A-Z]+-[0-9][0-9][0-9]/ { flush(); id=$1; st=$0; sub(/.*status:[[:space:]]*/, "", st); sub(/[[:space:]].*/, "", st); next }
+          /^REQ-/ { flush(); next }
+          /^  对应：/ { r=$0; sub(/^  对应：/, "", r); ref=r }
+          /^  结果：/ { r=$0; sub(/^  结果：/, "", r); res=r }
+          END { flush() }
+        ' "$@"
+      }
+      while IFS=$'\t' read -r vid vst vref vres; do
+        case "$vst" in
+          passed) echo "$vres" | grep -qE '未执行|失败' && { echo "FAIL: $vid 状态 passed 但结果含未执行/失败"; bad=1; } ;;
+          failed) echo "$vres" | grep -qE '未执行' && { echo "FAIL: $vid 状态 failed 但未记录结果"; bad=1; } ;;
+          stale)  echo "$vres" | grep -qE '通过|passed' && { echo "FAIL: $vid 已 stale 但结果仍称通过"; bad=1; } ;;
+        esac
+        for did in $(echo "$vref" | grep -oE 'DEC-[0-9]+' || true); do
+          dst="$(grep -hE "^${did}[[:space:]]" "${dec_files[@]}" 2>/dev/null | sed -nE 's/.*status: ([a-z]+).*/\1/p')"
+          if [ "$dst" = "superseded" ] && [ "$vst" != "stale" ]; then
+            echo "FAIL: $vid 依赖已 superseded 的 $did，必须标 stale"
+            bad=1
+          fi
+        done
+      done < <(ver_records "${ver_files[@]}")
+    fi
+    if [ "$bad" -eq 0 ]; then echo "PASS"; else fail=1; fi
+
+    echo "== 12/15 豁免期限检查 =="
+    bad=0
+    today="$(date +%F)"
+    while IFS= read -r hit; do
+      f="${hit%%:*}"
+      rest="${hit#*:}"
+      ln="${rest%%:*}"
+      line="${rest#*:}"
+      wt="$(echo "$line" | sed -nE 's/.*waived-until[=:[:space:]]+([0-9]{4}-[0-9]{2}-[0-9]{2}).*/\1/p')"
+      [ -z "$wt" ] && continue
+      echo "$line" | grep -qE 'owner[=:]' || { echo "FAIL: $f:$ln 豁免缺少 owner"; bad=1; }
+      echo "$line" | grep -qE 'reason[=:]' || { echo "FAIL: $f:$ln 豁免缺少 reason"; bad=1; }
+      if [[ "$wt" < "$today" ]]; then
+        echo "FAIL: $f:$ln 豁免已于 $wt 过期（今天 $today）"
+        bad=1
+      fi
+    done < <(grep -rnH 'waived-until' "${req_files[@]}" 2>/dev/null || true)
+    if [ "$bad" -eq 0 ]; then echo "PASS"; else fail=1; fi
+
+    echo "== 13/15 req/ 域单一性 =="
+    bad=0
+    for f in "${req_files[@]}"; do
+      base="$(basename "$f" .stmts.md)"
+      dom="$(printf '%s' "$base" | tr '[:lower:]' '[:upper:]')"
+      while IFS= read -r id; do
+        case "$id" in
+          "REQ-${dom}-"*) ;;
+          *) echo "FAIL: $f 含跨域语句 $id"; bad=1 ;;
+        esac
+      done < <(grep -hoE '^REQ-[A-Z]+-[A-Z]+-[0-9][0-9][0-9]' "$f")
+    done
+    if [ "$bad" -eq 0 ]; then echo "PASS"; else fail=1; fi
+
+    echo "== 14/15 叙述层不得定义 REQ/VER/DEC =="
+    bad=0
+    for d in 01-product 02-design 03-specs 04-test; do
+      [ -d "$d" ] || continue
+      hits="$(grep -rnE '^(REQ|VER|DEC)-' --include='*.md' "$d" 2>/dev/null || true)"
+      if [ -n "$hits" ]; then
+        printf '%s\n' "$hits"
+        echo "FAIL: $d 出现语句/用例/决策定义行"
+        bad=1
+      fi
+    done
+    if [ "$bad" -eq 0 ]; then echo "PASS"; else fail=1; fi
+
+    echo "== 15/15 accepted 语句来源可追溯 =="
+    bad=0
+    if [ ${#req_files[@]} -gt 0 ]; then
+      missing="$(awk '
+        /^REQ-/ { if (id != "" && acc && !src) print id; id=$1; acc=($0 ~ /status: accepted/); src=0; next }
+        /^  来源：/ { src=1 }
+        END { if (id != "" && acc && !src) print id }
+      ' "${req_files[@]}")"
+      if [ -n "$missing" ]; then
+        echo "FAIL: accepted 语句缺少来源字段"
+        printf '%s\n' "$missing"
+        bad=1
+      fi
+    fi
+    if [ "$bad" -eq 0 ]; then echo "PASS"; else fail=1; fi
+
+    if [ "$fail" -ne 0 ]; then
+      echo "RESULT: FAIL"
+      exit 1
+    fi
+    echo "RESULT: PASS"

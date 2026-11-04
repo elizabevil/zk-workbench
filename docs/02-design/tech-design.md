@@ -1,3 +1,12 @@
+---
+doc_id: DESIGN
+title: ZK UI 技术设计
+status: active
+owner: 产品负责人
+version: 0.1
+last-updated: 2026-11-02
+---
+
 # ZK UI 技术设计
 
 ## 分层
@@ -8,27 +17,23 @@
 
 ### DESIGN-001 有状态客户端复用
 
-ZooKeeper 客户端持有 session、心跳、重连状态和 Watcher 生命周期。本产品使用连接管理器按逻辑连接维护长期客户端实例，供同一连接下多个面板和命令复用；不按操作新建客户端，也不将 session 当作无状态连接借还。
-
-不同凭据、SSH Tunnel、会话参数或用户明确建立的连接保持独立 session。共享 Rust 核心代码不等于共享 ZooKeeper session。每个连接的缓存、Watcher、generation 和审计上下文隔离。
+行为约束见 `req/conn.stmts.md` 的 `REQ-CONN-SESSION-001`、`REQ-CONN-SESSION-002`；本节只保留设计意图：按逻辑连接复用长期客户端，不把 session 当作无状态连接借还。
 
 ### DESIGN-002 会话世代
 
-每个连接维护单调递增的 `generation`。会话重建或从断开恢复时递增。前端携带其当前 generation 发起依赖旧树状态的增量操作；Rust 发现不匹配时拒绝操作并要求刷新相关展开子树。具体 IPC 契约待设计。
+行为约束见 `req/conn.stmts.md` 的 `REQ-CONN-GEN-001` 与 `req/ui.stmts.md` 的 `REQ-UI-TREE-003`；IPC 契约仍待设计，属于决策层。
 
 ### DESIGN-003 树缓存与索引
 
-子节点列表采用按连接、路径分区的有界短时缓存，条目记录读取时间和 generation。generation 变化立即使缓存失效；Watcher 可提前失效对应父路径；TTL 和手动刷新兜底。节点数据和 Stat 属于编辑依据，选中时实时或近实时读取。
-
-缓存 TTL 初始可用 30 秒开展体验实验，但不是已批准需求。容量上限和淘汰策略由树规模、请求量和内存测试决定。
+缓存 TTL、容量与淘汰策略见 `dec/data-strategy.md` 的 `DEC-020`；失效行为见 `req/ui.stmts.md` 的 `REQ-UI-TREE-002`、`REQ-UI-TREE-003`。
 
 ### DESIGN-004 查询策略
 
-路径直达是按输入路径逐级查询，不要求 UI 先展开祖先。路径补全使用已加载子节点或最近访问记录。第一阶段的名称/路径搜索只查本地已加载索引，并标明范围；全树搜索可能造成大量请求，必须由用户显式启动并提供范围、限速、进度和取消。
+查询与搜索策略见 `dec/data-strategy.md` 的 `DEC-021`；搜索范围约束见 `req/ui.stmts.md` 的 `REQ-UI-TREE-005`。
 
 ### DESIGN-005 Watcher 限制
 
-Watcher 是状态变化提示，不是变更日志。应用收到事件后按连接和路径使相关缓存失效并局部刷新。事件订阅在断连、重连、会话过期后的恢复行为取决于服务端版本和 Rust 客户端库，必须经验证后定案。
+Watcher 语义见 `dec/data-strategy.md` 的 `DEC-022`；事件与旧 generation 的行为约束见 `req/conn.stmts.md` 的 `REQ-CONN-GEN-002`。
 
 ## 跨平台约定
 

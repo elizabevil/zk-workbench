@@ -1,3 +1,12 @@
+---
+doc_id: ROADMAP
+title: ZK UI 建议路线图
+status: active
+owner: 产品负责人
+version: 0.1
+last-updated: 2026-11-02
+---
+
 # ZK UI 建议路线图
 
 以下阶段按负责人确认的产品优先级排列，用于安排验证和实现，不代表排期承诺。

@@ -1,3 +1,12 @@
+---
+doc_id: CHG-0001
+title: 树缓存、快速查询与多连接方向调查
+status: draft
+owner: 产品负责人
+version: 0.1
+last-updated: 2026-11-02
+---
+
 # CHG-0001 树缓存、快速查询与多连接方向调查
 
 ## 状态

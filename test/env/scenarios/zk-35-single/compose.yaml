@@ -1,0 +1,15 @@
+name: zkui-zk-35-single
+
+services:
+  zk:
+    image: zookeeper:3.5
+    container_name: zkui-zk-35-single
+    ports:
+      - "2182:2181"
+    environment:
+      ZOO_4LW_COMMANDS_WHITELIST: "*"
+    healthcheck:
+      test: ["CMD-SHELL", "zkServer.sh status"]
+      interval: 5s
+      timeout: 5s
+      retries: 12

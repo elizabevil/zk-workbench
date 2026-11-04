@@ -18,7 +18,7 @@ status: active
 
 每项项目任务至少读取：
 
-1. `docs/README.md` 及适用的 `docs-dir.md` / `00-meta` 规范（可访问时）。
+1. `docs/README.md` 与 `docs/META.md`（文档规范）。
 2. `06-ai/collaboration.md` 与 `06-ai/guardrails.md`。
 3. 当前任务提示词及其点名的项目文档。
 
@@ -29,11 +29,11 @@ status: active
 | 任务类型 | 额外上下文 |
 |---|---|
 | 产品需求讨论 | `01-product/prd.md`、`01-product/roadmap.md`、相关 CHG 和待决策项 |
-| 功能设计 | 相关 PRD 条款、`02-design/tech-design.md`、对应 `03-specs` |
+| 功能设计 | 相关 `req/` 语句、`02-design/tech-design.md`、对应 `dec/` 决策 |
 | 技术调查 | 调查目标对应的 PRD/设计/规格、`04-test/test-plan.md`、相关来源记录 |
 | 需求变更 | 当前条款、依赖/验收/测试引用、相关 ADR/CHG；评估影响后再改基线 |
 | 测试规划 | 相关需求和规格、`04-test/test-plan.md`、技术验证结论 |
-| 文档治理 | `docs-dir.md`、文档规范、README 索引和受影响文件 |
+| 文档治理 | `docs/META.md` 文档规范、README 索引和受影响文件 |
 | 代码修改（必读） | `06-ai/code-generation.md`、`06-ai/code-engineering.md`、本次相关需求/设计/规格、相关实现和测试、manifest/锁文件/工具链配置 |
 
 ### 编码任务按改动范围裁剪

@@ -1,0 +1,61 @@
+# 测试 ZooKeeper 环境编排。
+#
+# 本文件只负责启动与销毁，不执行任何测试用例。
+# 用法（在仓库根目录）：
+#   just --justfile test/env/justfile list
+#   just --justfile test/env/justfile up zk-39-single
+#   just --justfile test/env/justfile down zk-39-single
+#
+# 运行时按顺序自动探测：docker compose → podman compose → podman-compose。
+
+list:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for d in scenarios/*/; do
+      [ -f "$d/compose.yaml" ] || continue
+      printf '%s\n' "$(basename "$d")"
+    done
+
+up scenario:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    dir="scenarios/{{scenario}}"
+    if [ ! -f "$dir/compose.yaml" ]; then
+      echo "未知场景：{{scenario}}；可用场景见 just list" >&2
+      exit 1
+    fi
+    runtime=""
+    if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+      runtime="docker compose"
+    elif command -v podman >/dev/null 2>&1 && podman compose version >/dev/null 2>&1; then
+      runtime="podman compose"
+    elif command -v podman-compose >/dev/null 2>&1; then
+      runtime="podman-compose"
+    else
+      echo "未找到可用的容器运行时：需要 docker compose、podman compose 或 podman-compose" >&2
+      exit 1
+    fi
+    echo "使用运行时：$runtime"
+    exec $runtime -f "$dir/compose.yaml" up -d
+
+down scenario:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    dir="scenarios/{{scenario}}"
+    if [ ! -f "$dir/compose.yaml" ]; then
+      echo "未知场景：{{scenario}}；可用场景见 just list" >&2
+      exit 1
+    fi
+    runtime=""
+    if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+      runtime="docker compose"
+    elif command -v podman >/dev/null 2>&1 && podman compose version >/dev/null 2>&1; then
+      runtime="podman compose"
+    elif command -v podman-compose >/dev/null 2>&1; then
+      runtime="podman-compose"
+    else
+      echo "未找到可用的容器运行时：需要 docker compose、podman compose 或 podman-compose" >&2
+      exit 1
+    fi
+    echo "使用运行时：$runtime"
+    exec $runtime -f "$dir/compose.yaml" down -v
