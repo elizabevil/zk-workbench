@@ -29,4 +29,12 @@ image_path: string,
 /**
  * 面板背景黑色透明度，0-100，默认 50。
  */
-panel_opacity: number, };
+panel_opacity: number, 
+/**
+ * 背景模糊半径（px），用于磨砂玻璃效果。
+ */
+background_blur: number, 
+/**
+ * 界面字号（px），默认 14。
+ */
+font_size: number, };

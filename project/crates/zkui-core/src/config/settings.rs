@@ -152,6 +152,10 @@ pub struct AppearanceSettings {
     pub image_path: String,
     /// 面板背景黑色透明度，0-100，默认 50。
     pub panel_opacity: u8,
+    /// 背景模糊半径（px），用于磨砂玻璃效果。
+    pub background_blur: u8,
+    /// 界面字号（px），默认 14。
+    pub font_size: u8,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -174,6 +178,8 @@ impl Default for AppearanceSettings {
             gradient_angle: 135,
             image_path: String::new(),
             panel_opacity: 50,
+            background_blur: 0,
+            font_size: 14,
         }
     }
 }

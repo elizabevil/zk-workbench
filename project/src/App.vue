@@ -53,10 +53,20 @@ const background = computed(() => {
 
 const appStyle = computed(() => {
   const opacity = (settings.settings?.appearance.panel_opacity ?? 50) / 100;
+  const fontSize = settings.settings?.appearance.font_size ?? 14;
   return {
-    background: background.value,
     "--panel-bg": `rgb(0 0 0 / ${opacity})`,
     "--panel-hover-bg": `rgb(0 0 0 / ${Math.min(0.9, opacity + 0.12)})`,
+    zoom: String(fontSize / 14),
+  };
+});
+
+const backgroundStyle = computed(() => {
+  const blur = settings.settings?.appearance.background_blur ?? 0;
+  return {
+    background: background.value,
+    filter: blur > 0 ? `blur(${blur}px)` : "none",
+    transform: blur > 0 ? "scale(1.06)" : "none",
   };
 });
 
@@ -79,6 +89,7 @@ watch(
 
 <template>
   <main class="app" :style="appStyle">
+    <div class="app-bg" :style="backgroundStyle" />
     <router-view />
   </main>
 </template>

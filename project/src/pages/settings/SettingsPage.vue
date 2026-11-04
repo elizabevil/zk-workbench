@@ -386,6 +386,14 @@ function removeProxy(index: number): void {
           {{ t("settings.appearance.panelOpacity") }}
           <input v-model.number="store.settings.appearance.panel_opacity" max="100" min="0" type="range" />
         </label>
+        <label>
+          {{ t("settings.appearance.backgroundBlur") }}
+          <input v-model.number="store.settings.appearance.background_blur" max="30" min="0" type="range" />
+        </label>
+        <label>
+          {{ t("settings.appearance.fontSize") }}
+          <input v-model.number="store.settings.appearance.font_size" max="22" min="10" type="number" />
+        </label>
         <div class="preview" :style="appearancePreview" />
       </fieldset>
 

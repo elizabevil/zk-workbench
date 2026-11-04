@@ -200,7 +200,8 @@ async function connected(): Promise<void> {
   flex: 1;
 }
 .content {
-  max-width: 1080px;
+  width: 100%;
+  max-width: 1000px;
   margin: 0 auto;
   padding: 32px 24px;
 }
@@ -233,8 +234,10 @@ async function connected(): Promise<void> {
 }
 .section-head {
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  text-align: center;
   gap: 16px;
   margin-bottom: 20px;
 }

@@ -161,3 +161,121 @@ function childPath(name: string): string {
     </div>
   </div>
 </template>
+
+<style scoped>
+.node {
+  font-size: 12px;
+}
+.row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 4px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.row:hover {
+  background: rgb(255 255 255 / 5%);
+}
+.row.selected {
+  background: rgb(34 211 238 / 8%);
+  outline: 1px solid #22d3ee;
+  outline-offset: -1px;
+}
+.prefix {
+  color: #303845;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  user-select: none;
+}
+.twist {
+  padding: 0 2px;
+  border: none;
+  background: transparent;
+  color: #9aa4b2;
+  cursor: pointer;
+  font-size: 10px;
+}
+.label {
+  padding: 1px 2px;
+  border: none;
+  background: transparent;
+  color: #d7dee8;
+  cursor: pointer;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.row.selected .label {
+  color: #fff;
+  font-weight: 600;
+}
+.muted {
+  color: #9aa4b2;
+  font-size: 11px;
+}
+.retry {
+  border: none;
+  background: transparent;
+  color: #f87171;
+  cursor: pointer;
+  font-size: 11px;
+}
+.empty {
+  padding-left: 1.4rem;
+}
+.row-actions {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  display: inline-flex;
+  gap: 2px;
+  padding: 1px 3px;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 45%);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-50%) scale(0.85);
+  transition:
+    opacity 100ms ease,
+    transform 100ms ease;
+}
+.row:hover .row-actions,
+.row:focus-within .row-actions {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(-50%) scale(1);
+}
+.action {
+  width: 1rem;
+  height: 1rem;
+  padding: 0;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: rgb(203 213 225 / 55%);
+  font-size: 0.7rem;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.action-top {
+  color: rgb(52 211 153 / 60%);
+}
+.action-right {
+  color: rgb(96 165 250 / 60%);
+}
+.action-bottom {
+  color: rgb(248 113 113 / 60%);
+}
+.action:hover {
+  background: rgb(255 255 255 / 10%);
+  color: #fff;
+}
+</style>

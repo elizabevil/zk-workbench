@@ -213,6 +213,8 @@ export default {
       imageFile: "Choose image",
       noImage: "No image selected",
       clearImage: "Clear image",
+      backgroundBlur: "Background blur (frosted)",
+      fontSize: "UI font size (px)",
       panelOpacity: "Panel opacity (black)",
     },
     general: {
