@@ -30,7 +30,10 @@ async fn create_read_cas_delete() {
     assert!(matches!(conflict, Err(ZkError::BadVersion)));
 
     zk.delete(&path, Some(1)).await.expect("删除失败");
-    assert!(matches!(zk.get_data(&path, false).await, Err(ZkError::NoNode)));
+    assert!(matches!(
+        zk.get_data(&path, false).await,
+        Err(ZkError::NoNode)
+    ));
 }
 
 #[tokio::test]

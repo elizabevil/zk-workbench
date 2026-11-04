@@ -10,14 +10,21 @@ async fn multi_writer_creates_atomically() {
     let client = connect().await;
     let base = unique("zkc-multi");
     let options = persistent().with_acls(open_acls());
-    client.create(&base, b"", &options).await.expect("创建父节点失败");
+    client
+        .create(&base, b"", &options)
+        .await
+        .expect("创建父节点失败");
 
     let first = format!("{base}/a");
     let second = format!("{base}/b");
     let mut writer = client.new_multi_writer();
     let create_options = CreateMode::Persistent.with_acls(Acls::anyone_all());
-    writer.add_create(&first, b"a", &create_options).expect("加入创建失败");
-    writer.add_create(&second, b"b", &create_options).expect("加入创建失败");
+    writer
+        .add_create(&first, b"a", &create_options)
+        .expect("加入创建失败");
+    writer
+        .add_create(&second, b"b", &create_options)
+        .expect("加入创建失败");
 
     let results = writer.commit().await.expect("原子多写失败");
     assert_eq!(results.len(), 2);
@@ -37,10 +44,17 @@ async fn check_writer_rejects_stale_version() {
         .await
         .expect("创建失败");
 
-    client.set_data(&path, b"v1", Some(0)).await.expect("先推进版本");
+    client
+        .set_data(&path, b"v1", Some(0))
+        .await
+        .expect("先推进版本");
 
-    let mut writer = client.new_check_writer(&path, Some(0)).expect("创建 check writer 失败");
-    writer.add_set_data(&path, b"stale", None).expect("加入写入失败");
+    let mut writer = client
+        .new_check_writer(&path, Some(0))
+        .expect("创建 check writer 失败");
+    writer
+        .add_set_data(&path, b"stale", None)
+        .expect("加入写入失败");
     let result = writer.commit().await;
     assert!(result.is_err(), "版本已过期，检查写应失败");
 

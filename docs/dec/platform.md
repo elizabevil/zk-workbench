@@ -28,3 +28,9 @@ DEC-032   status: accepted   updated: 2026-11-02
   依据：负责人指定以当前环境为基线；CHG-0017。
   推翻条件：目标平台构建或依赖要求提高最低版本。
   影响：写入 package.json、rust-toolchain.toml 与锁文件；升级须单独评审。
+
+DEC-033   status: accepted   updated: 2026-11-02
+  选择：TypeScript 固定 6.0.x，`vue-tsc` 3.3.14；不使用 TS 7。
+  依据：TS 7 移除了 `typescript/lib/tsc` 子路径（package.json 无 `exports` 之外的可解析入口），`vue-tsc` 通过该子路径加载编译器，会报 `ERR_PACKAGE_PATH_NOT_EXPORTED`；TS 6.0.3 实测可用。
+  推翻条件：`vue-tsc` 发布支持 TS 7 的版本，或改用其他 SFC 类型检查方案。
+  影响：`package.json` 与锁文件；升级 TypeScript 主版本需同时验证 `vue-tsc`。

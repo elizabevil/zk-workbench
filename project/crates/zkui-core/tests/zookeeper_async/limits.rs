@@ -12,9 +12,14 @@ async fn large_payload_boundary() {
     let big_path = unique("zka-large-reject");
 
     let medium = vec![b'x'; 512 * 1024];
-    zk.create(&small_path, medium.clone(), open_acls(), CreateMode::Persistent)
-        .await
-        .expect("512 KiB 写入应成功");
+    zk.create(
+        &small_path,
+        medium.clone(),
+        open_acls(),
+        CreateMode::Persistent,
+    )
+    .await
+    .expect("512 KiB 写入应成功");
     let (data, stat) = zk.get_data(&small_path, false).await.expect("读取失败");
     assert_eq!(data, medium);
     assert_eq!(stat.data_length as usize, medium.len());
@@ -22,7 +27,12 @@ async fn large_payload_boundary() {
 
     let oversized = vec![b'y'; 1024 * 1024 + 4096];
     let created = zk
-        .create(&big_path, oversized.clone(), open_acls(), CreateMode::Persistent)
+        .create(
+            &big_path,
+            oversized.clone(),
+            open_acls(),
+            CreateMode::Persistent,
+        )
         .await;
     println!("1 MiB + 4 KiB 写入结果: {created:?}");
     match created {

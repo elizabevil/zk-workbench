@@ -15,7 +15,9 @@ async fn error_paths_are_classified() {
     let duplicate = client.create(&base, b"", &options).await;
     assert!(matches!(duplicate, Err(Error::NodeExists)));
 
-    let missing_parent = client.create("/zkc-missing-parent/child", b"", &options).await;
+    let missing_parent = client
+        .create("/zkc-missing-parent/child", b"", &options)
+        .await;
     assert!(matches!(missing_parent, Err(Error::NoNode)));
 
     let delete_missing = client.delete("/zkc-does-not-exist", None).await;
@@ -32,7 +34,10 @@ async fn recursive_delete_is_not_atomic() {
     let options = persistent().with_acls(open_acls());
     client.create(&base, b"", &options).await.expect("创建失败");
     let child = format!("{base}/child");
-    client.create(&child, b"", &options).await.expect("创建子节点失败");
+    client
+        .create(&child, b"", &options)
+        .await
+        .expect("创建子节点失败");
 
     let not_empty = client.delete(&base, None).await;
     assert!(matches!(not_empty, Err(Error::NotEmpty)));

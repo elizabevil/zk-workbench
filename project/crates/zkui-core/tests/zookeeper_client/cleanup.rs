@@ -9,7 +9,10 @@ use super::common::{connect, delete_recursive};
 async fn cleanup_leftovers() {
     let client = connect().await;
     let (children, _) = client.get_children("/").await.expect("读取根节点失败");
-    let leftovers: Vec<String> = children.into_iter().filter(|c| c.starts_with("zkc-")).collect();
+    let leftovers: Vec<String> = children
+        .into_iter()
+        .filter(|c| c.starts_with("zkc-"))
+        .collect();
     println!("发现遗留节点 {} 个: {leftovers:?}", leftovers.len());
     for child in &leftovers {
         delete_recursive(&client, &format!("/{child}")).await;

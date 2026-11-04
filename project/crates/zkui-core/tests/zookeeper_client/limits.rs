@@ -13,7 +13,10 @@ async fn large_payload_boundary() {
     let options = persistent().with_acls(open_acls());
 
     let medium = vec![b'x'; 512 * 1024];
-    client.create(&small_path, &medium, &options).await.expect("512 KiB 写入应成功");
+    client
+        .create(&small_path, &medium, &options)
+        .await
+        .expect("512 KiB 写入应成功");
     let (data, stat) = client.get_data(&small_path).await.expect("读取失败");
     assert_eq!(data.len(), medium.len());
     assert_eq!(data, medium);
@@ -31,10 +34,7 @@ async fn large_payload_boundary() {
         }
         Err(error) => {
             println!("大节点被拒绝的错误类型: {error:?}");
-            assert!(
-                !matches!(error, Error::NoNode),
-                "拒绝原因不应是节点不存在"
-            );
+            assert!(!matches!(error, Error::NoNode), "拒绝原因不应是节点不存在");
         }
     }
 }

@@ -11,5 +11,8 @@ tauri-dependencies:
       libayatana-appindicator3-dev \
       librsvg2-dev
 
+    sudo apt install pkg-config
+    sudo apt install libglib2.0-dev libgtk-3-dev
+
 tauri-run:
     npm run tauri dev

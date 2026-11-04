@@ -1,7 +1,5 @@
 //! 公共辅助：连接、唯一路径、递归删除。
 
-use std::time::Duration;
-
 use zookeeper_client::{Acls, Client, CreateMode};
 
 pub fn endpoint() -> String {
@@ -18,7 +16,9 @@ pub fn unique(prefix: &str) -> String {
 
 pub async fn connect() -> Client {
     let endpoint = endpoint();
-    Client::connect(&endpoint).await.expect("连接 ZooKeeper 失败")
+    Client::connect(&endpoint)
+        .await
+        .expect("连接 ZooKeeper 失败")
 }
 
 pub fn persistent() -> CreateMode {
@@ -40,13 +40,4 @@ pub async fn delete_recursive(client: &Client, path: &str) {
         Box::pin(delete_recursive(client, &child_path)).await;
     }
     let _ = client.delete(path, None).await;
-}
-
-pub async fn wait_for<F, T>(future: F, label: &str) -> T
-where
-    F: std::future::Future<Output = T>,
-{
-    tokio::time::timeout(Duration::from_secs(10), future)
-        .await
-        .unwrap_or_else(|_| panic!("等待 {label} 超时"))
 }

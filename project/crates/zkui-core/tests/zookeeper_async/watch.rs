@@ -22,7 +22,9 @@ async fn data_watch_receives_change() {
     .await
     .expect("注册 watch 失败");
 
-    zk.set_data(&path, b"v1".to_vec(), None).await.expect("写入失败");
+    zk.set_data(&path, b"v1".to_vec(), None)
+        .await
+        .expect("写入失败");
 
     let event = tokio::time::timeout(Duration::from_secs(10), rx.recv())
         .await

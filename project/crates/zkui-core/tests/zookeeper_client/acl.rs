@@ -18,10 +18,16 @@ async fn auth_scheme_acl_requires_authentication() {
     let acl_list = [Acl::new_const(Permission::ALL, "auth", "")];
     let acls = Acls::new(&acl_list);
     let options = persistent().with_acls(acls);
-    authenticated.create(&path, b"secret", &options).await.expect("创建失败");
+    authenticated
+        .create(&path, b"secret", &options)
+        .await
+        .expect("创建失败");
 
     let denied = anonymous.get_data(&path).await;
-    assert!(matches!(denied, Err(Error::NoAuth)), "未认证应被拒绝，实际 {denied:?}");
+    assert!(
+        matches!(denied, Err(Error::NoAuth)),
+        "未认证应被拒绝，实际 {denied:?}"
+    );
 
     let denied_write = anonymous.set_data(&path, b"x", None).await;
     assert!(matches!(denied_write, Err(Error::NoAuth)));

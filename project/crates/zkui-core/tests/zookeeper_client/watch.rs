@@ -16,7 +16,10 @@ async fn oneshot_data_watch_receives_change() {
         .await
         .expect("创建失败");
 
-    let (_data, _stat, watcher) = client.get_and_watch_data(&path).await.expect("注册 watch 失败");
+    let (_data, _stat, watcher) = client
+        .get_and_watch_data(&path)
+        .await
+        .expect("注册 watch 失败");
     client.set_data(&path, b"v1", None).await.expect("写入失败");
 
     let event = tokio::time::timeout(Duration::from_secs(10), watcher.changed())
@@ -38,7 +41,10 @@ async fn children_watch_receives_creation() {
         .get_and_watch_children(&base)
         .await
         .expect("注册子节点 watch 失败");
-    client.create(&format!("{base}/child"), b"", &options).await.expect("创建子节点失败");
+    client
+        .create(&format!("{base}/child"), b"", &options)
+        .await
+        .expect("创建子节点失败");
 
     let event = tokio::time::timeout(Duration::from_secs(10), watcher.changed())
         .await
@@ -62,13 +68,19 @@ async fn persistent_watch_receives_multiple_changes() {
         .await
         .expect("注册持久 watch 失败");
 
-    client.set_data(&path, b"v1", None).await.expect("第一次写入失败");
+    client
+        .set_data(&path, b"v1", None)
+        .await
+        .expect("第一次写入失败");
     let first = tokio::time::timeout(Duration::from_secs(10), watcher.changed())
         .await
         .expect("等待第一次事件超时");
     assert_eq!(first.path, path);
 
-    client.set_data(&path, b"v2", None).await.expect("第二次写入失败");
+    client
+        .set_data(&path, b"v2", None)
+        .await
+        .expect("第二次写入失败");
     let second = tokio::time::timeout(Duration::from_secs(10), watcher.changed())
         .await
         .expect("等待第二次事件超时");

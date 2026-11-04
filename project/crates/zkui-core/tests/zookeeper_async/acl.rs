@@ -28,7 +28,10 @@ async fn creator_all_acl_requires_authentication() {
     let denied = anonymous.get_data(&path, false).await;
     assert!(matches!(denied, Err(ZkError::NoAuth)), "实际 {denied:?}");
 
-    let (data, _) = authenticated.get_data(&path, false).await.expect("读取失败");
+    let (data, _) = authenticated
+        .get_data(&path, false)
+        .await
+        .expect("读取失败");
     assert_eq!(data, b"secret");
 
     authenticated.delete(&path, None).await.expect("清理失败");

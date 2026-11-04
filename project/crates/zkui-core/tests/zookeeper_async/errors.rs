@@ -19,7 +19,12 @@ async fn error_paths_are_classified() {
     assert!(matches!(duplicate, Err(ZkError::NodeExists)));
 
     let missing_parent = zk
-        .create("/zka-missing/child", Vec::new(), open_acls(), CreateMode::Persistent)
+        .create(
+            "/zka-missing/child",
+            Vec::new(),
+            open_acls(),
+            CreateMode::Persistent,
+        )
         .await;
     assert!(matches!(missing_parent, Err(ZkError::NoNode)));
 

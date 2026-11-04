@@ -1,0 +1,26 @@
+# 代码侧校验与开发命令。由仓库根 justfile 汇总调用。
+# 运行时依赖：cargo、node、npm（版本见 rust-toolchain.toml 与 package.json 的 engines）。
+
+fmt:
+    cargo fmt --all
+
+fmt-check:
+    cargo fmt --all -- --check
+
+clippy:
+    cargo clippy --workspace --all-targets -- -D warnings
+
+lint:
+    npx --no-install biome check src config
+
+typecheck:
+    npx --no-install vue-tsc --noEmit
+
+test:
+    cargo test --workspace
+
+# 需要 ZooKeeper 环境；默认连本机 2181。
+spike endpoint="127.0.0.1:2181":
+    ZK_SPIKE_ENDPOINT={{endpoint}} cargo test -p zkui-core -- --ignored --test-threads=1
+
+check: fmt-check clippy lint typecheck test
