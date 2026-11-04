@@ -15,7 +15,9 @@ use crate::config::{Settings, SettingsStore};
 use crate::error::{AppError, AppResult, app};
 use crate::ipc::connection::{ConnectionSnapshot, ConnectionStateEvent, CreateConnection};
 use crate::ipc::metrics::MetricsSnapshot;
-use crate::ipc::node::{DeleteOutcome, DeletePreview, NodeCreateMode, NodeData, NodeStat};
+use crate::ipc::node::{
+    AclEntry, DeleteOutcome, DeletePreview, NodeCreateMode, NodeData, NodeStat,
+};
 use crate::metrics::Metrics;
 use crate::transport::{RelayHandle, no_proxy, proxy::ProxyProfile, relay};
 
@@ -363,6 +365,38 @@ impl ConnectionManager {
             .get(connection_id)
             .map(|entry| entry.handle.client().clone())
             .ok_or_else(|| Box::new(app::not_found(connection_id)))
+    }
+
+    /// 读取 ACL（只读）。
+    pub async fn acl(&self, connection_id: &str, path: &str) -> AppResult<Vec<AclEntry>> {
+        use zookeeper_client::Permission;
+        let client = self.client_of(connection_id)?;
+        let started = Instant::now();
+        let (acls, _stat) = client.get_acl(path).await?;
+        self.metrics
+            .record_read(started.elapsed().as_millis() as u64);
+        Ok(acls
+            .iter()
+            .map(|acl| {
+                let mut permissions = String::new();
+                for (letter, permission) in [
+                    ("c", Permission::CREATE),
+                    ("r", Permission::READ),
+                    ("w", Permission::WRITE),
+                    ("d", Permission::DELETE),
+                    ("a", Permission::ADMIN),
+                ] {
+                    if acl.permission().has(permission) {
+                        permissions.push_str(letter);
+                    }
+                }
+                AclEntry {
+                    scheme: acl.scheme().to_string(),
+                    id: acl.id().to_string(),
+                    permissions,
+                }
+            })
+            .collect())
     }
 
     /// 读取直接子节点，按名称排序。

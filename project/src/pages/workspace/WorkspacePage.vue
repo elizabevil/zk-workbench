@@ -4,7 +4,8 @@ import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 
 import { type InvokeRejection, toAppError } from "@/api/client";
-import { nodeData } from "@/api/node";
+import { nodeAcl, nodeData } from "@/api/node";
+import type { AclEntry } from "@/api/types/AclEntry";
 import type { AppError } from "@/api/types/AppError";
 import type { ConnectionSnapshot } from "@/api/types/ConnectionSnapshot";
 import type { DeleteOutcome } from "@/api/types/DeleteOutcome";
@@ -28,7 +29,9 @@ const treeKey = ref(0);
 const selectedPath = ref<string | null>("/");
 const data = ref<NodeData | null>(null);
 const dataError = ref<AppError | null>(null);
-const activeTab = ref<"data" | "stat">("data");
+const activeTab = ref<"data" | "stat" | "acl">("data");
+const acls = ref<AclEntry[] | null>(null);
+const aclError = ref<AppError | null>(null);
 const formatted = ref(false);
 const loadingData = ref(false);
 const editorOpen = ref(false);
@@ -82,7 +85,29 @@ function select(path: string): void {
   selectedPath.value = path;
   activeTab.value = "data";
   formatted.value = false;
+  acls.value = null;
+  aclError.value = null;
   void loadData(path);
+}
+
+async function loadAcl(): Promise<void> {
+  if (!connectionId.value || !selectedPath.value) {
+    return;
+  }
+  aclError.value = null;
+  try {
+    acls.value = await nodeAcl(connectionId.value, selectedPath.value);
+  } catch (raw) {
+    acls.value = null;
+    aclError.value = toAppError(raw as InvokeRejection);
+  }
+}
+
+function showAcl(): void {
+  activeTab.value = "acl";
+  if (acls.value === null) {
+    void loadAcl();
+  }
 }
 
 async function copyAddress(): Promise<void> {
@@ -313,6 +338,13 @@ function onDeleted(outcome: DeleteOutcome): void {
             >
               {{ t("data.statTab") }}
             </button>
+            <button
+              type="button"
+              :class="{ active: activeTab === 'acl' }"
+              @click="showAcl"
+            >
+              {{ t("data.aclTab") }}
+            </button>
           </div>
 
           <p v-if="dataError" class="error">{{ t(dataError.message_key) }}</p>
@@ -339,6 +371,28 @@ function onDeleted(outcome: DeleteOutcome): void {
                 </div>
                 <pre class="text">{{ displayText || t("data.empty") }}</pre>
               </template>
+            </div>
+
+            <div v-else-if="activeTab === 'acl'" class="acl-pane">
+              <p v-if="aclError" class="error">{{ t(aclError.message_key) }}</p>
+              <table v-else-if="acls && acls.length" class="acl-table">
+                <thead>
+                  <tr>
+                    <th>{{ t("data.scheme") }}</th>
+                    <th>{{ t("data.identity") }}</th>
+                    <th>{{ t("data.permissions") }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="entry in acls" :key="`${entry.scheme}:${entry.id}`">
+                    <td>{{ entry.scheme }}</td>
+                    <td class="mono">{{ entry.id }}</td>
+                    <td class="mono">{{ entry.permissions }}</td>
+                  </tr>
+                </tbody>
+              </table>
+              <p v-else class="muted">{{ t("data.aclEmpty") }}</p>
+              <p class="hint">{{ t("data.aclReadOnly") }}</p>
             </div>
 
             <dl v-else class="stat-grid">
@@ -636,6 +690,29 @@ function onDeleted(outcome: DeleteOutcome): void {
   color: #fbbf24;
   margin: 0;
   font-size: 13px;
+}
+.acl-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.acl-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.acl-table th,
+.acl-table td {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 1px solid rgb(255 255 255 / 8%);
+}
+.mono {
+  font-family: ui-monospace, monospace;
+}
+.hint {
+  color: #9aa4b2;
+  font-size: 12px;
 }
 .stat-grid {
   display: grid;

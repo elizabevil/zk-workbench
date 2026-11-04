@@ -27,6 +27,12 @@ export default {
   },
   data: {
     tab: "Data",
+    aclTab: "ACL",
+    scheme: "Scheme",
+    identity: "Identity",
+    permissions: "Permissions",
+    aclEmpty: "ACL is empty (or not visible to this identity)",
+    aclReadOnly: "ACL panel is read-only; use the setAcl command to edit.",
     statTab: "Stat",
     edit: "Edit",
     create: "Create",

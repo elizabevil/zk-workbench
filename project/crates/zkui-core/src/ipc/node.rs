@@ -70,3 +70,13 @@ pub struct DeleteOutcome {
     #[ts(type = "number")]
     pub unexecuted: u64,
 }
+
+/// ACL 条目（只读展示）。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[ts(export)]
+pub struct AclEntry {
+    pub scheme: String,
+    pub id: String,
+    /// 权限字母组合：c/r/w/d/a。
+    pub permissions: String,
+}

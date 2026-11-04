@@ -27,6 +27,12 @@ export default {
   },
   data: {
     tab: "数据",
+    aclTab: "ACL",
+    scheme: "Scheme",
+    identity: "身份",
+    permissions: "权限",
+    aclEmpty: "ACL 为空（或当前身份无权查看）",
+    aclReadOnly: "ACL 面板只读；编辑通过命令区 setAcl 完成。",
     statTab: "Stat",
     edit: "编辑",
     create: "创建",

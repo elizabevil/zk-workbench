@@ -160,3 +160,12 @@ pub async fn node_delete(
     }
     result
 }
+
+#[tauri::command]
+pub async fn node_acl(
+    state: State<'_, AppState>,
+    connection_id: String,
+    path: String,
+) -> AppResult<Vec<zkui_core::ipc::node::AclEntry>> {
+    state.manager.acl(&connection_id, &path).await
+}

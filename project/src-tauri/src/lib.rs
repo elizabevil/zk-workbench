@@ -27,6 +27,7 @@ pub fn run() {
             commands::otel::otel_status,
             commands::node::node_children,
             commands::node::node_stat,
+            commands::node::node_acl,
             commands::node::node_data,
             commands::node::node_set,
             commands::node::node_create,

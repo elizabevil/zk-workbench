@@ -1,6 +1,7 @@
 //! 节点读写与删除。
 
 import { call } from "./client";
+import type { AclEntry } from "./types/AclEntry";
 import type { DeleteOutcome } from "./types/DeleteOutcome";
 import type { DeletePreview } from "./types/DeletePreview";
 import type { NodeCreateMode } from "./types/NodeCreateMode";
@@ -52,4 +53,8 @@ export function nodeDelete(
   recursive: boolean,
 ): Promise<DeleteOutcome> {
   return call<DeleteOutcome>("node_delete", { connectionId, path, recursive });
+}
+
+export function nodeAcl(connectionId: string, path: string): Promise<AclEntry[]> {
+  return call<AclEntry[]>("node_acl", { connectionId, path });
 }
