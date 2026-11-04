@@ -23,10 +23,12 @@ import type {AppPaths} from "@/api/types/AppPaths";
 import type {Locale} from "@/api/types/Locale";
 import type {NotificationLevel} from "@/api/types/NotificationLevel";
 import type {ProxyProfile} from "@/api/types/ProxyProfile";
+import {KEY_ESCAPE} from "@/constants/keyboard";
 import {LOCALES} from "@/i18n/locale";
 import {NOTIFICATION_LEVELS, PROXY_KINDS} from "@/settings/constants";
 import {useSettingsStore} from "@/stores/settings";
 import {useUiStore} from "@/stores/ui";
+import {applyNumber} from "@/utils/number";
 import {
   DEFAULT_SHORTCUTS,
   eventToBinding,
@@ -96,11 +98,39 @@ function scrollToSection(id: string): void {
 const passwords = ref<Record<number, string>>({});
 const testTarget = ref("127.0.0.1:2181");
 const testMessage = ref("");
-const dragIndex = ref<number | null>(null);
+const dragIndex = ref<number>();
 const proxySaved = ref("");
 let autoSaveTimer = 0;
+let proxyTipTimer = 0;
+let testTipTimer = 0;
 const shortcutSaved = ref("");
 const previewImage = ref("");
+const selectedImageName = ref("");
+const backgroundFileInput = ref<HTMLInputElement>();
+
+const imageName = computed(() => {
+  const path = store.settings?.appearance.image_path ?? "";
+  if (!path) {
+    return "";
+  }
+  return selectedImageName.value || path.split(/[\\/]/).pop() || "";
+});
+
+function setProxySaved(message: string): void {
+  proxySaved.value = message;
+  window.clearTimeout(proxyTipTimer);
+  proxyTipTimer = window.setTimeout(() => {
+    proxySaved.value = "";
+  }, 4000);
+}
+
+function setTestMessage(message: string): void {
+  testMessage.value = message;
+  window.clearTimeout(testTipTimer);
+  testTipTimer = window.setTimeout(() => {
+    testMessage.value = "";
+  }, 4000);
+}
 
 function setLocale(value: unknown): void {
   if (!store.settings) {
@@ -144,64 +174,66 @@ function setProxyKind(profile: ProxyProfile, value: unknown): void {
   }
 }
 
-function setGradientAngle(value: number | null): void {
-  if (store.settings && value !== null) {
+function setGradientAngle(value: number): void {
+  if (store.settings) {
     store.settings.appearance.gradient_angle = value;
   }
 }
 
-function setPanelOpacity(value: number | null): void {
-  if (store.settings && value !== null) {
+function setPanelOpacity(value: number): void {
+  if (store.settings) {
     store.settings.appearance.panel_opacity = value;
   }
 }
 
-function setBackgroundBlur(value: number | null): void {
-  if (store.settings && value !== null) {
+function setBackgroundBlur(value: number): void {
+  if (store.settings) {
     store.settings.appearance.background_blur = value;
   }
 }
 
-function setFontSize(value: number | null): void {
-  if (store.settings && value !== null) {
+function setFontSize(value: number): void {
+  if (store.settings) {
     store.settings.appearance.font_size = value;
   }
 }
 
-function setMaxAttempts(value: number | null): void {
-  if (store.settings && value !== null) {
+function setMaxAttempts(value: number): void {
+  if (store.settings) {
     store.settings.retry.max_attempts = value;
   }
 }
 
-function setInitialInterval(value: number | null): void {
-  if (store.settings && value !== null) {
+function setInitialInterval(value: number): void {
+  if (store.settings) {
     store.settings.retry.initial_interval_ms = toU64(value);
   }
 }
 
-function setMaxInterval(value: number | null): void {
-  if (store.settings && value !== null) {
+function setMaxInterval(value: number): void {
+  if (store.settings) {
     store.settings.retry.max_interval_ms = toU64(value);
   }
 }
 
-function setLogMaxSize(value: number | null): void {
-  if (store.settings && value !== null) {
+function setLogMaxSize(value: number): void {
+  if (store.settings) {
     store.settings.logs.max_size_mb = toU64(value);
   }
 }
 
-function setLogRetention(value: number | null): void {
-  if (store.settings && value !== null) {
+function setLogRetention(value: number): void {
+  if (store.settings) {
     store.settings.logs.retention_days = value;
   }
 }
 
-function setProxyPort(profile: ProxyProfile, value: number | null): void {
-  if (value !== null) {
-    profile.port = value;
-  }
+function setProxyPort(profile: ProxyProfile, value: number): void {
+  profile.port = value;
+}
+
+function applyProxyPort(profile: ProxyProfile, value: unknown): void {
+  applyNumber(value, (port) => setProxyPort(profile, port));
 }
 
 watch(
@@ -236,12 +268,18 @@ const appearancePreview = computed(() => {
   };
 });
 
+function chooseBackground(): void {
+  backgroundFileInput.value?.click();
+}
+
 async function pickBackground(event: Event): Promise<void> {
   const input = event.target as HTMLInputElement;
   const file = input.files?.[0];
   if (!file || !store.settings) {
     return;
   }
+  selectedImageName.value = file.name;
+  input.value = "";
   const dataUrl = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result));
@@ -258,6 +296,7 @@ async function pickBackground(event: Event): Promise<void> {
 function clearBackground(): void {
   if (store.settings) {
     store.settings.appearance.image_path = "";
+    selectedImageName.value = "";
   }
 }
 
@@ -294,7 +333,7 @@ function goBack(): void {
 }
 
 function onEscape(event: KeyboardEvent): void {
-  if (event.key === "Escape") {
+  if (event.key === KEY_ESCAPE) {
     goBack();
   }
 }
@@ -342,7 +381,7 @@ onMounted(async () => {
         }
       }
     },
-    {root: container, rootMargin: "-10% 0px -70% 0px", threshold: 0},
+    {root: container, rootMargin: "-10% 0px -40% 0px", threshold: 0},
   );
   for (const fieldset of fieldsets) {
     observer.observe(fieldset);
@@ -355,6 +394,8 @@ onMounted(async () => {
 onUnmounted(() => {
   observer?.disconnect();
   window.removeEventListener("keydown", onEscape);
+  window.clearTimeout(proxyTipTimer);
+  window.clearTimeout(testTipTimer);
 });
 
 async function clearPassword(profile: ProxyProfile): Promise<void> {
@@ -371,10 +412,10 @@ async function resetSettings(): Promise<void> {
 async function testProxy(profile: ProxyProfile): Promise<void> {
   try {
     await proxyTest(profile, testTarget.value);
-    testMessage.value = t("settings.proxy.testOk");
+    setTestMessage(t("settings.proxy.testOk"));
   } catch (raw) {
     const error = toAppError(raw as InvokeRejection);
-    testMessage.value = t(error.message_key);
+    setTestMessage(t(error.message_key));
   }
 }
 
@@ -396,8 +437,8 @@ function dragStart(index: number): void {
 function drop(index: number): void {
   const profiles = store.settings?.proxy.profiles;
   const from = dragIndex.value;
-  dragIndex.value = null;
-  if (!profiles || from === null || from === index) {
+  dragIndex.value = undefined;
+  if (!profiles || from === undefined || from === index) {
     return;
   }
   const [item] = profiles.splice(from, 1);
@@ -410,7 +451,7 @@ async function applyProxy(): Promise<void> {
   const active = profiles.length
     ? `${profiles[0].kind}://${profiles[0].host}:${profiles[0].port}`
     : t("settings.proxy.direct");
-  proxySaved.value = t("settings.proxy.saved", {target: active});
+  setProxySaved(t("settings.proxy.saved", {target: active}));
 }
 
 function submitSettings(event: Event): void {
@@ -446,6 +487,9 @@ function removeProxy(index: number): void {
       <h1>{{ t("settings.title") }}</h1>
       <div class="header-actions">
         <span :title="t('settings.zoom')" class="zoom-badge">{{ ui.zoomPercent }}%</span>
+        <button :title="t('settings.zoomReset')" type="button" @click="ui.resetZoom()">
+          {{ t("settings.zoomReset") }}
+        </button>
         <button type="button" @click="router.push('/')">{{ t("settings.back") }}</button>
       </div>
     </header>
@@ -473,6 +517,7 @@ function removeProxy(index: number): void {
         :on-submit="submitSettings"
         :show-feedback="false"
         class="settings-form"
+        label-align="left"
         label-placement="left"
         label-width="180"
         size="small"
@@ -537,22 +582,33 @@ function removeProxy(index: number): void {
                 :show-button="false"
                 :value="store.settings.appearance.gradient_angle"
                 class="control-xs"
-                @update:value="setGradientAngle"
+                @update:value="(value) => applyNumber(value, setGradientAngle)"
               />
             </NFormItem>
           </template>
           <template v-if="store.settings.appearance.mode === 'image'">
             <NFormItem :label="t('settings.appearance.imageFile')">
-              <input
-                accept="image/png,image/jpeg,image/webp,image/gif"
-                class="file-input"
-                type="file"
-                @change="pickBackground"
-              />
+              <div class="file-row">
+                <NButton size="small" @click="chooseBackground">
+                  {{ t("settings.appearance.imageFile") }}
+                </NButton>
+                <span v-if="imageName" :title="store.settings.appearance.image_path" class="file-name">
+                  {{ imageName }}
+                </span>
+                <span v-else class="hint">{{ t("settings.appearance.noImage") }}</span>
+                <input
+                  ref="backgroundFileInput"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  class="file-input-hidden"
+                  type="file"
+                  @change="pickBackground"
+                />
+              </div>
             </NFormItem>
-            <p class="hint">{{ store.settings.appearance.image_path || t("settings.appearance.noImage") }}</p>
             <div class="actions">
-              <NButton size="small" @click="clearBackground">{{ t("settings.appearance.clearImage") }}</NButton>
+              <NButton :disabled="!store.settings.appearance.image_path" size="small" @click="clearBackground">
+                {{ t("settings.appearance.clearImage") }}
+              </NButton>
             </div>
           </template>
           <NFormItem :label="t('settings.appearance.panelOpacity')">
@@ -561,7 +617,7 @@ function removeProxy(index: number): void {
                 :max="100"
                 :min="0"
                 :value="store.settings.appearance.panel_opacity"
-                @update:value="setPanelOpacity"
+                @update:value="(value) => applyNumber(value, setPanelOpacity)"
               />
               <span class="slider-value">{{ store.settings.appearance.panel_opacity }}</span>
             </div>
@@ -572,7 +628,7 @@ function removeProxy(index: number): void {
                 :max="30"
                 :min="0"
                 :value="store.settings.appearance.background_blur"
-                @update:value="setBackgroundBlur"
+                @update:value="(value) => applyNumber(value, setBackgroundBlur)"
               />
               <span class="slider-value">{{ store.settings.appearance.background_blur }}</span>
             </div>
@@ -584,10 +640,15 @@ function removeProxy(index: number): void {
               :show-button="false"
               :value="store.settings.appearance.font_size"
               class="control-xs"
-              @update:value="setFontSize"
+              @update:value="(value) => applyNumber(value, setFontSize)"
             />
           </NFormItem>
-          <div :style="appearancePreview" class="preview" />
+          <div :style="appearancePreview" class="preview">
+            <span class="preview-sample" :style="{fontSize: `${store.settings.appearance.font_size}px`}">
+              {{ t("settings.appearance.previewText") }}
+            </span>
+            <span class="preview-meta">{{ store.settings.appearance.font_size }} px</span>
+          </div>
         </fieldset>
 
         <fieldset>
@@ -619,7 +680,7 @@ function removeProxy(index: number): void {
               :show-button="false"
               :value="store.settings.retry.max_attempts"
               class="control-xs"
-              @update:value="setMaxAttempts"
+              @update:value="(value) => applyNumber(value, setMaxAttempts)"
             />
           </NFormItem>
           <NFormItem :label="t('settings.retry.initial')">
@@ -628,7 +689,7 @@ function removeProxy(index: number): void {
               :show-button="false"
               :value="fromU64(store.settings.retry.initial_interval_ms)"
               class="control-sm"
-              @update:value="setInitialInterval"
+              @update:value="(value) => applyNumber(value, setInitialInterval)"
             />
           </NFormItem>
           <NFormItem :label="t('settings.retry.max')">
@@ -637,7 +698,7 @@ function removeProxy(index: number): void {
               :show-button="false"
               :value="fromU64(store.settings.retry.max_interval_ms)"
               class="control-sm"
-              @update:value="setMaxInterval"
+              @update:value="(value) => applyNumber(value, setMaxInterval)"
             />
           </NFormItem>
         </fieldset>
@@ -694,7 +755,7 @@ function removeProxy(index: number): void {
                   :show-button="false"
                   :value="profile.port"
                   size="small"
-                  @update:value="(value) => setProxyPort(profile, value)"
+                  @update:value="(value) => applyProxyPort(profile, value)"
                 />
                 <NInput
                   v-model:value="profile.username"
@@ -746,7 +807,7 @@ function removeProxy(index: number): void {
               @keydown.prevent="captureShortcut(action, $event)"
             />
           </NFormItem>
-          <div class="row-actions">
+          <div class="actions">
             <NButton size="small" @click="resetShortcuts">{{ t("settings.shortcuts.reset") }}</NButton>
             <span v-if="shortcutSaved" class="hint">{{ shortcutSaved }}</span>
           </div>
@@ -770,7 +831,7 @@ function removeProxy(index: number): void {
               :step="1"
               :value="fromU64(store.settings.logs.max_size_mb)"
               class="control-xs"
-              @update:value="setLogMaxSize"
+              @update:value="(value) => applyNumber(value, setLogMaxSize)"
             />
           </NFormItem>
           <NFormItem :label="t('settings.logs.retention')">
@@ -779,7 +840,7 @@ function removeProxy(index: number): void {
               :show-button="false"
               :value="store.settings.logs.retention_days"
               class="control-xs"
-              @update:value="setLogRetention"
+              @update:value="(value) => applyNumber(value, setLogRetention)"
             />
           </NFormItem>
           <p v-if="paths" class="hint">{{ t("settings.logs.config") }}: {{ paths.config_path }}</p>
@@ -862,10 +923,10 @@ function removeProxy(index: number): void {
 .settings-nav {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 6px;
   flex: 0 0 200px;
-  padding: 8px 0;
+  padding: 0 0 8px;
   overflow-y: auto;
 }
 
@@ -883,12 +944,6 @@ function removeProxy(index: number): void {
 .settings-nav button.active {
   background: rgb(37 99 235 / 22%);
   color: #fff;
-}
-
-@media (max-height: 680px) {
-  .settings-nav {
-    justify-content: flex-start;
-  }
 }
 
 .saved-tip {
@@ -932,6 +987,7 @@ legend {
   padding-right: 20px;
   color: #cbd5e1;
   font-size: 13px;
+  text-align: left;
 }
 
 .settings-form :deep(.n-form-item-blank) {
@@ -1011,21 +1067,26 @@ legend {
   text-align: right;
 }
 
-.file-input {
-  width: 320px;
-  max-width: 100%;
-  color: #9aa4b2;
-  font: inherit;
+.file-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: 420px;
 }
 
-.file-input::file-selector-button {
-  margin-right: 8px;
-  padding: 4px 8px;
-  border: 1px solid #2a323c;
-  border-radius: 4px;
-  background: #1d242c;
-  color: #e6e6e6;
-  cursor: pointer;
+.file-name {
+  min-width: 0;
+  overflow: hidden;
+  color: #cbd5e1;
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-input-hidden {
+  display: none;
 }
 
 .shortcut-input {
@@ -1092,14 +1153,46 @@ legend {
 .actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   flex-wrap: wrap;
   gap: 12px;
 }
 
+.settings-form > .actions {
+  padding-right: 30px;
+}
+
 .preview {
-  height: 48px;
+  box-sizing: border-box;
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  overflow: hidden;
   border: 1px solid #2a323c;
   border-radius: 6px;
+  background-position: center;
+  background-size: cover;
+}
+
+.preview-sample {
+  min-width: 0;
+  overflow: hidden;
+  color: #fff;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 3px rgb(0 0 0 / 85%);
+  white-space: nowrap;
+}
+
+.preview-meta {
+  flex: none;
+  color: rgb(255 255 255 / 75%);
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  text-shadow: 0 1px 3px rgb(0 0 0 / 85%);
 }
 
 .hint {

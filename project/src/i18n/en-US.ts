@@ -242,6 +242,7 @@ export default {
             backgroundBlur: "Background blur (frosted)",
             fontSize: "UI font size (px)",
             panelOpacity: "Panel opacity (black)",
+            previewText: "ZooKeeper node Aa 123",
         },
         general: {
             title: "General",

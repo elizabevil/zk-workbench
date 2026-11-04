@@ -241,6 +241,7 @@ export default {
             backgroundBlur: "背景模糊（磨砂）",
             fontSize: "界面字号（px）",
             panelOpacity: "面板透明度（黑色）",
+            previewText: "ZooKeeper 节点 Aa 123",
         },
         general: {title: "通用", locale: "语言", theme: "主题", restore: "启动时恢复上次连接"},
         notifications: {
