@@ -2,6 +2,7 @@
 
 use base64::Engine;
 use tauri::State;
+use zkui_core::audit::AuditEntry;
 use zkui_core::error::{AppResult, app};
 use zkui_core::ipc::node::{DeleteOutcome, DeletePreview, NodeCreateMode, NodeData, NodeStat};
 
@@ -52,10 +53,28 @@ pub async fn node_set(
     data_b64: String,
     expected_version: i32,
 ) -> AppResult<NodeStat> {
-    state
+    let data = decode(&data_b64)?;
+    let result = state
         .manager
-        .set_data(&connection_id, &path, decode(&data_b64)?, expected_version)
-        .await
+        .set_data(&connection_id, &path, data, expected_version)
+        .await;
+    match &result {
+        Ok(stat) => {
+            let mut entry = AuditEntry::success("set", &connection_id, &path);
+            entry.before_version = Some(expected_version);
+            entry.after_version = Some(stat.version);
+            state.audit.record(entry)?;
+        }
+        Err(error) => {
+            state.audit.record(AuditEntry::failure(
+                "set",
+                &connection_id,
+                &path,
+                error.as_ref(),
+            ))?;
+        }
+    }
+    result
 }
 
 #[tauri::command]
@@ -67,16 +86,27 @@ pub async fn node_create(
     mode: NodeCreateMode,
     create_parents: bool,
 ) -> AppResult<String> {
-    state
+    let data = decode(&data_b64)?;
+    let result = state
         .manager
-        .create_node(
-            &connection_id,
-            &path,
-            decode(&data_b64)?,
-            mode,
-            create_parents,
-        )
-        .await
+        .create_node(&connection_id, &path, data, mode, create_parents)
+        .await;
+    match &result {
+        Ok(actual) => {
+            let mut entry = AuditEntry::success("create", &connection_id, actual);
+            entry.detail = Some(format!("mode={mode:?}"));
+            state.audit.record(entry)?;
+        }
+        Err(error) => {
+            state.audit.record(AuditEntry::failure(
+                "create",
+                &connection_id,
+                &path,
+                error.as_ref(),
+            ))?;
+        }
+    }
+    result
 }
 
 #[tauri::command]
@@ -99,8 +129,34 @@ pub async fn node_delete(
     path: String,
     recursive: bool,
 ) -> AppResult<DeleteOutcome> {
-    state
+    let result = state
         .manager
         .delete_node(&connection_id, &path, recursive)
-        .await
+        .await;
+    match &result {
+        Ok(outcome) => match &outcome.failed_error {
+            Some(error) => {
+                let mut entry = AuditEntry::failure("delete", &connection_id, &path, error);
+                entry.detail = Some(format!(
+                    "deleted={}, unexecuted={}",
+                    outcome.deleted, outcome.unexecuted
+                ));
+                state.audit.record(entry)?;
+            }
+            None => {
+                let mut entry = AuditEntry::success("delete", &connection_id, &path);
+                entry.detail = Some(format!("deleted={}", outcome.deleted));
+                state.audit.record(entry)?;
+            }
+        },
+        Err(error) => {
+            state.audit.record(AuditEntry::failure(
+                "delete",
+                &connection_id,
+                &path,
+                error.as_ref(),
+            ))?;
+        }
+    }
+    result
 }

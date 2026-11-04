@@ -60,6 +60,7 @@ pub enum ErrorKind {
     NotFound,
     Closed,
     SecretStore,
+    AuditFailed,
     // proxy 域
     Connect,
     Handshake,
@@ -90,6 +91,7 @@ impl ErrorKind {
             ErrorKind::NotFound => "not_found",
             ErrorKind::Closed => "closed",
             ErrorKind::SecretStore => "secret_store",
+            ErrorKind::AuditFailed => "audit_failed",
             ErrorKind::Connect => "connect",
             ErrorKind::Handshake => "handshake",
             ErrorKind::InvalidArgument => "invalid_argument",

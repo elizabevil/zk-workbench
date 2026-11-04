@@ -4,10 +4,12 @@ import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 
 import { appPaths } from "@/api/app";
+import { auditClear, auditExport, auditList, auditPrune, auditVerify } from "@/api/audit";
 import { type InvokeRejection, toAppError } from "@/api/client";
 import { metricsSnapshot } from "@/api/metrics";
 import { proxyPasswordClear, proxyPasswordSet, proxyTest } from "@/api/proxy";
 import type { AppPaths } from "@/api/types/AppPaths";
+import type { AuditRecord } from "@/api/types/AuditRecord";
 import type { MetricsSnapshot } from "@/api/types/MetricsSnapshot";
 import type { ProxyProfile } from "@/api/types/ProxyProfile";
 import { LOCALES } from "@/i18n/locale";
@@ -33,6 +35,9 @@ const noProxyText = computed({
 
 const paths = ref<AppPaths | null>(null);
 const metrics = ref<MetricsSnapshot | null>(null);
+const auditRows = ref<AuditRecord[]>([]);
+const auditMessage = ref("");
+const exportPath = ref("");
 const passwords = ref<Record<number, string>>({});
 const testTarget = ref("127.0.0.1:2181");
 const testMessage = ref("");
@@ -41,10 +46,46 @@ async function loadMetrics(): Promise<void> {
   metrics.value = await metricsSnapshot();
 }
 
+async function loadAudit(): Promise<void> {
+  auditRows.value = await auditList(100, 0, null);
+}
+
+async function verifyAudit(): Promise<void> {
+  const report = await auditVerify();
+  auditMessage.value = report.ok
+    ? t("settings.audit.verified", { count: report.checked })
+    : t("settings.audit.broken", { id: report.broken_at ?? "-" });
+}
+
+async function clearAudit(): Promise<void> {
+  if (!window.confirm(t("settings.audit.confirmClear"))) {
+    return;
+  }
+  const cleared = await auditClear();
+  auditMessage.value = t("settings.audit.cleared", { count: cleared });
+  await loadAudit();
+}
+
+async function pruneAudit(): Promise<void> {
+  const days = store.settings?.audit.retention_days ?? 90;
+  const removed = await auditPrune(days);
+  auditMessage.value = t("settings.audit.pruned", { count: removed });
+  await loadAudit();
+}
+
+async function exportAudit(): Promise<void> {
+  if (!exportPath.value.trim()) {
+    return;
+  }
+  await auditExport(exportPath.value.trim());
+  auditMessage.value = t("settings.audit.exported");
+}
+
 onMounted(async () => {
   await store.load();
   paths.value = await appPaths();
   await loadMetrics();
+  await loadAudit();
 });
 
 function moveProxy(index: number, delta: number): void {
@@ -246,8 +287,43 @@ function removeProxy(index: number): void {
           {{ t("settings.audit.retention") }}
           <input v-model.number="store.settings.audit.retention_days" min="1" type="number" />
         </label>
-        <button disabled type="button">{{ t("settings.audit.clear") }}</button>
-        <p class="hint">{{ t("settings.audit.clearHint") }}</p>
+        <div class="audit-actions">
+          <button type="button" @click="loadAudit">{{ t("settings.audit.refresh") }}</button>
+          <button type="button" @click="verifyAudit">{{ t("settings.audit.verify") }}</button>
+          <button type="button" @click="pruneAudit">{{ t("settings.audit.prune") }}</button>
+          <button type="button" class="danger" @click="clearAudit">
+            {{ t("settings.audit.clear") }}
+          </button>
+        </div>
+        <p v-if="auditMessage" class="hint">{{ auditMessage }}</p>
+
+        <div class="audit-export">
+          <input v-model="exportPath" :placeholder="t('settings.audit.exportPath')" />
+          <button type="button" @click="exportAudit">{{ t("settings.audit.export") }}</button>
+        </div>
+
+        <table v-if="auditRows.length" class="audit-table">
+          <thead>
+            <tr>
+              <th>{{ t("settings.audit.time") }}</th>
+              <th>{{ t("settings.audit.op") }}</th>
+              <th>{{ t("settings.audit.path") }}</th>
+              <th>{{ t("settings.audit.result") }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="row in auditRows" :key="row.id">
+              <td>{{ new Date(row.ts).toLocaleString() }}</td>
+              <td>{{ row.op }}</td>
+              <td class="mono">{{ row.path ?? "-" }}</td>
+              <td>
+                {{ row.result }}
+                <span v-if="row.error_kind" class="muted">({{ row.error_kind }})</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <p v-else class="hint">{{ t("settings.audit.empty") }}</p>
       </fieldset>
 
       <fieldset>
@@ -361,6 +437,41 @@ label.inline {
 .actions {
   display: flex;
   gap: 12px;
+}
+.audit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.audit-export {
+  display: flex;
+  gap: 8px;
+}
+.audit-export input {
+  flex: 1;
+  padding: 7px 9px;
+  border-radius: 6px;
+  border: 1px solid #2a323c;
+  background: #101418;
+  color: inherit;
+}
+.audit-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.audit-table th,
+.audit-table td {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 1px solid rgb(255 255 255 / 8%);
+}
+.audit-table .mono {
+  font-family: ui-monospace, monospace;
+}
+.danger {
+  border-color: rgb(248 113 113 / 45%);
+  color: #f87171;
 }
 .metrics-head {
   display: flex;

@@ -95,3 +95,16 @@ pub fn secret_store_failed(detail: &str) -> AppError {
         },
     )
 }
+
+/// 审计存储失败。
+pub fn audit_failed(detail: &str) -> AppError {
+    AppError::new(
+        ErrorKind::AuditFailed,
+        ErrorScope::App,
+        2007,
+        ErrorFields {
+            detail: Some(detail.to_string()),
+            ..Default::default()
+        },
+    )
+}
