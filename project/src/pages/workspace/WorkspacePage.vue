@@ -8,7 +8,9 @@ import { nodeData } from "@/api/node";
 import type { AppError } from "@/api/types/AppError";
 import type { ConnectionSnapshot } from "@/api/types/ConnectionSnapshot";
 import type { NodeData } from "@/api/types/NodeData";
+import type { NodeStat } from "@/api/types/NodeStat";
 import ConnectionDialog from "@/components/ConnectionDialog.vue";
+import NodeEditor from "@/components/NodeEditor.vue";
 import TreeNodeItem from "@/components/TreeNodeItem.vue";
 import { useConnectionStore } from "@/stores/connection";
 import { decodeUtf8Base64, hexPreview } from "@/utils/encoding";
@@ -21,19 +23,23 @@ const menuOpen = ref(false);
 const dialogOpen = ref(false);
 const treeKey = ref(0);
 const selectedPath = ref<string | null>("/");
-
-const activeTab = ref<"data" | "stat">("data");
-const formatted = ref(false);
 const data = ref<NodeData | null>(null);
 const dataError = ref<AppError | null>(null);
+const activeTab = ref<"data" | "stat">("data");
+const formatted = ref(false);
 const loadingData = ref(false);
+const editorOpen = ref(false);
+const toast = ref("");
 
 const connectionId = computed(() => store.snapshot?.connection_id ?? "");
+const stat = computed<NodeStat | null>(() => data.value?.stat ?? null);
 const stateLabel = computed(() =>
   store.snapshot ? t(`connection.state.${store.snapshot.state}`) : t("shell.noConnection"),
 );
 
-const text = computed(() => (data.value?.is_text ? decodeUtf8Base64(data.value.data_b64) : ""));
+const text = computed(() =>
+  data.value?.is_text ? decodeUtf8Base64(data.value.data_b64) : "",
+);
 const pretty = computed(() => {
   if (!text.value) {
     return null;
@@ -46,7 +52,6 @@ const pretty = computed(() => {
 });
 const displayText = computed(() => (formatted.value && pretty.value ? pretty.value : text.value));
 const hexDump = computed(() => (data.value ? hexPreview(data.value.data_b64) : ""));
-
 async function loadData(path: string): Promise<void> {
   if (!connectionId.value) {
     return;
@@ -126,6 +131,15 @@ async function disconnect(): Promise<void> {
     await router.replace("/");
   }
 }
+
+function onSaved(stat: NodeStat): void {
+  editorOpen.value = false;
+  toast.value = t("editor.saved", { version: stat.version });
+  if (selectedPath.value) {
+    void loadData(selectedPath.value);
+  }
+}
+
 </script>
 
 <template>
@@ -204,6 +218,15 @@ async function disconnect(): Promise<void> {
             <h2 class="path">{{ selectedPath }}</h2>
             <div class="toolbar">
               <button type="button" class="tiny" @click="refresh">{{ t("data.refresh") }}</button>
+              <button
+                type="button"
+                class="tiny"
+                :disabled="!data || !data.is_text"
+                :title="data && !data.is_text ? t('data.notEditable') : ''"
+                @click="editorOpen = true"
+              >
+                {{ t("data.edit") }}
+              </button>
             </div>
           </div>
 
@@ -225,7 +248,7 @@ async function disconnect(): Promise<void> {
           </div>
 
           <p v-if="dataError" class="error">{{ t(dataError.message_key) }}</p>
-          <p v-else-if="loadingData" class="muted">{{ t("shell.loading") }}</p>
+          <p v-else-if="loadingData" class="muted">{{ t("delete.loading") }}</p>
 
           <template v-else-if="data">
             <div v-if="activeTab === 'data'" class="data-pane">
@@ -237,7 +260,12 @@ async function disconnect(): Promise<void> {
               <template v-else>
                 <div class="data-toolbar">
                   <span class="muted">{{ t("data.bytes") }}: {{ data.byte_len }}</span>
-                  <button v-if="pretty" type="button" class="tiny" @click="formatted = !formatted">
+                  <button
+                    v-if="pretty"
+                    type="button"
+                    class="tiny"
+                    @click="formatted = !formatted"
+                  >
                     {{ formatted ? t("data.raw") : t("data.formatted") }}
                   </button>
                 </div>
@@ -246,17 +274,17 @@ async function disconnect(): Promise<void> {
             </div>
 
             <dl v-else class="stat-grid">
-              <div><dt>{{ t("shell.version") }}</dt><dd>{{ data.stat.version }}</dd></div>
-              <div><dt>{{ t("shell.cversion") }}</dt><dd>{{ data.stat.cversion }}</dd></div>
-              <div><dt>{{ t("shell.children") }}</dt><dd>{{ data.stat.num_children }}</dd></div>
-              <div><dt>{{ t("shell.dataLength") }}</dt><dd>{{ data.stat.data_length }}</dd></div>
+              <div><dt>{{ t("shell.version") }}</dt><dd>{{ stat?.version }}</dd></div>
+              <div><dt>{{ t("shell.cversion") }}</dt><dd>{{ stat?.cversion }}</dd></div>
+              <div><dt>{{ t("shell.children") }}</dt><dd>{{ stat?.num_children }}</dd></div>
+              <div><dt>{{ t("shell.dataLength") }}</dt><dd>{{ stat?.data_length }}</dd></div>
               <div>
                 <dt>{{ t("shell.ephemeral") }}</dt>
                 <dd>
-                  {{ data.stat.ephemeral_owner === 0 ? t("shell.persistent") : data.stat.ephemeral_owner }}
+                  {{ stat?.ephemeral_owner === 0 ? t("shell.persistent") : stat?.ephemeral_owner }}
                 </dd>
               </div>
-              <div><dt>{{ t("shell.mtime") }}</dt><dd>{{ new Date(data.stat.mtime).toLocaleString() }}</dd></div>
+              <div><dt>{{ t("shell.mtime") }}</dt><dd>{{ stat ? new Date(stat.mtime).toLocaleString() : "" }}</dd></div>
             </dl>
           </template>
         </div>
@@ -273,10 +301,19 @@ async function disconnect(): Promise<void> {
       <span>{{ store.snapshot?.connection_id ?? "" }}</span>
     </footer>
 
-    <ConnectionDialog
-      :open="dialogOpen"
-      @close="dialogOpen = false"
-      @connected="onConnected"
+    <p v-if="toast" class="toast">{{ toast }}</p>
+
+    <ConnectionDialog :open="dialogOpen" @close="dialogOpen = false" @connected="onConnected" />
+    <NodeEditor
+      v-if="data"
+      :open="editorOpen"
+      :connection-id="connectionId"
+      :path="selectedPath ?? '/'"
+      :original-text="text"
+      :version="data.stat.version"
+      @close="editorOpen = false"
+      @saved="onSaved"
+      @reload="editorOpen = false; loadData(selectedPath ?? '/')"
     />
   </div>
 </template>
@@ -394,9 +431,17 @@ async function disconnect(): Promise<void> {
   border-radius: 5px;
   border: 1px solid rgb(255 255 255 / 15%);
   background: transparent;
-  color: #9aa4b2;
+  color: #cbd5e1;
   cursor: pointer;
   font-size: 12px;
+}
+.tiny:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.tiny.danger {
+  color: #f87171;
+  border-color: rgb(248 113 113 / 40%);
 }
 .tree-scroll {
   flex: 1;
@@ -404,50 +449,19 @@ async function disconnect(): Promise<void> {
 }
 .content {
   flex: 1;
-  display: grid;
-  place-items: center;
-  padding: 24px;
+  min-width: 0;
   overflow: auto;
+  padding: 20px 24px;
 }
 .placeholder {
+  display: grid;
+  place-items: center;
+  height: 100%;
   text-align: center;
 }
 .placeholder h2 {
   margin: 0 0 6px;
   font-size: 18px;
-}
-.stat-panel {
-  align-self: start;
-  justify-self: stretch;
-  max-width: 720px;
-  margin: 0 auto;
-}
-.path {
-  font-family: ui-monospace, monospace;
-  font-size: 18px;
-  margin: 0 0 16px;
-  word-break: break-all;
-}
-.stat-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 10px 20px;
-  margin: 0;
-}
-.stat-grid div {
-  padding: 8px 10px;
-  border-radius: 6px;
-  border: 1px solid rgb(255 255 255 / 8%);
-  background: rgb(16 20 24 / 55%);
-}
-.stat-grid dt {
-  color: #9aa4b2;
-  font-size: 12px;
-  margin-bottom: 4px;
-}
-.stat-grid dd {
-  margin: 0;
-  font-family: ui-monospace, monospace;
 }
 .detail {
   display: flex;
@@ -471,15 +485,6 @@ async function disconnect(): Promise<void> {
   display: flex;
   gap: 6px;
   flex: none;
-}
-.tiny {
-  padding: 2px 8px;
-  border-radius: 5px;
-  border: 1px solid rgb(255 255 255 / 15%);
-  background: transparent;
-  color: #cbd5e1;
-  cursor: pointer;
-  font-size: 12px;
 }
 .tabs {
   display: flex;
@@ -532,6 +537,27 @@ async function disconnect(): Promise<void> {
   margin: 0;
   font-size: 13px;
 }
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px 20px;
+  margin: 0;
+}
+.stat-grid div {
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid rgb(255 255 255 / 8%);
+  background: rgb(16 20 24 / 55%);
+}
+.stat-grid dt {
+  color: #9aa4b2;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+.stat-grid dd {
+  margin: 0;
+  font-family: ui-monospace, monospace;
+}
 .statusbar {
   display: flex;
   align-items: center;
@@ -542,6 +568,18 @@ async function disconnect(): Promise<void> {
   color: #9aa4b2;
   border-top: 1px solid rgb(255 255 255 / 8%);
   background: rgb(16 20 24 / 80%);
+}
+.toast {
+  position: fixed;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 14px;
+  border-radius: 6px;
+  background: #1d242c;
+  border: 1px solid #2a323c;
+  font-size: 13px;
+  z-index: 50;
 }
 .muted {
   color: #9aa4b2;

@@ -1,4 +1,4 @@
-//! 节点读取 DTO。
+//! 节点读取与写入 DTO。
 
 use serde::Serialize;
 use ts_rs::TS;

@@ -1,4 +1,4 @@
-//! 节点读取。
+//! 节点读写与删除。
 
 import { call } from "./client";
 import type { NodeData } from "./types/NodeData";
@@ -14,4 +14,13 @@ export function nodeStat(connectionId: string, path: string): Promise<NodeStat> 
 
 export function nodeData(connectionId: string, path: string): Promise<NodeData> {
   return call<NodeData>("node_data", { connectionId, path });
+}
+
+export function nodeSet(
+  connectionId: string,
+  path: string,
+  dataB64: string,
+  expectedVersion: number,
+): Promise<NodeStat> {
+  return call<NodeStat>("node_set", { connectionId, path, dataB64, expectedVersion });
 }

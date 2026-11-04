@@ -25,6 +25,9 @@ export default {
   data: {
     tab: "Data",
     statTab: "Stat",
+    edit: "Edit",
+    create: "Create",
+    delete: "Delete",
     refresh: "Refresh",
     raw: "Raw",
     formatted: "Formatted",
@@ -34,9 +37,18 @@ export default {
     empty: "Empty",
     notEditable: "Inline editing is not available for binary data",
   },
+  editor: {
+    title: "Edit data",
+    versionHint: "Read version: {version}; saving uses this version for CAS.",
+    preview: "Preview changes",
+    back: "Back",
+    confirm: "Save",
+    saving: "Saving…",
+    cancel: "Cancel",
+    reload: "Reload",
+    saved: "Saved, version {version}",
+  },
   shell: {
-    loading: "Loading…",
-
     noConnection: "Not connected",
     tree: "Node tree",
     treeHint: "Lazy loading arrives in S4",

@@ -1,10 +1,21 @@
-//! 节点读取命令。
+//! 节点读取与写入命令。
 
+use base64::Engine;
 use tauri::State;
-use zkui_core::error::AppResult;
+use zkui_core::error::{AppResult, app};
 use zkui_core::ipc::node::{NodeData, NodeStat};
 
 use crate::state::AppState;
+
+fn decode(data_b64: &str) -> AppResult<Vec<u8>> {
+    base64::engine::general_purpose::STANDARD
+        .decode(data_b64)
+        .map_err(|error| {
+            Box::new(app::invalid_argument(&format!(
+                "invalid base64 data: {error}"
+            )))
+        })
+}
 
 #[tauri::command]
 pub async fn node_children(
@@ -31,4 +42,18 @@ pub async fn node_data(
     path: String,
 ) -> AppResult<NodeData> {
     state.manager.data(&connection_id, &path).await
+}
+
+#[tauri::command]
+pub async fn node_set(
+    state: State<'_, AppState>,
+    connection_id: String,
+    path: String,
+    data_b64: String,
+    expected_version: i32,
+) -> AppResult<NodeStat> {
+    state
+        .manager
+        .set_data(&connection_id, &path, decode(&data_b64)?, expected_version)
+        .await
 }

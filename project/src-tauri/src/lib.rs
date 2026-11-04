@@ -19,6 +19,7 @@ pub fn run() {
             commands::node::node_children,
             commands::node::node_stat,
             commands::node::node_data,
+            commands::node::node_set,
             commands::profile::profile_list,
             commands::profile::profile_save,
             commands::profile::profile_delete,

@@ -209,6 +209,14 @@ impl ConnectionManager {
         })
     }
 
+    fn client_of(&self, connection_id: &str) -> AppResult<Client> {
+        let entries = self.entries.read().expect("connections lock poisoned");
+        entries
+            .get(connection_id)
+            .map(|entry| entry.handle.client().clone())
+            .ok_or_else(|| Box::new(app::not_found(connection_id)))
+    }
+
     /// 读取节点原始数据与 Stat。
     pub async fn data(&self, connection_id: &str, path: &str) -> AppResult<NodeData> {
         let client = self.client_of(connection_id)?;
@@ -223,12 +231,17 @@ impl ConnectionManager {
         })
     }
 
-    fn client_of(&self, connection_id: &str) -> AppResult<Client> {
-        let entries = self.entries.read().expect("connections lock poisoned");
-        entries
-            .get(connection_id)
-            .map(|entry| entry.handle.client().clone())
-            .ok_or_else(|| Box::new(app::not_found(connection_id)))
+    /// 以读取时的 version 做 CAS 写入。
+    pub async fn set_data(
+        &self,
+        connection_id: &str,
+        path: &str,
+        data: Vec<u8>,
+        expected_version: i32,
+    ) -> AppResult<NodeStat> {
+        let client = self.client_of(connection_id)?;
+        let stat = client.set_data(path, &data, Some(expected_version)).await?;
+        Ok(stat_of(path, &stat))
     }
 
     /// 读取直接子节点，按名称排序。

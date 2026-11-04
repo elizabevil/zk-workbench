@@ -25,6 +25,9 @@ export default {
   data: {
     tab: "数据",
     statTab: "Stat",
+    edit: "编辑",
+    create: "创建",
+    delete: "删除",
     refresh: "刷新",
     raw: "原始",
     formatted: "格式化",
@@ -34,9 +37,18 @@ export default {
     empty: "空数据",
     notEditable: "二进制数据不支持内联编辑",
   },
+  editor: {
+    title: "编辑数据",
+    versionHint: "读取版本：{version}，保存将使用该版本做 CAS。",
+    preview: "预览变更",
+    back: "返回编辑",
+    confirm: "确认保存",
+    saving: "保存中…",
+    cancel: "取消",
+    reload: "重新加载",
+    saved: "已保存，版本 {version}",
+  },
   shell: {
-    loading: "加载中…",
-
     noConnection: "未连接",
     tree: "节点树",
     treeHint: "按需加载将在 S4 提供",
