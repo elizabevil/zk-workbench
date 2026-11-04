@@ -415,6 +415,7 @@ function onKeydown(event: KeyboardEvent): void {
   } else if (matchesShortcut(event, map.delete) && selectedPath.value) {
     event.preventDefault();
     deleteTarget.value = selectedPath.value;
+    deleteOpen.value = true;
   } else if (matchesShortcut(event, map.refresh)) {
     event.preventDefault();
     refresh();
@@ -583,6 +584,7 @@ function onDeleted(outcome: DeleteOutcome): void {
             @dblclick="openEditorAt"
             @toggle="toggleExpanded"
             @create="createFromTree"
+            @edit="openEditorAt"
             @delete="deleteFromTree"
             @error="dataError = $event"
           />
@@ -1007,6 +1009,7 @@ function onDeleted(outcome: DeleteOutcome): void {
   gap: 4px;
 }
 .tree-scroll {
+  padding: 0.5rem 1.2rem 0.5rem 0;
   flex: 1;
   overflow: auto;
 }

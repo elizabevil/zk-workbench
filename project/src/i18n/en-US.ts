@@ -136,6 +136,7 @@ export default {
     expandAll: "Expand all",
     collapseAll: "Collapse all",
     expanded: "Expanded {count} nodes",
+    editNode: "Edit node",
     newChild: "New child",
     deleteNode: "Delete node",
     tools: "Tools",

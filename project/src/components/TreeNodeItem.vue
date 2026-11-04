@@ -22,6 +22,7 @@ const emit = defineEmits<{
   dblclick: [path: string];
   toggle: [path: string];
   create: [path: string];
+  edit: [path: string];
   delete: [path: string];
   error: [error: AppError];
 }>();
@@ -71,8 +72,14 @@ function childPath(name: string): string {
       class="row"
       :class="{ selected: path === selectedPath }"
       :style="{ paddingLeft: `${depth * 14}px` }"
+      role="treeitem"
+      tabindex="0"
+      :aria-selected="path === selectedPath"
+      @click="emit('select', path)"
+      @keydown.enter.prevent="emit('select', path)"
+      @keydown.space.prevent="emit('select', path)"
     >
-      <button class="twist" type="button" @click="toggle">
+      <button class="twist" type="button" @click.stop="toggle">
         {{ expanded ? "▾" : "▸" }}
       </button>
       <button
@@ -88,12 +95,27 @@ function childPath(name: string): string {
         {{ t("shell.retry") }}
       </button>
       <div class="row-actions">
-        <button type="button" :title="t('shell.newChild')" @click.stop="emit('create', path)">
+        <button
+          type="button"
+          class="action action-top"
+          :title="t('shell.newChild')"
+          @click.stop="emit('create', path)"
+        >
           +
         </button>
         <button
           v-if="path !== '/'"
           type="button"
+          class="action action-right"
+          :title="t('shell.editNode')"
+          @click.stop="emit('edit', path)"
+        >
+          ✎
+        </button>
+        <button
+          v-if="path !== '/'"
+          type="button"
+          class="action action-bottom"
           :title="t('shell.deleteNode')"
           @click.stop="emit('delete', path)"
         >
@@ -116,6 +138,7 @@ function childPath(name: string): string {
         @dblclick="emit('dblclick', $event)"
         @toggle="emit('toggle', $event)"
         @create="emit('create', $event)"
+        @edit="emit('edit', $event)"
         @delete="emit('delete', $event)"
         @error="emit('error', $event)"
       />
