@@ -125,6 +125,7 @@ export default {
     placeholder: "Type a command, e.g. ls / or get /path",
     run: "Run",
     running: "Running…",
+    emptyOutput: "Results appear here",
     history: "History",
   },
   shell: {

@@ -124,6 +124,7 @@ export default {
     placeholder: "输入命令，例如 ls / 或 get /path",
     run: "执行",
     running: "执行中…",
+    emptyOutput: "执行结果会显示在这里",
     history: "历史",
   },
   shell: {
