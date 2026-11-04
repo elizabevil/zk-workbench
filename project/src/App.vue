@@ -6,6 +6,7 @@ import {computed, onMounted, onUnmounted, ref, watch} from "vue";
 import {useRouter} from "vue-router";
 
 import {backgroundImageLoad} from "@/api/appearance";
+import AboutDialog from "@/components/AboutDialog.vue";
 import {listenConnectionState, MENU_ACTION, MENU_ACTION_SETTINGS} from "@/api/events";
 import {useConnectionStore} from "@/stores/connection";
 import {useSettingsStore} from "@/stores/settings";
@@ -51,10 +52,18 @@ function onWheel(event: WheelEvent): void {
 function onZoomKey(event: KeyboardEvent): void {
   if ((event.ctrlKey || event.metaKey) && event.key === "0") {
     event.preventDefault();
-    uiZoom.value = 1;
-    saveZoom(1);
+    ui.resetZoom();
   }
 }
+
+watch(
+  () => ui.zoomResetRevision,
+  () => {
+    const fontSize = settings.settings?.appearance.font_size ?? BASE_FONT_SIZE;
+    uiZoom.value = BASE_FONT_SIZE / fontSize;
+    saveZoom(uiZoom.value);
+  },
+);
 
 onMounted(async () => {
   settings.load();
@@ -143,6 +152,7 @@ watch(
     <div :style="backgroundStyle" class="app-bg"/>
     <NConfigProvider abstract :locale="naiveLocale" :theme="darkTheme" :theme-overrides="naiveThemeOverrides">
       <router-view/>
+      <AboutDialog/>
     </NConfigProvider>
   </main>
 </template>

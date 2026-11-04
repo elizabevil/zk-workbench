@@ -1,16 +1,20 @@
 <script lang="ts" setup>
+import {invoke} from "@tauri-apps/api/core";
+import {NButton, NModal, NTag} from "naive-ui";
 import {computed, onMounted, onUnmounted, ref, watch} from "vue";
 import {useI18n} from "vue-i18n";
 
 import {appInfo} from "@/api/app";
 import type {AppInfo} from "@/api/types/AppInfo";
-
-const props = defineProps<{ open: boolean }>();
-const emit = defineEmits<{ close: [] }>();
+import {ABOUT_LINKS} from "@/constants/about";
+import {KEY_ESCAPE} from "@/constants/keyboard";
+import {useUiStore} from "@/stores/ui";
 
 const {t} = useI18n();
+const ui = useUiStore();
 const info = ref<AppInfo | null>(null);
 const copied = ref(false);
+const linkError = ref("");
 let copiedTimer = 0;
 
 const versionLabel = computed(() => {
@@ -32,7 +36,25 @@ async function load(): Promise<void> {
 }
 
 function close(): void {
-  emit("close");
+  ui.closeAbout();
+}
+
+function onShow(value: boolean): void {
+  if (!value) {
+    close();
+  }
+}
+
+async function openLink(url: string): Promise<void> {
+  if (!url) {
+    return;
+  }
+  linkError.value = "";
+  try {
+    await invoke("open_external", {url});
+  } catch {
+    linkError.value = t("about.openFailed");
+  }
 }
 
 async function copyVersion(): Promise<void> {
@@ -52,7 +74,7 @@ async function copyVersion(): Promise<void> {
 }
 
 function onKeydown(event: KeyboardEvent): void {
-  if (props.open && event.key === "Escape") {
+  if (ui.aboutOpen && event.key === KEY_ESCAPE) {
     event.preventDefault();
     event.stopImmediatePropagation();
     close();
@@ -60,14 +82,15 @@ function onKeydown(event: KeyboardEvent): void {
 }
 
 watch(
-    () => props.open,
-    (open) => {
-      if (open) {
-        copied.value = false;
-        void load();
-      }
-    },
-    {immediate: true},
+  () => ui.aboutOpen,
+  (open) => {
+    if (open) {
+      copied.value = false;
+      linkError.value = "";
+      void load();
+    }
+  },
+  {immediate: true},
 );
 
 onMounted(() => window.addEventListener("keydown", onKeydown));
@@ -78,80 +101,65 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <Teleport to="body">
-    <div v-if="open" class="overlay" @mousedown.self="close">
-      <section
-          aria-labelledby="about-title"
-          aria-modal="true"
-          class="dialog"
-          role="dialog"
-      >
-        <div aria-hidden="true" class="logo">ZK</div>
-        <h2 id="about-title">ZK Workbench</h2>
-        <p class="version">{{ versionLabel || "zkui Version 0.1.0" }}</p>
-        <p class="description">{{ t("about.description") }}</p>
+  <NModal
+    :close-on-esc="false"
+    :show="ui.aboutOpen"
+    :style="{width: '460px'}"
+    :title="t('shell.about')"
+    preset="card"
+    @update:show="onShow"
+  >
+    <div class="content">
+      <div aria-hidden="true" class="logo">ZK</div>
+      <h2>ZK Workbench</h2>
+      <p class="version">{{ versionLabel || "zkui Version 0.1.0" }}</p>
+      <p class="description">{{ t("about.description") }}</p>
 
-        <section class="block">
-          <h3>{{ t("about.techStack") }}</h3>
-          <div class="chips">
-            <span>Tauri 2</span>
-            <span>Vue 3</span>
-            <span>Rust</span>
-          </div>
-        </section>
-
-        <section class="links">
-          <button
-              v-for="item in ['website', 'github', 'releaseNotes', 'support']"
-              :key="item"
-              :title="t('about.comingSoon')"
-              class="placeholder"
-              disabled
-              type="button"
-          >
-            {{ t(`about.${item}`) }}
-          </button>
-        </section>
-
-        <p class="developer">{{ t("about.developedBy", {name: "Debi"}) }}</p>
-        <p class="legal">© 2026 ZK Workbench · License</p>
-
-        <footer class="actions">
-          <button type="button" @click="copyVersion">
-            {{ copied ? t("about.copied") : t("about.copyVersion") }}
-          </button>
-          <button class="primary" type="button" @click="close">
-            {{ t("about.close") }}
-          </button>
-        </footer>
+      <section class="block">
+        <h3>{{ t("about.techStack") }}</h3>
+        <div class="chips">
+          <NTag size="small">Tauri 2</NTag>
+          <NTag size="small">Vue 3</NTag>
+          <NTag size="small">Rust</NTag>
+        </div>
       </section>
+
+      <section class="links">
+        <NButton
+          v-for="item in ABOUT_LINKS"
+          :key="item.key"
+          :disabled="!item.url"
+          :title="item.url || t('about.comingSoon')"
+          size="tiny"
+          @click="openLink(item.url)"
+        >
+          {{ t(`about.${item.key}`) }}
+        </NButton>
+      </section>
+
+      <p v-if="linkError" class="link-error">{{ linkError }}</p>
+
+      <p class="developer">{{ t("about.developedBy", {name: "Debi"}) }}</p>
+      <p class="legal">© 2026 ZK Workbench · License</p>
     </div>
-  </Teleport>
+
+    <template #footer>
+      <div class="actions">
+        <NButton @click="copyVersion">
+          {{ copied ? t("about.copied") : t("about.copyVersion") }}
+        </NButton>
+        <NButton type="primary" @click="close">{{ t("about.close") }}</NButton>
+      </div>
+    </template>
+  </NModal>
 </template>
 
 <style scoped>
-.overlay {
-  position: fixed;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  background: rgb(0 0 0 / 55%);
-  z-index: 100;
-}
-
-.dialog {
-  width: min(460px, 92vw);
-  max-height: 88vh;
-  overflow-y: auto;
+.content {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 10px;
-  padding: 24px 26px 20px;
-  border: 1px solid #2a323c;
-  border-radius: 12px;
-  background: #171c22;
-  box-shadow: 0 18px 50px rgb(0 0 0 / 45%);
 }
 
 .logo {
@@ -211,15 +219,6 @@ h2 {
   gap: 6px;
 }
 
-.chips span {
-  padding: 3px 9px;
-  border: 1px solid rgb(255 255 255 / 12%);
-  border-radius: 999px;
-  background: rgb(255 255 255 / 5%);
-  color: #cbd5e1;
-  font-size: 12px;
-}
-
 .links {
   width: 100%;
   display: grid;
@@ -229,13 +228,9 @@ h2 {
   border-top: 1px solid rgb(255 255 255 / 8%);
 }
 
-.placeholder {
-  padding: 6px 4px;
-  border: 1px dashed rgb(255 255 255 / 12%);
-  border-radius: 6px;
-  background: transparent;
-  color: #6b7280;
-  cursor: not-allowed;
+.link-error {
+  margin: 0;
+  color: #f87171;
   font-size: 11px;
 }
 
@@ -251,32 +246,8 @@ h2 {
 }
 
 .actions {
-  width: 100%;
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  margin-top: 8px;
-}
-
-button {
-  padding: 7px 14px;
-  border: 1px solid #2a323c;
-  border-radius: 6px;
-  background: #1d242c;
-  color: inherit;
-  cursor: pointer;
-}
-
-button:hover:not(:disabled) {
-  background: #252d36;
-}
-
-.primary {
-  border-color: #2563eb;
-  background: #2563eb;
-}
-
-.primary:hover {
-  background: #1d4ed8;
 }
 </style>

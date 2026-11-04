@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import {NAlert, NButton, NForm, NFormItem, NInput, NModal} from "naive-ui";
 import {computed, ref, watch} from "vue";
 import {useI18n} from "vue-i18n";
 
@@ -30,15 +31,16 @@ const saving = ref(false);
 const fileName = ref("");
 
 watch(
-    () => props.open,
-    (open) => {
-      if (open) {
-        hex.value = "";
-        error.value = null;
-        localError.value = "";
-        fileName.value = "";
-      }
-    },
+  () => props.open,
+  (open) => {
+    if (!open) {
+      return;
+    }
+    hex.value = "";
+    error.value = null;
+    localError.value = "";
+    fileName.value = "";
+  },
 );
 
 const newBytes = computed<Uint8Array | null>(() => {
@@ -94,10 +96,10 @@ async function save(): Promise<void> {
   error.value = null;
   try {
     const stat = await nodeSet(
-        props.connectionId,
-        props.path,
-        encodeBytesBase64(newBytes.value),
-        props.version,
+      props.connectionId,
+      props.path,
+      encodeBytesBase64(newBytes.value),
+      props.version,
     );
     emit("saved", stat);
   } catch (raw) {
@@ -106,92 +108,97 @@ async function save(): Promise<void> {
     saving.value = false;
   }
 }
+
+function onShow(value: boolean): void {
+  if (!value) {
+    emit("close");
+  }
+}
 </script>
 
 <template>
-  <Teleport to="body">
-    <div v-if="open" class="overlay">
-      <div class="dialog">
-        <h2>{{ t("binary.title") }}</h2>
-        <p class="path">{{ path }}</p>
+  <NModal
+    :close-on-esc="false"
+    :show="open"
+    :style="{width: '720px'}"
+    :title="t('binary.title')"
+    preset="card"
+    @update:show="onShow"
+  >
+    <p class="path">{{ path }}</p>
 
-        <label class="file">
-          {{ t("binary.file") }}
-          <input type="file" @change="pickFile"/>
+    <NForm :show-feedback="false" label-placement="top" size="small">
+      <NFormItem :label="t('binary.file')">
+        <div class="file-row">
+          <input accept="*/*" class="file-input" type="file" @change="pickFile" />
           <span v-if="fileName" class="muted">{{ fileName }}</span>
-        </label>
-
-        <label>
-          {{ t("binary.hex") }}
-          <textarea v-model="hex" class="hex" spellcheck="false"/>
-        </label>
-
-        <p class="muted">
-          {{ t("binary.bytes") }}: {{ byteLen }} → {{ newBytes?.length ?? "-" }}
-          · {{ t("binary.delta") }}: {{ delta >= 0 ? `+${delta}` : delta }}
-          · {{ t("binary.changed") }}: {{ changedBytes }}
-        </p>
-
-        <p v-if="localError" class="error">{{ localError }}</p>
-        <p v-if="error" class="error">{{ t(error.message_key) }}</p>
-
-        <div class="actions">
-          <button type="button" @click="emit('close')">{{ t("binary.cancel") }}</button>
-          <button :disabled="saving" class="danger" type="button" @click="save">
-            {{ saving ? t("binary.saving") : t("binary.save") }}
-          </button>
         </div>
+      </NFormItem>
+      <NFormItem :label="t('binary.hex')">
+        <NInput
+          v-model:value="hex"
+          :autosize="{minRows: 8, maxRows: 16}"
+          class="hex-input"
+          type="textarea"
+        />
+      </NFormItem>
+    </NForm>
+
+    <p class="muted">
+      {{ t("binary.bytes") }}: {{ byteLen }} → {{ newBytes?.length ?? "-" }}
+      · {{ t("binary.delta") }}: {{ delta >= 0 ? `+${delta}` : delta }}
+      · {{ t("binary.changed") }}: {{ changedBytes }}
+    </p>
+
+    <NAlert v-if="localError" :bordered="false" type="error">
+      {{ localError }}
+    </NAlert>
+    <NAlert v-if="error" :bordered="false" type="error">
+      {{ t(error.message_key) }}
+    </NAlert>
+
+    <template #footer>
+      <div class="actions">
+        <NButton @click="emit('close')">{{ t("binary.cancel") }}</NButton>
+        <NButton :loading="saving" type="error" @click="save">
+          {{ saving ? t("binary.saving") : t("binary.save") }}
+        </NButton>
       </div>
-    </div>
-  </Teleport>
+    </template>
+  </NModal>
 </template>
 
 <style scoped>
-.overlay {
-  position: fixed;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  background: rgb(0 0 0 / 55%);
-  z-index: 95;
-}
-
-.dialog {
-  width: min(720px, 94vw);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 18px 20px;
-  border-radius: 10px;
-  background: #171c22;
-  border: 1px solid #2a323c;
-}
-
-h2 {
-  margin: 0;
-  font-size: 17px;
-}
-
 .path {
-  margin: 0;
+  margin: 0 0 10px;
   font-family: ui-monospace, monospace;
   word-break: break-all;
 }
 
-label {
+.file-row {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 13px;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
-.hex {
-  min-height: 180px;
-  padding: 10px;
-  border-radius: 6px;
+.file-input {
+  max-width: 100%;
+  color: #9aa4b2;
+  font: inherit;
+}
+
+.file-input::file-selector-button {
+  margin-right: 8px;
+  padding: 4px 8px;
   border: 1px solid #2a323c;
-  background: #101418;
-  color: inherit;
+  border-radius: 4px;
+  background: #1d242c;
+  color: #e6e6e6;
+  cursor: pointer;
+}
+
+.hex-input :deep(.n-input__textarea-el) {
   font-family: ui-monospace, monospace;
   font-size: 12px;
 }
@@ -200,26 +207,6 @@ label {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-}
-
-button {
-  padding: 7px 13px;
-  border-radius: 6px;
-  border: 1px solid #2a323c;
-  background: #1d242c;
-  color: inherit;
-  cursor: pointer;
-}
-
-.danger {
-  background: #b91c1c;
-  border-color: #b91c1c;
-}
-
-.error {
-  color: #ef4444;
-  margin: 0;
-  font-size: 13px;
 }
 
 .muted {

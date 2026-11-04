@@ -5,7 +5,10 @@ import jsonLanguage from "highlight.js/lib/languages/json";
 import yamlLanguage from "highlight.js/lib/languages/yaml";
 import {computed, onMounted, onUnmounted, ref, watch} from "vue";
 import {useI18n} from "vue-i18n";
+
+import {KEY_ESCAPE} from "@/constants/keyboard";
 import {useRouter} from "vue-router";
+import {NButton} from "naive-ui";
 import {isMap, isSeq, parseDocument} from "yaml";
 import {auditList} from "@/api/audit";
 import {type InvokeRejection, toAppError} from "@/api/client";
@@ -17,7 +20,6 @@ import type {ConnectionSnapshot} from "@/api/types/ConnectionSnapshot";
 import type {DeleteOutcome} from "@/api/types/DeleteOutcome";
 import type {NodeData} from "@/api/types/NodeData";
 import type {NodeStat} from "@/api/types/NodeStat";
-import AboutDialog from "@/components/AboutDialog.vue";
 import CommandPanel from "@/components/CommandPanel.vue";
 import ConnectionDialog from "@/components/ConnectionDialog.vue";
 import NodeBinaryEditor from "@/components/NodeBinaryEditor.vue";
@@ -28,6 +30,7 @@ import TreeNodeItem from "@/components/TreeNodeItem.vue";
 import {useConnectionStore} from "@/stores/connection";
 import {useHistoryStore} from "@/stores/history";
 import {useTabsStore} from "@/stores/tabs";
+import {useUiStore} from "@/stores/ui";
 import {decodeUtf8Base64, hexPreview} from "@/utils/encoding";
 import {clampCommandHeight, loadCommandHeight, saveCommandHeight,} from "@/utils/layout";
 import {normalizePath} from "@/utils/path";
@@ -41,6 +44,7 @@ const {t} = useI18n();
 const router = useRouter();
 const store = useConnectionStore();
 const tabs = useTabsStore();
+const ui = useUiStore();
 
 const menuOpen = ref(false);
 const dialogOpen = ref(false);
@@ -62,19 +66,32 @@ const binaryOpen = ref(false);
 const deleteTarget = ref<string | null>(null);
 const retryPath = ref<string | null>(null);
 const toast = ref("");
+let toastTimer = 0;
 const jumpPath = ref("");
 const jumpInput = ref<HTMLInputElement | null>(null);
-const jumpCompletion = ref<{ prefix: string; index: number } | null>(null);
+const jumpCompletion = ref<{
+  candidates: string[];
+  index: number;
+  prefixText: string;
+  lastValue: string;
+} | null>(null);
 const shortcuts = ref<ShortcutMap>(loadShortcuts());
 const toolsOpen = ref(false);
-const aboutOpen = ref(false);
 
 function showAbout(): void {
-  aboutOpen.value = true;
+  ui.openAbout();
 }
 
 async function closeWindow(): Promise<void> {
   await getCurrentWindow().close();
+}
+
+function showToast(message: string, duration = 3000): void {
+  toast.value = message;
+  window.clearTimeout(toastTimer);
+  toastTimer = window.setTimeout(() => {
+    toast.value = "";
+  }, duration);
 }
 
 const history = useHistoryStore();
@@ -206,10 +223,7 @@ async function expandAll(): Promise<void> {
   }
   expandedPaths.value = next;
   persistExpanded();
-  toast.value = t("shell.expanded", {count});
-  window.setTimeout(() => {
-    toast.value = "";
-  }, 3000);
+  showToast(t("shell.expanded", {count}), 3000);
 }
 
 function collapseAll(): void {
@@ -413,13 +427,10 @@ async function copyPath(): Promise<void> {
   }
   try {
     await navigator.clipboard.writeText(selectedPath.value);
-    toast.value = t("data.pathCopied", {path: selectedPath.value});
+    showToast(t("data.pathCopied", {path: selectedPath.value}), 2500);
   } catch {
-    toast.value = t("data.copyFailed");
+    showToast(t("data.copyFailed"), 2500);
   }
-  window.setTimeout(() => {
-    toast.value = "";
-  }, 2500);
 }
 
 async function copyAddress(): Promise<void> {
@@ -429,15 +440,30 @@ async function copyAddress(): Promise<void> {
   const address = `${store.snapshot.host}:${store.snapshot.port}`;
   try {
     await navigator.clipboard.writeText(address);
-    toast.value = t("shell.copied", {address});
+    showToast(t("shell.copied", {address}), 2500);
   } catch {
-    toast.value = t("shell.copyFailed");
+    showToast(t("shell.copyFailed"), 2500);
   }
   menuOpen.value = false;
 }
 
+function applyJumpCompletion(
+  state: { candidates: string[]; index: number; prefixText: string; lastValue: string },
+  index: number,
+): void {
+  state.index = index;
+  jumpPath.value = state.prefixText + state.candidates[index];
+  state.lastValue = jumpPath.value;
+}
+
 async function completeJump(): Promise<void> {
   const value = jumpPath.value;
+  if (jumpCompletion.value?.lastValue === value) {
+    const state = jumpCompletion.value;
+    applyJumpCompletion(state, (state.index + 1) % state.candidates.length);
+    return;
+  }
+
   const slash = value.lastIndexOf("/");
   const rawParent = slash >= 0 ? value.slice(0, slash) : "";
   const prefix = slash >= 0 ? value.slice(slash + 1) : value;
@@ -451,14 +477,20 @@ async function completeJump(): Promise<void> {
         .filter((name) => name.startsWith(prefix))
         .map((name) => `${parent === "/" ? "" : parent}/${name}`);
     if (candidates.length === 0) {
+      jumpCompletion.value = null;
       return;
     }
-    const index =
-        jumpCompletion.value?.prefix === value ? (jumpCompletion.value.index + 1) % candidates.length : 0;
-    jumpCompletion.value = {prefix: value, index};
-    jumpPath.value = candidates[index];
+    const state = {
+      candidates,
+      index: 0,
+      prefixText: value.slice(0, slash + 1),
+      lastValue: "",
+    };
+    jumpCompletion.value = state;
+    applyJumpCompletion(state, 0);
   } catch {
     // 补全失败不打断输入
+    jumpCompletion.value = null;
   }
 }
 
@@ -477,15 +509,17 @@ function loadFull(): void {
 
 function refresh(): void {
   treeKey.value += 1;
-  if (selectedPath.value) {
-    void loadStat(selectedPath.value);
-  }
 }
 
 function reloadData(): void {
   if (selectedPath.value) {
     void loadStat(selectedPath.value);
   }
+}
+
+function refreshAll(): void {
+  refresh();
+  reloadData();
 }
 
 watch(connectionId, () => {
@@ -522,12 +556,15 @@ onMounted(async () => {
   window.addEventListener("keydown", onKeydown);
 });
 
-onUnmounted(() => window.removeEventListener("keydown", onKeydown));
+onUnmounted(() => {
+  window.removeEventListener("keydown", onKeydown);
+  window.clearTimeout(toastTimer);
+});
 
 function onKeydown(event: KeyboardEvent): void {
-  if (event.key === "Escape") {
-    if (aboutOpen.value) {
-      aboutOpen.value = false;
+  if (event.key === KEY_ESCAPE) {
+    if (ui.aboutOpen) {
+      ui.closeAbout();
     } else if (editorOpen.value || createOpen.value || deleteOpen.value || binaryOpen.value) {
       editorOpen.value = false;
       createOpen.value = false;
@@ -566,7 +603,7 @@ function onKeydown(event: KeyboardEvent): void {
     deleteOpen.value = true;
   } else if (matchesShortcut(event, map.refresh)) {
     event.preventDefault();
-    refresh();
+    refreshAll();
   }
 }
 
@@ -610,7 +647,7 @@ async function openBinaryEditor(): Promise<void> {
 
 function onSaved(stat: NodeStat): void {
   editorOpen.value = false;
-  toast.value = t("editor.saved", {version: stat.version});
+  showToast(t("editor.saved", {version: stat.version}), 3000);
   if (selectedPath.value) {
     void loadData(selectedPath.value);
   }
@@ -618,10 +655,7 @@ function onSaved(stat: NodeStat): void {
 
 function onCreated(actualPath: string): void {
   createOpen.value = false;
-  toast.value = t("create.created", {path: actualPath});
-  window.setTimeout(() => {
-    toast.value = "";
-  }, 3500);
+  showToast(t("create.created", {path: actualPath}), 3500);
   treeKey.value += 1;
   select(actualPath);
 }
@@ -629,9 +663,12 @@ function onCreated(actualPath: string): void {
 function onDeleted(outcome: DeleteOutcome): void {
   deleteOpen.value = false;
   retryPath.value = outcome.failed_path ?? null;
-  toast.value = outcome.failed_path
-      ? t("delete.failed", {path: outcome.failed_path, done: outcome.deleted})
-      : t("delete.done", {done: outcome.deleted});
+  showToast(
+      outcome.failed_path
+          ? t("delete.failed", {path: outcome.failed_path, done: outcome.deleted})
+          : t("delete.done", {done: outcome.deleted}),
+      outcome.failed_path ? 7000 : 3500,
+  );
   treeKey.value += 1;
   const parent = selectedPath.value?.replace(/\/[^/]+$/, "") || "/";
   select(parent || "/");
@@ -711,9 +748,9 @@ function onDeleted(outcome: DeleteOutcome): void {
           <div class="aside-head">
             <span>{{ t("shell.tree") }}</span>
             <div class="tree-actions">
-              <button class="tiny" type="button" @click="expandAll">{{ t("shell.expandAll") }}</button>
-              <button class="tiny" type="button" @click="collapseAll">{{ t("shell.collapseAll") }}</button>
-              <button class="tiny" type="button" @click="refresh">{{ t("shell.refresh") }}</button>
+              <NButton size="tiny" @click="expandAll">{{ t("shell.expandAll") }}</NButton>
+              <NButton size="tiny" @click="collapseAll">{{ t("shell.collapseAll") }}</NButton>
+              <NButton size="tiny" @click="refresh">{{ t("shell.refresh") }}</NButton>
             </div>
           </div>
           <form class="jump" @submit.prevent="jump">
@@ -769,22 +806,17 @@ function onDeleted(outcome: DeleteOutcome): void {
                 {{ selectedPath }}
               </button>
               <div class="toolbar">
-                <button class="tiny" type="button" @click="reloadData">{{ t("data.refresh") }}</button>
-                <button class="tiny" type="button" @click="openCreate">
-                  {{ t("data.create") }}
-                </button>
-                <button
-                    :disabled="!data?.is_text || data.truncated"
-                    :title="data?.is_text === false ? t('data.notEditable') : ''"
-                    class="tiny"
-                    type="button"
-                    @click="editorOpen = true"
+                <NButton size="tiny" @click="reloadData">{{ t("data.refresh") }}</NButton>
+                <NButton size="tiny" @click="openCreate">{{ t("data.create") }}</NButton>
+                <NButton
+                  :disabled="!data?.is_text || data.truncated"
+                  :title="data?.is_text === false ? t('data.notEditable') : ''"
+                  size="tiny"
+                  @click="editorOpen = true"
                 >
                   {{ t("data.edit") }}
-                </button>
-                <button class="tiny danger" type="button" @click="openDelete">
-                  {{ t("data.delete") }}
-                </button>
+                </NButton>
+                <NButton size="tiny" type="error" @click="openDelete">{{ t("data.delete") }}</NButton>
               </div>
             </div>
 
@@ -845,15 +877,15 @@ function onDeleted(outcome: DeleteOutcome): void {
                       <span class="muted">{{ t("shell.version") }}: {{ stat?.version }}</span>
                       <span class="muted">{{ t("shell.mtime") }}: {{ stat ? toRfc3339(stat.mtime) : "" }}</span>
                       <div class="format-group">
-                        <button
-                            v-for="option in FORMAT_OPTIONS"
-                            :key="option.value"
-                            :class="{ active: format === option.value }"
-                            type="button"
-                            @click="format = option.value"
+                        <NButton
+                          v-for="option in FORMAT_OPTIONS"
+                          :key="option.value"
+                          :type="format === option.value ? 'primary' : 'default'"
+                          size="tiny"
+                          @click="format = option.value"
                         >
                           {{ option.label }}
-                        </button>
+                        </NButton>
                       </div>
                       <template v-if="data.truncated">
                         <span class="warn">{{ t("data.truncated") }}</span>
@@ -1035,7 +1067,12 @@ function onDeleted(outcome: DeleteOutcome): void {
             <template v-else>
               <ul v-if="history.entries.length" class="timeline">
                 <li v-for="(entry, index) in history.entries" :key="`${entry.ts}-${index}`">
-                  <button class="history-line mono" type="button" @click="history.setDraft(entry.line)">
+                  <button
+                      :title="entry.line"
+                      class="history-line mono"
+                      type="button"
+                      @click="history.setDraft(entry.line)"
+                  >
                     {{ entry.line }}
                   </button>
                   <span class="muted">{{ entry.ok ? "" : "!" }}</span>
@@ -1089,7 +1126,7 @@ function onDeleted(outcome: DeleteOutcome): void {
           <CommandPanel
               :connection-id="connectionId"
               :connection-name="store.snapshot?.display_name ?? ''"
-              @refresh="refresh"
+              @refresh="refreshAll"
           />
         </div>
       </template>
@@ -1115,7 +1152,6 @@ function onDeleted(outcome: DeleteOutcome): void {
       </button>
     </p>
 
-    <AboutDialog :open="aboutOpen" @close="aboutOpen = false"/>
     <ConnectionDialog :open="dialogOpen" @close="dialogOpen = false" @connected="onConnected"/>
     <NodeEditor
         v-if="data"
@@ -1274,6 +1310,12 @@ function onDeleted(outcome: DeleteOutcome): void {
   min-height: 0;
 }
 
+.resizer,
+.h-resizer {
+  background: var(--panel-bg);
+  backdrop-filter: blur(10px) saturate(120%);
+}
+
 .command-dock {
   display: flex;
   flex: 0 0 auto;
@@ -1288,7 +1330,6 @@ function onDeleted(outcome: DeleteOutcome): void {
   margin: 0;
   padding: 0;
   border: none;
-  background: transparent;
   cursor: row-resize;
 }
 
@@ -1382,10 +1423,9 @@ function onDeleted(outcome: DeleteOutcome): void {
   gap: 4px;
 }
 
-.tree-actions .tiny {
+.tree-actions :deep(.n-button) {
   flex: 1;
   min-width: 0;
-  padding: 2px 4px;
   white-space: nowrap;
 }
 
@@ -1499,21 +1539,6 @@ function onDeleted(outcome: DeleteOutcome): void {
   margin-left: auto;
 }
 
-.format-group button {
-  padding: 2px 8px;
-  border: 1px solid rgb(255 255 255 / 15%);
-  border-radius: 5px;
-  background: transparent;
-  color: #9aa4b2;
-  cursor: pointer;
-  font-size: 12px;
-}
-
-.format-group button.active {
-  border-color: #2563eb;
-  background: rgb(37 99 235 / 20%);
-  color: #fff;
-}
 
 .binary-meta {
   margin: 0;
@@ -1670,7 +1695,7 @@ function onDeleted(outcome: DeleteOutcome): void {
 .inspector {
   flex: 0 0 var(--inspector-width, 20%);
   min-width: 12rem;
-  padding: 12px;
+  padding: 14px 22px;
   overflow: auto;
   border-left: 1px solid rgb(255 255 255 / 8%);
   background: rgb(10 13 16 / 70%);
@@ -1681,7 +1706,6 @@ function onDeleted(outcome: DeleteOutcome): void {
   flex: 0 0 6px;
   padding: 0;
   border: none;
-  background: transparent;
   cursor: col-resize;
 }
 
@@ -1726,7 +1750,19 @@ function onDeleted(outcome: DeleteOutcome): void {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 6px 0;
+  padding: 6px 2px 6px 0;
+}
+
+.side-body .timeline {
+  font-size: 11px;
+}
+
+.side-body .history-line {
+  font-size: 11px;
+}
+
+.side-body .timeline .muted {
+  font-size: 11px;
 }
 
 .inspector {
@@ -1744,18 +1780,25 @@ function onDeleted(outcome: DeleteOutcome): void {
 .inspector-grid div {
   display: flex;
   justify-content: space-between;
-  gap: 8px;
+  gap: 12px;
   font-size: 12px;
   padding: 3px 0;
   border-bottom: 1px solid rgb(255 255 255 / 5%);
 }
 
 .inspector-grid dt {
+  flex: 0 0 auto;
   color: #9aa4b2;
+  white-space: nowrap;
 }
 
 .inspector-grid dd {
+  flex: 1;
+  min-width: 0;
   margin: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .mono {
@@ -1794,16 +1837,17 @@ function onDeleted(outcome: DeleteOutcome): void {
 }
 
 .history-line {
+  flex: 1;
+  min-width: 0;
   border: none;
   background: transparent;
   color: #cbd5e1;
   cursor: pointer;
   padding: 0;
   text-align: left;
-  max-width: 75%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .audit-link {
@@ -1824,7 +1868,9 @@ function onDeleted(outcome: DeleteOutcome): void {
 
 .timeline li {
   display: flex;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: 8px;
   padding: 3px 0;
   border-bottom: 1px solid rgb(255 255 255 / 5%);
 }

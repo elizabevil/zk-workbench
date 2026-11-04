@@ -19,6 +19,7 @@ pub fn run() {
             commands::connection::connection_snapshot,
             commands::connection::connection_close,
             commands::app::app_info,
+            commands::app::open_external,
             commands::appearance::background_image_store,
             commands::appearance::background_image_load,
             commands::connection::connection_list,

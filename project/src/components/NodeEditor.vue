@@ -2,6 +2,8 @@
 import {computed, nextTick, onMounted, onUnmounted, ref, watch} from "vue";
 import {useI18n} from "vue-i18n";
 
+import {KEY_ESCAPE} from "@/constants/keyboard";
+
 import {type InvokeRejection, toAppError} from "@/api/client";
 import {nodeSet} from "@/api/node";
 import type {AppError} from "@/api/types/AppError";
@@ -292,7 +294,7 @@ function onKeydown(event: KeyboardEvent): void {
     openFind(true);
     return;
   }
-  if (event.key === "Escape" && findOpen.value) {
+  if (event.key === KEY_ESCAPE && findOpen.value) {
     event.preventDefault();
     event.stopImmediatePropagation();
     closeFind();

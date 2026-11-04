@@ -5,10 +5,32 @@ import {ref} from "vue";
 
 export const useUiStore = defineStore("ui", () => {
   const zoomPercent = ref(100);
+  const zoomResetRevision = ref(0);
+  const aboutOpen = ref(false);
 
   function setZoomPercent(value: number): void {
     zoomPercent.value = Math.round(value);
   }
 
-  return {zoomPercent, setZoomPercent};
+  function resetZoom(): void {
+    zoomResetRevision.value += 1;
+  }
+
+  function openAbout(): void {
+    aboutOpen.value = true;
+  }
+
+  function closeAbout(): void {
+    aboutOpen.value = false;
+  }
+
+  return {
+    zoomPercent,
+    zoomResetRevision,
+    aboutOpen,
+    setZoomPercent,
+    resetZoom,
+    openAbout,
+    closeAbout,
+  };
 });

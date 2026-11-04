@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import {NAlert, NButton, NCheckbox, NForm, NFormItem, NInput, NModal, NRadio, NRadioGroup} from "naive-ui";
 import {ref, watch} from "vue";
 import {useI18n} from "vue-i18n";
 
@@ -22,42 +23,54 @@ const emit = defineEmits<{
 
 const {t} = useI18n();
 const path = ref("/");
-const mode = ref<NodeCreateMode>("persistent");
+const NODE_CREATE_MODES = [
+  "persistent",
+  "ephemeral",
+  "persistent_sequential",
+  "ephemeral_sequential",
+] as const satisfies readonly NodeCreateMode[];
+const DEFAULT_CREATE_MODE = NODE_CREATE_MODES[0];
+const mode = ref<NodeCreateMode>(DEFAULT_CREATE_MODE);
 const data = ref("");
 const createParents = ref(false);
 const error = ref<AppError | null>(null);
 const saving = ref(false);
 
 watch(
-    () => props.open,
-    (open) => {
-      if (open) {
-        path.value = props.defaultPath;
-        mode.value = "persistent";
-        data.value = "";
-        createParents.value = false;
-        error.value = null;
-      }
-    },
+  () => props.open,
+  (open) => {
+    if (!open) {
+      return;
+    }
+    path.value = props.defaultPath;
+    mode.value = DEFAULT_CREATE_MODE;
+    data.value = "";
+    createParents.value = false;
+    error.value = null;
+  },
 );
 
-const modes: NodeCreateMode[] = [
-  "persistent",
-  "ephemeral",
-  "persistent_sequential",
-  "ephemeral_sequential",
-];
+function isNodeCreateMode(value: unknown): value is NodeCreateMode {
+  return typeof value === "string" && (NODE_CREATE_MODES as readonly string[]).includes(value);
+}
 
-async function submit(): Promise<void> {
+function setMode(value: unknown): void {
+  if (isNodeCreateMode(value)) {
+    mode.value = value;
+  }
+}
+
+async function submit(event?: Event): Promise<void> {
+  event?.preventDefault();
   saving.value = true;
   error.value = null;
   try {
     const actual = await nodeCreate(
-        props.connectionId,
-        normalizePath(path.value),
-        encodeUtf8Base64(data.value),
-        mode.value,
-        createParents.value,
+      props.connectionId,
+      normalizePath(path.value),
+      encodeUtf8Base64(data.value),
+      mode.value,
+      createParents.value,
     );
     emit("created", actual);
   } catch (raw) {
@@ -66,165 +79,85 @@ async function submit(): Promise<void> {
     saving.value = false;
   }
 }
+
+function onShow(value: boolean): void {
+  if (!value) {
+    emit("close");
+  }
+}
 </script>
 
 <template>
-  <Teleport to="body">
-    <div v-if="open" class="overlay">
-      <form class="dialog" @submit.prevent="submit">
-        <h2>{{ t("create.title") }}</h2>
-        <label>
-          {{ t("create.path") }}
-          <input v-model="path"/>
-        </label>
-        <label>
-          {{ t("create.modeLabel") }}
+  <NModal
+    :close-on-esc="false"
+    :show="open"
+    :style="{width: '560px'}"
+    :title="t('create.title')"
+    preset="card"
+    @update:show="onShow"
+  >
+    <NForm :on-submit="submit" :show-feedback="false" label-placement="top" size="small">
+      <NFormItem :label="t('create.path')">
+        <NInput v-model:value="path" />
+      </NFormItem>
+      <NFormItem :label="t('create.modeLabel')">
+        <NRadioGroup :value="mode" @update:value="setMode">
           <div class="mode-group">
-            <label
-                v-for="item in modes"
-                :key="item"
-                :class="{ active: mode === item }"
-                class="mode-option"
-            >
-              <input v-model="mode" :value="item" type="radio"/>
-              <span>{{ t(`create.mode.${item}`) }}</span>
-            </label>
+            <NRadio v-for="item in NODE_CREATE_MODES" :key="item" :value="item">
+              {{ t(`create.mode.${item}`) }}
+            </NRadio>
           </div>
-        </label>
-        <label>
-          {{ t("create.data") }}
-          <textarea v-model="data" rows="5"/>
-        </label>
-        <label class="inline">
-          <input v-model="createParents" type="checkbox"/>
-          {{ t("create.parents") }}
-        </label>
-        <p v-if="mode === 'ephemeral' || mode === 'ephemeral_sequential'" class="warn">
-          {{ t("create.ephemeralHint") }}
-        </p>
-        <p v-if="error" class="error">{{ t(error.message_key) }}</p>
-        <div class="actions">
-          <button type="button" @click="emit('close')">{{ t("create.cancel") }}</button>
-          <button :disabled="saving" class="primary" type="submit">
-            {{ saving ? t("create.saving") : t("create.submit") }}
-          </button>
-        </div>
-      </form>
-    </div>
-  </Teleport>
+        </NRadioGroup>
+      </NFormItem>
+      <NFormItem :label="t('create.data')">
+        <NInput
+          v-model:value="data"
+          :autosize="{minRows: 4, maxRows: 8}"
+          class="data-input"
+          type="textarea"
+        />
+      </NFormItem>
+      <NFormItem>
+        <NCheckbox v-model:checked="createParents">{{ t("create.parents") }}</NCheckbox>
+      </NFormItem>
+    </NForm>
+
+    <NAlert
+      v-if="mode === 'ephemeral' || mode === 'ephemeral_sequential'"
+      :bordered="false"
+      type="warning"
+    >
+      {{ t("create.ephemeralHint") }}
+    </NAlert>
+    <NAlert v-if="error" :bordered="false" type="error">
+      {{ t(error.message_key) }}
+    </NAlert>
+
+    <template #footer>
+      <div class="actions">
+        <NButton @click="emit('close')">{{ t("create.cancel") }}</NButton>
+        <NButton :loading="saving" type="primary" @click="submit()">
+          {{ saving ? t("create.saving") : t("create.submit") }}
+        </NButton>
+      </div>
+    </template>
+  </NModal>
 </template>
 
 <style scoped>
-.overlay {
-  position: fixed;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  background: rgb(0 0 0 / 55%);
-  z-index: 90;
-}
-
-.dialog {
-  width: min(560px, 92vw);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 18px 20px;
-  border-radius: 10px;
-  background: #171c22;
-  border: 1px solid #2a323c;
-}
-
-h2 {
-  margin: 0;
-  font-size: 17px;
-}
-
-label {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-label.inline {
-  flex-direction: row;
-  align-items: center;
-  gap: 8px;
-}
-
-input,
-select,
-textarea {
-  padding: 7px 9px;
-  border-radius: 6px;
-  border: 1px solid #2a323c;
-  background: #101418;
-  color: inherit;
-  font-family: inherit;
-}
-
-textarea {
-  font-family: ui-monospace, monospace;
-}
-
 .mode-group {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
-.mode-option {
-  flex-direction: row;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 8px;
-  border: 1px solid #2a323c;
-  border-radius: 6px;
-  background: #101418;
-  color: #e6edf3;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.mode-option.active {
-  border-color: #2563eb;
-  background: rgb(37 99 235 / 15%);
-}
-
-.mode-option input {
-  accent-color: #2563eb;
-  margin: 0;
+.data-input :deep(.n-input__textarea-el) {
+  font-family: ui-monospace, monospace;
 }
 
 .actions {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-}
-
-button {
-  padding: 7px 13px;
-  border-radius: 6px;
-  border: 1px solid #2a323c;
-  background: #1d242c;
-  color: inherit;
-  cursor: pointer;
-}
-
-.primary {
-  background: #2563eb;
-  border-color: #2563eb;
-}
-
-.error {
-  color: #ef4444;
-  margin: 0;
-  font-size: 13px;
-}
-
-.warn {
-  color: #fbbf24;
-  margin: 0;
-  font-size: 12px;
 }
 </style>
