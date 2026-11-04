@@ -13,6 +13,8 @@ export default {
     new: "新建连接",
     open: "打开",
     disconnect: "断开",
+    audit: "审计",
+    observability: "可观测",
     settings: "设置",
     group: "分组",
     groupPlaceholder: "可选，例如 prod",
@@ -161,6 +163,7 @@ export default {
     disconnect: "断开连接",
   },
   settings: {
+    saved: "已保存",
     title: "设置",
     open: "设置",
     back: "返回",
@@ -206,6 +209,9 @@ export default {
       remove: "删除",
     },
     audit: {
+      hint: "记录本应用发起的变更，只追加不修改。",
+      actor: "身份",
+      detail: "详情",
       title: "审计",
       refresh: "刷新",
       verify: "校验完整性",

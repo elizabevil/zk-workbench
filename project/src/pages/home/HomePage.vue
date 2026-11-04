@@ -101,6 +101,12 @@ async function connected(): Promise<void> {
     <header class="topbar">
       <div class="brand">ZK Workbench</div>
       <div class="spacer" />
+      <button type="button" class="ghost" @click="router.push('/audit')">
+        {{ t("home.audit") }}
+      </button>
+      <button type="button" class="ghost" @click="router.push('/observability')">
+        {{ t("home.observability") }}
+      </button>
       <button type="button" class="ghost" @click="router.push('/settings')">
         {{ t("home.settings") }}
       </button>

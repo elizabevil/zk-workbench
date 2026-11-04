@@ -4,20 +4,13 @@ import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 
 import { appPaths } from "@/api/app";
-import { auditClear, auditExport, auditList, auditPrune, auditVerify } from "@/api/audit";
 import { type InvokeRejection, toAppError } from "@/api/client";
-import { metricsSnapshot } from "@/api/metrics";
-import { otelExportNow, otelStatus } from "@/api/otel";
 import { proxyPasswordClear, proxyPasswordSet, proxyTest } from "@/api/proxy";
 import type { AppPaths } from "@/api/types/AppPaths";
-import type { AuditRecord } from "@/api/types/AuditRecord";
-import type { MetricsSnapshot } from "@/api/types/MetricsSnapshot";
-import type { OtelExportStatus } from "@/api/types/OtelExportStatus";
 import type { ProxyProfile } from "@/api/types/ProxyProfile";
 import { LOCALES } from "@/i18n/locale";
 import { NOTIFICATION_LEVELS, PROXY_KINDS } from "@/settings/constants";
 import { useSettingsStore } from "@/stores/settings";
-import { toRfc3339 } from "@/utils/time";
 
 const { t } = useI18n();
 const router = useRouter();
@@ -37,10 +30,6 @@ const noProxyText = computed({
 });
 
 const paths = ref<AppPaths | null>(null);
-const metrics = ref<MetricsSnapshot | null>(null);
-const auditRows = ref<AuditRecord[]>([]);
-const auditMessage = ref("");
-const exportPath = ref("");
 
 const sections = [
   "general",
@@ -49,8 +38,6 @@ const sections = [
   "retry",
   "task",
   "proxy",
-  "audit",
-  "observability",
   "logs",
 ] as const;
 const activeSection = ref<string>("general");
@@ -59,75 +46,16 @@ let observer: IntersectionObserver | undefined;
 function scrollToSection(id: string): void {
   document.getElementById(`settings-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
-const otel = ref<OtelExportStatus | null>(null);
-const otelMessage = ref("");
 const passwords = ref<Record<number, string>>({});
 const testTarget = ref("127.0.0.1:2181");
 const testMessage = ref("");
 const dragIndex = ref<number | null>(null);
 
-async function loadMetrics(): Promise<void> {
-  metrics.value = await metricsSnapshot();
-}
-
-async function loadOtel(): Promise<void> {
-  otel.value = await otelStatus();
-}
-
-async function exportOtel(): Promise<void> {
-  try {
-    await otelExportNow();
-    otelMessage.value = t("settings.observability.otelExported");
-  } catch (raw) {
-    const error = raw as { message_key?: string };
-    otelMessage.value = error.message_key ? t(error.message_key) : String(raw);
-  }
-  await loadOtel();
-}
-
-async function loadAudit(): Promise<void> {
-  auditRows.value = await auditList(100, 0, null);
-}
-
-async function verifyAudit(): Promise<void> {
-  const report = await auditVerify();
-  auditMessage.value = report.ok
-    ? t("settings.audit.verified", { count: report.checked })
-    : t("settings.audit.broken", { id: report.broken_at });
-}
-
-async function clearAudit(): Promise<void> {
-  if (!window.confirm(t("settings.audit.confirmClear"))) {
-    return;
-  }
-  const cleared = await auditClear();
-  auditMessage.value = t("settings.audit.cleared", { count: cleared });
-  await loadAudit();
-}
-
-async function pruneAudit(): Promise<void> {
-  const days = store.settings?.audit.retention_days ?? 90;
-  const removed = await auditPrune(days);
-  auditMessage.value = t("settings.audit.pruned", { count: removed });
-  await loadAudit();
-}
-
-async function exportAudit(): Promise<void> {
-  if (!exportPath.value.trim()) {
-    return;
-  }
-  await auditExport(exportPath.value.trim());
-  auditMessage.value = t("settings.audit.exported");
-}
-
 onMounted(async () => {
   await store.load();
   paths.value = await appPaths();
-  await loadMetrics();
-  await loadAudit();
-  await loadOtel();
   await nextTick();
-  const container = document.querySelector(".settings-form");
+  const container = document.querySelector(".settings");
   const fieldsets = Array.from(container?.querySelectorAll("fieldset") ?? []);
   fieldsets.forEach((element, index) => {
     element.id = `settings-${sections[index] ?? index}`;
@@ -329,21 +257,23 @@ function removeProxy(index: number): void {
           {{ t("settings.proxy.noProxy") }}
           <textarea v-model="noProxyText" rows="3" />
         </label>
-        <div
+        <ul class="proxy-list">
+        <li
           v-for="(profile, index) in store.settings.proxy.profiles"
           :key="index"
           class="proxy-row"
           @dragover.prevent
           @drop="drop(index)"
         >
-          <span
+          <button
             class="proxy-handle"
+            type="button"
             draggable="true"
             :title="t('settings.proxy.drag')"
             @dragstart="dragStart(index)"
           >
             ⠿
-          </span>
+          </button>
           <select v-model="profile.kind">
             <option v-for="kind in PROXY_KINDS" :key="kind" :value="kind">
               {{ kind }}
@@ -364,121 +294,14 @@ function removeProxy(index: number): void {
             </button>
             <button type="button" @click="removeProxy(index)">{{ t("settings.proxy.remove") }}</button>
           </div>
-        </div>
+        </li>
+        </ul>
         <button type="button" @click="addProxy">{{ t("settings.proxy.add") }}</button>
         <label>
           {{ t("settings.proxy.testTarget") }}
           <input v-model="testTarget" />
         </label>
         <p v-if="testMessage" class="hint">{{ testMessage }}</p>
-      </fieldset>
-
-      <fieldset>
-        <legend>{{ t("settings.audit.title") }}</legend>
-        <label>
-          {{ t("settings.audit.retention") }}
-          <input v-model.number="store.settings.audit.retention_days" min="1" type="number" />
-        </label>
-        <div class="audit-actions">
-          <button type="button" @click="loadAudit">{{ t("settings.audit.refresh") }}</button>
-          <button type="button" @click="verifyAudit">{{ t("settings.audit.verify") }}</button>
-          <button type="button" @click="pruneAudit">{{ t("settings.audit.prune") }}</button>
-          <button type="button" class="danger" @click="clearAudit">
-            {{ t("settings.audit.clear") }}
-          </button>
-        </div>
-        <p v-if="auditMessage" class="hint">{{ auditMessage }}</p>
-
-        <div class="audit-export">
-          <input v-model="exportPath" :placeholder="t('settings.audit.exportPath')" />
-          <button type="button" @click="exportAudit">{{ t("settings.audit.export") }}</button>
-        </div>
-
-        <table v-if="auditRows.length" class="audit-table">
-          <thead>
-            <tr>
-              <th>{{ t("settings.audit.time") }}</th>
-              <th>{{ t("settings.audit.op") }}</th>
-              <th>{{ t("settings.audit.path") }}</th>
-              <th>{{ t("settings.audit.result") }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="row in auditRows" :key="row.id">
-              <td>{{ toRfc3339(row.ts) }}</td>
-              <td>{{ row.op }}</td>
-              <td class="mono">{{ row.path ?? "-" }}</td>
-              <td>
-                {{ row.result }}
-                <span v-if="row.error_kind" class="muted">({{ row.error_kind }})</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <p v-else class="hint">{{ t("settings.audit.empty") }}</p>
-      </fieldset>
-
-      <fieldset>
-        <legend>{{ t("settings.observability.title") }}</legend>
-        <label class="inline">
-          <input v-model="store.settings.observability.otel.enabled" type="checkbox" />
-          {{ t("settings.observability.otlp") }}
-        </label>
-        <label>
-          {{ t("settings.observability.endpoint") }}
-          <input v-model="store.settings.observability.otel.endpoint" />
-        </label>
-        <label>
-          {{ t("settings.observability.sampleRatio") }}
-          <input
-            v-model.number="store.settings.observability.otel.sample_ratio"
-            max="1"
-            min="0"
-            step="0.1"
-            type="number"
-          />
-        </label>
-        <p class="hint">{{ t("settings.observability.hint") }}</p>
-
-        <div class="audit-actions">
-          <button type="button" @click="exportOtel">
-            {{ t("settings.observability.otelExportNow") }}
-          </button>
-          <button type="button" @click="loadOtel">
-            {{ t("settings.observability.refresh") }}
-          </button>
-          <span v-if="otel" class="hint">
-            {{ otel.enabled ? t("settings.observability.otelEnabled") : t("settings.observability.otelDisabled") }}
-            <template v-if="otel.last_export_ts">
-              · {{ t("settings.observability.otelLast") }}:
-              {{ toRfc3339(otel.last_export_ts) }}
-            </template>
-            <template v-if="otel.last_error">
-              · {{ t("settings.observability.otelError") }}: {{ otel.last_error }}
-            </template>
-          </span>
-        </div>
-        <p v-if="otelMessage" class="hint">{{ otelMessage }}</p>
-
-        <div class="metrics-head">
-          <span>{{ t("settings.observability.metrics") }}</span>
-          <button type="button" @click="loadMetrics">
-            {{ t("settings.observability.refresh") }}
-          </button>
-        </div>
-        <dl v-if="metrics" class="metrics">
-          <div><dt>{{ t("settings.observability.connects") }}</dt><dd>{{ metrics.connect_attempts }}</dd></div>
-          <div><dt>{{ t("settings.observability.failures") }}</dt><dd>{{ metrics.connect_failures }}</dd></div>
-          <div><dt>{{ t("settings.observability.reconnects") }}</dt><dd>{{ metrics.reconnects }}</dd></div>
-          <div><dt>{{ t("settings.observability.reads") }}</dt><dd>{{ metrics.node_reads }}</dd></div>
-          <div><dt>{{ t("settings.observability.writes") }}</dt><dd>{{ metrics.node_writes }}</dd></div>
-          <div><dt>{{ t("settings.observability.creates") }}</dt><dd>{{ metrics.node_creates }}</dd></div>
-          <div><dt>{{ t("settings.observability.deletes") }}</dt><dd>{{ metrics.node_deletes }}</dd></div>
-          <div><dt>{{ t("settings.observability.readP50") }}</dt><dd>{{ metrics.read_p50_ms }} ms</dd></div>
-          <div><dt>{{ t("settings.observability.readP95") }}</dt><dd>{{ metrics.read_p95_ms }} ms</dd></div>
-          <div><dt>{{ t("settings.observability.writeP50") }}</dt><dd>{{ metrics.write_p50_ms }} ms</dd></div>
-          <div><dt>{{ t("settings.observability.writeP95") }}</dt><dd>{{ metrics.write_p95_ms }} ms</dd></div>
-        </dl>
       </fieldset>
 
       <fieldset>
@@ -519,6 +342,9 @@ function removeProxy(index: number): void {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
 }
 .header {
   display: flex;
@@ -527,7 +353,7 @@ function removeProxy(index: number): void {
 }
 .settings-layout {
   display: flex;
-  gap: 20px;
+  gap: 2%;
   min-height: 0;
   flex: 1;
 }
@@ -538,8 +364,7 @@ function removeProxy(index: number): void {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  width: 160px;
-  flex: none;
+  flex: 0 0 18%;
 }
 .settings-nav button {
   text-align: left;
@@ -557,9 +382,9 @@ function removeProxy(index: number): void {
 .settings-form {
   flex: 1;
   min-width: 0;
-  max-height: calc(100vh - 190px);
-  overflow-y: auto;
-  padding-right: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 .sections {
   display: grid;
@@ -586,6 +411,14 @@ label.inline {
   flex-direction: row;
   align-items: center;
   gap: 8px;
+}
+.proxy-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 .proxy-row {
   display: grid;

@@ -112,6 +112,7 @@ const highlighted = computed(() => {
   }
   return hljs.highlight(displayText.value, { language: format.value }).value;
 });
+// biome-ignore lint/correctness/noUnusedVariables: used in template
 const hexDump = computed(() => (data.value ? hexPreview(data.value.data_b64) : ""));
 const defaultChildPath = computed(() =>
   selectedPath.value === "/" ? "/new" : `${selectedPath.value}/new`,
@@ -400,6 +401,12 @@ function onDeleted(outcome: DeleteOutcome): void {
       </div>
 
       <div class="spacer" />
+      <button type="button" class="ghost" @click="router.push('/audit')">
+        {{ t("home.audit") }}
+      </button>
+      <button type="button" class="ghost" @click="router.push('/observability')">
+        {{ t("home.observability") }}
+      </button>
       <button type="button" class="ghost" @click="router.push('/settings')">
         {{ t("home.settings") }}
       </button>

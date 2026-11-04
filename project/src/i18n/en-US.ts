@@ -13,6 +13,8 @@ export default {
     new: "New connection",
     open: "Open",
     disconnect: "Disconnect",
+    audit: "Audit",
+    observability: "Observability",
     settings: "Settings",
     group: "Group",
     groupPlaceholder: "Optional, e.g. prod",
@@ -162,6 +164,7 @@ export default {
     disconnect: "Disconnect",
   },
   settings: {
+    saved: "Saved",
     title: "Settings",
     open: "Settings",
     back: "Back",
@@ -212,6 +215,9 @@ export default {
       remove: "Remove",
     },
     audit: {
+      hint: "Records changes made by this app; append-only.",
+      actor: "Actor",
+      detail: "Detail",
       title: "Audit",
       refresh: "Refresh",
       verify: "Verify integrity",
