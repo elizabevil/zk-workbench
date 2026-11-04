@@ -12,6 +12,7 @@ use super::state::ConnectionState;
 use crate::config::{Settings, SettingsStore};
 use crate::error::{AppError, AppResult, app};
 use crate::ipc::connection::{ConnectionSnapshot, ConnectionStateEvent, CreateConnection};
+use crate::ipc::node::NodeStat;
 use crate::transport::{RelayHandle, no_proxy, proxy::ProxyProfile, relay};
 
 struct Entry {
@@ -204,6 +205,41 @@ impl ConnectionManager {
             generation: entry.handle.generation(),
             identity: entry.handle.identity(),
             session_timeout_ms: entry.handle.session_timeout().as_millis() as u64,
+        })
+    }
+
+    fn client_of(&self, connection_id: &str) -> AppResult<Client> {
+        let entries = self.entries.read().expect("connections lock poisoned");
+        entries
+            .get(connection_id)
+            .map(|entry| entry.handle.client().clone())
+            .ok_or_else(|| Box::new(app::not_found(connection_id)))
+    }
+
+    /// 读取直接子节点，按名称排序。
+    pub async fn children(&self, connection_id: &str, path: &str) -> AppResult<Vec<String>> {
+        let client = self.client_of(connection_id)?;
+        let (mut children, _stat) = client.get_children(path).await?;
+        children.sort();
+        Ok(children)
+    }
+
+    /// 读取节点 Stat。
+    pub async fn stat(&self, connection_id: &str, path: &str) -> AppResult<NodeStat> {
+        let client = self.client_of(connection_id)?;
+        let (_data, stat) = client.get_data(path).await?;
+        Ok(NodeStat {
+            path: path.to_string(),
+            version: stat.version,
+            cversion: stat.cversion,
+            aversion: stat.aversion,
+            data_length: stat.data_length,
+            num_children: stat.num_children,
+            ephemeral_owner: stat.ephemeral_owner,
+            czxid: stat.czxid,
+            mzxid: stat.mzxid,
+            ctime: stat.ctime,
+            mtime: stat.mtime,
         })
     }
 

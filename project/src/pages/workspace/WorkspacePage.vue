@@ -1,9 +1,15 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
+
+import { type InvokeRejection, toAppError } from "@/api/client";
+import { nodeStat } from "@/api/node";
+import type { AppError } from "@/api/types/AppError";
 import type { ConnectionSnapshot } from "@/api/types/ConnectionSnapshot";
+import type { NodeStat } from "@/api/types/NodeStat";
 import ConnectionDialog from "@/components/ConnectionDialog.vue";
+import TreeNodeItem from "@/components/TreeNodeItem.vue";
 import { useConnectionStore } from "@/stores/connection";
 
 const { t } = useI18n();
@@ -12,9 +18,56 @@ const store = useConnectionStore();
 
 const menuOpen = ref(false);
 const dialogOpen = ref(false);
+const treeKey = ref(0);
+const selectedPath = ref<string | null>("/");
+const stat = ref<NodeStat | null>(null);
+const statError = ref<AppError | null>(null);
 
+const connectionId = computed(() => store.snapshot?.connection_id ?? "");
 const stateLabel = computed(() =>
   store.snapshot ? t(`connection.state.${store.snapshot.state}`) : t("shell.noConnection"),
+);
+
+async function loadStat(path: string): Promise<void> {
+  if (!connectionId.value) {
+    return;
+  }
+  statError.value = null;
+  try {
+    stat.value = await nodeStat(connectionId.value, path);
+  } catch (raw) {
+    stat.value = null;
+    statError.value = toAppError(raw as InvokeRejection);
+  }
+}
+
+function select(path: string): void {
+  selectedPath.value = path;
+  void loadStat(path);
+}
+
+function refresh(): void {
+  treeKey.value += 1;
+  if (selectedPath.value) {
+    void loadStat(selectedPath.value);
+  }
+}
+
+watch(connectionId, () => {
+  treeKey.value += 1;
+  selectedPath.value = "/";
+  stat.value = null;
+  void loadStat("/");
+});
+
+watch(
+  () => store.snapshot?.generation,
+  () => {
+    treeKey.value += 1;
+    if (selectedPath.value) {
+      void loadStat(selectedPath.value);
+    }
+  },
 );
 
 onMounted(async () => {
@@ -25,8 +78,11 @@ onMounted(async () => {
       store.activate(first.connection_id);
     } else {
       await router.replace("/");
+      return;
     }
   }
+  selectedPath.value = "/";
+  void loadStat("/");
 });
 
 function switchTo(snapshot: ConnectionSnapshot): void {
@@ -95,14 +151,42 @@ async function disconnect(): Promise<void> {
 
     <div class="body">
       <aside class="tree">
-        <div class="aside-head">{{ t("shell.tree") }}</div>
-        <p class="muted">{{ t("shell.treeHint") }}</p>
+        <div class="aside-head">
+          <span>{{ t("shell.tree") }}</span>
+          <button type="button" class="tiny" @click="refresh">{{ t("shell.refresh") }}</button>
+        </div>
+        <div v-if="connectionId" class="tree-scroll">
+          <TreeNodeItem
+            :key="`${connectionId}-${store.snapshot?.generation ?? 0}-${treeKey}`"
+            :connection-id="connectionId"
+            name="/"
+            path="/"
+            :depth="0"
+            @select="select"
+            @error="statError = $event"
+          />
+        </div>
+        <p v-else class="muted">{{ t("shell.noConnection") }}</p>
       </aside>
 
       <section class="content">
-        <div class="placeholder">
+        <div v-if="!selectedPath" class="placeholder">
           <h2>{{ t("shell.contentTitle") }}</h2>
           <p class="muted">{{ t("shell.contentHint") }}</p>
+        </div>
+
+        <div v-else class="stat-panel">
+          <h2 class="path">{{ selectedPath }}</h2>
+          <p v-if="statError" class="error">{{ t(statError.message_key) }}</p>
+
+          <dl v-if="stat" class="stat-grid">
+            <div><dt>{{ t("shell.version") }}</dt><dd>{{ stat.version }}</dd></div>
+            <div><dt>{{ t("shell.cversion") }}</dt><dd>{{ stat.cversion }}</dd></div>
+            <div><dt>{{ t("shell.children") }}</dt><dd>{{ stat.num_children }}</dd></div>
+            <div><dt>{{ t("shell.dataLength") }}</dt><dd>{{ stat.data_length }}</dd></div>
+            <div><dt>{{ t("shell.ephemeral") }}</dt><dd>{{ stat.ephemeral_owner === 0 ? t("shell.persistent") : stat.ephemeral_owner }}</dd></div>
+            <div><dt>{{ t("shell.mtime") }}</dt><dd>{{ new Date(stat.mtime).toLocaleString() }}</dd></div>
+          </dl>
         </div>
       </section>
     </div>
@@ -218,19 +302,40 @@ async function disconnect(): Promise<void> {
   min-height: 0;
 }
 .tree {
-  width: 260px;
-  padding: 16px;
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 8px 12px 12px;
   border-right: 1px solid rgb(255 255 255 / 8%);
   background: rgb(16 20 24 / 45%);
 }
 .aside-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   font-weight: 600;
   margin-bottom: 8px;
+  padding-right: 4px;
+}
+.tiny {
+  padding: 2px 8px;
+  border-radius: 5px;
+  border: 1px solid rgb(255 255 255 / 15%);
+  background: transparent;
+  color: #9aa4b2;
+  cursor: pointer;
+  font-size: 12px;
+}
+.tree-scroll {
+  flex: 1;
+  overflow: auto;
 }
 .content {
   flex: 1;
   display: grid;
   place-items: center;
+  padding: 24px;
+  overflow: auto;
 }
 .placeholder {
   text-align: center;
@@ -238,6 +343,39 @@ async function disconnect(): Promise<void> {
 .placeholder h2 {
   margin: 0 0 6px;
   font-size: 18px;
+}
+.stat-panel {
+  align-self: start;
+  justify-self: stretch;
+  max-width: 720px;
+  margin: 0 auto;
+}
+.path {
+  font-family: ui-monospace, monospace;
+  font-size: 18px;
+  margin: 0 0 16px;
+  word-break: break-all;
+}
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px 20px;
+  margin: 0;
+}
+.stat-grid div {
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid rgb(255 255 255 / 8%);
+  background: rgb(16 20 24 / 55%);
+}
+.stat-grid dt {
+  color: #9aa4b2;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+.stat-grid dd {
+  margin: 0;
+  font-family: ui-monospace, monospace;
 }
 .statusbar {
   display: flex;
@@ -253,6 +391,9 @@ async function disconnect(): Promise<void> {
 .muted {
   color: #9aa4b2;
   font-size: 12px;
+}
+.error {
+  color: #ef4444;
 }
 .dot {
   width: 8px;

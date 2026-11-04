@@ -164,3 +164,27 @@ async fn no_proxy_bypasses_configured_proxy() {
     manager.close(&snapshot.connection_id).expect("关闭失败");
     let _ = std::fs::remove_dir_all(dir);
 }
+
+#[tokio::test]
+#[ignore = "需要 ZooKeeper 环境"]
+async fn children_and_stat_read_root() {
+    let manager = ConnectionManager::new();
+    let snapshot = manager.create(request()).await.expect("连接失败");
+    let children = manager
+        .children(&snapshot.connection_id, "/")
+        .await
+        .expect("读取子节点失败");
+    let stat = manager
+        .stat(&snapshot.connection_id, "/")
+        .await
+        .expect("读取 Stat 失败");
+    assert_eq!(stat.path, "/");
+    assert!(stat.num_children >= 0);
+    assert!(stat.version >= 0);
+    println!(
+        "root children: {}, stat.version: {}",
+        children.len(),
+        stat.version
+    );
+    manager.close(&snapshot.connection_id).expect("关闭失败");
+}
