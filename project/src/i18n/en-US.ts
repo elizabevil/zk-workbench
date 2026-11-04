@@ -1,0 +1,53 @@
+export default {
+  app: { title: "ZK UI" },
+  workbench: {
+    title: "Connection",
+    endpoint: "Cluster endpoint",
+    endpointPlaceholder: "127.0.0.1:2181",
+    displayName: "Name",
+    connect: "Connect",
+    close: "Disconnect",
+    connecting: "Connecting…",
+    generation: "generation",
+    sessionTimeout: "Session timeout",
+    empty: "No connection yet",
+  },
+  connection: {
+    state: {
+      creating: "Creating",
+      connecting: "Connecting",
+      connected: "Connected",
+      disconnected: "Disconnected",
+      expired: "Expired",
+      closed: "Closed",
+    },
+  },
+  error: {
+    title: "Operation failed",
+    zk: {
+      no_node: "Node does not exist",
+      no_auth: "Insufficient permission",
+      bad_version: "Version conflict",
+      node_exists: "Node already exists",
+      not_empty: "Node is not empty",
+      session_expired: "Session expired",
+      auth_failed: "Authentication failed",
+      connection_loss: "Connection lost",
+      no_children_for_ephemerals: "Ephemeral node cannot have children",
+      invalid_acl: "Invalid ACL",
+      quota_exceeded: "Quota exceeded",
+      unimplemented: "Server does not support this operation",
+      timeout: "Operation timed out",
+      other: "Unknown ZooKeeper error",
+    },
+    app: {
+      invalid_path: "Invalid path",
+      not_found: "Connection not found",
+      closed: "Connection closed",
+    },
+    ipc: {
+      invalid_argument: "Invalid argument",
+      stale_generation: "Session changed, please refresh",
+    },
+  },
+};

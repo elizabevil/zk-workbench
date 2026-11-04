@@ -114,9 +114,11 @@ src/
 
 | 事件 | 载荷 |
 |---|---|
-| `connection:state` | `{ connection_id, state, generation }` |
-| `tree:invalidated` | `{ connection_id, paths, generation }` |
-| `operation:progress` | `{ request_id, done, total, message_key }` |
+| `connection.state.changed` | `{ connection_id, state, generation }` |
+| `tree.node.invalidated` | `{ connection_id, paths, generation }` |
+| `operation.progress.changed` | `{ request_id, done, total, message_key }` |
+
+事件名采用 `<domain>.<entity>.<action>` 点分隔：Tauri 本身对冒号无限制，但点号在日志、SSE/WebSocket 桥接与 URL 场景不需要转义；事件名集中定义在 `zkui-core/src/ipc/events.rs` 与 `src/api/events.ts`。
 
 长操作（递归删除预览、将来全树搜索）带 `request_id`，提供 `operation_cancel`。
 

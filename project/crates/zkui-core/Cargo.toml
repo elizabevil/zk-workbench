@@ -6,6 +6,13 @@ rust-version.workspace = true
 description = "ZK UI 领域核心：连接、会话、缓存、命令执行与错误模型"
 
 [dependencies]
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+thiserror = "2.0.21"
+tokio = { version = "1", features = ["rt-multi-thread", "sync", "time", "macros"] }
+tracing = "0.1.44"
+ts-rs = { version = "12.0.1", features = ["serde-compat"] }
+zookeeper-client = { version = "0.11", features = ["tokio"] }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }

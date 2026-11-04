@@ -1,0 +1,53 @@
+export default {
+  app: { title: "ZK UI" },
+  workbench: {
+    title: "连接",
+    endpoint: "集群地址",
+    endpointPlaceholder: "127.0.0.1:2181",
+    displayName: "名称",
+    connect: "连接",
+    close: "关闭连接",
+    connecting: "连接中…",
+    generation: "generation",
+    sessionTimeout: "会话超时",
+    empty: "尚未建立连接",
+  },
+  connection: {
+    state: {
+      creating: "创建中",
+      connecting: "连接中",
+      connected: "已连接",
+      disconnected: "已断开",
+      expired: "会话过期",
+      closed: "已关闭",
+    },
+  },
+  error: {
+    title: "操作失败",
+    zk: {
+      no_node: "节点不存在",
+      no_auth: "权限不足",
+      bad_version: "版本冲突",
+      node_exists: "节点已存在",
+      not_empty: "节点非空",
+      session_expired: "会话已过期",
+      auth_failed: "认证失败",
+      connection_loss: "连接已断开",
+      no_children_for_ephemerals: "临时节点不能有子节点",
+      invalid_acl: "ACL 无效",
+      quota_exceeded: "超出配额",
+      unimplemented: "服务端不支持该操作",
+      timeout: "操作超时",
+      other: "ZooKeeper 返回未知错误",
+    },
+    app: {
+      invalid_path: "路径不合法",
+      not_found: "连接不存在",
+      closed: "连接已关闭",
+    },
+    ipc: {
+      invalid_argument: "参数不合法",
+      stale_generation: "会话已更新，请刷新",
+    },
+  },
+};

@@ -16,6 +16,9 @@ lint:
 typecheck:
     npx --no-install vue-tsc --noEmit
 
+types:
+    cargo test -p zkui-core --lib export_bindings
+
 test:
     cargo test --workspace
 
