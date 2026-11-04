@@ -15,6 +15,7 @@ import type { ConnectionSnapshot } from "@/api/types/ConnectionSnapshot";
 import type { DeleteOutcome } from "@/api/types/DeleteOutcome";
 import type { NodeData } from "@/api/types/NodeData";
 import type { NodeStat } from "@/api/types/NodeStat";
+import CommandPanel from "@/components/CommandPanel.vue";
 import ConnectionDialog from "@/components/ConnectionDialog.vue";
 import NodeBinaryEditor from "@/components/NodeBinaryEditor.vue";
 import NodeCreateDialog from "@/components/NodeCreateDialog.vue";
@@ -529,6 +530,13 @@ function onDeleted(outcome: DeleteOutcome): void {
         </div>
       </section>
     </div>
+
+    <CommandPanel
+      v-if="connectionId"
+      :connection-id="connectionId"
+      :connection-name="store.snapshot?.display_name ?? ''"
+      @refresh="refresh"
+    />
 
     <footer class="statusbar">
       <span>{{ t("shell.state") }}: {{ stateLabel }}</span>

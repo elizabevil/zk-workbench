@@ -2,21 +2,35 @@
 
 mod commands;
 mod events;
+mod i18n;
 mod logging;
+mod menu;
 mod otel;
 mod state;
+
+use tauri::Manager;
 
 use state::AppState;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    logging::init();
     tauri::Builder::default()
+        .menu(|handle| {
+            let locale = handle
+                .state::<AppState>()
+                .settings
+                .snapshot()
+                .general
+                .locale;
+            menu::build(handle, locale)
+        })
+        .on_menu_event(menu::handle_event)
         .manage(AppState::new())
         .invoke_handler(tauri::generate_handler![
             commands::connection::connection_create,
             commands::connection::connection_snapshot,
             commands::connection::connection_close,
+            commands::app::app_info,
             commands::connection::connection_list,
             commands::metrics::metrics_snapshot,
             commands::audit::audit_list,
@@ -24,6 +38,8 @@ pub fn run() {
             commands::audit::audit_clear,
             commands::audit::audit_prune,
             commands::audit::audit_export,
+            commands::command::command_preview,
+            commands::command::command_execute,
             commands::otel::otel_export_now,
             commands::otel::otel_status,
             commands::node::node_children,
@@ -48,6 +64,8 @@ pub fn run() {
             commands::proxy::app_paths,
         ])
         .setup(|app| {
+            let log_directory = app.state::<AppState>().settings.snapshot().logs.directory;
+            logging::init(&log_directory);
             events::spawn_forwarder(app.handle().clone());
             otel::spawn_periodic(app.handle().clone());
             Ok(())

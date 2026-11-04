@@ -29,7 +29,9 @@ pub fn proxy_password_has(profile: String) -> AppResult<bool> {
 
 #[tauri::command]
 pub fn app_paths(state: State<'_, crate::state::AppState>) -> zkui_core::ipc::app::AppPaths {
-    let log_dir = crate::logging::log_dir().unwrap_or_else(|| std::path::PathBuf::from("."));
+    let directory = state.settings.snapshot().logs.directory;
+    let log_dir =
+        crate::logging::log_dir(&directory).unwrap_or_else(|| std::path::PathBuf::from("."));
     zkui_core::ipc::app::AppPaths {
         config_path: state.settings.path().display().to_string(),
         log_dir: log_dir.display().to_string(),

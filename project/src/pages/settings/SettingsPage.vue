@@ -412,6 +412,11 @@ function removeProxy(index: number): void {
       <fieldset>
         <legend>{{ t("settings.logs.title") }}</legend>
         <p class="hint">{{ t("settings.logs.hint") }}</p>
+        <label>
+          {{ t("settings.logs.directory") }}
+          <input v-model="store.settings.logs.directory" :placeholder="t('settings.logs.directoryPlaceholder')" />
+        </label>
+        <p class="hint">{{ t("settings.logs.restartHint") }}</p>
         <p v-if="paths" class="hint">{{ t("settings.logs.config") }}: {{ paths.config_path }}</p>
         <p v-if="paths" class="hint">{{ t("settings.logs.dir") }}: {{ paths.log_dir }}</p>
       </fieldset>

@@ -63,6 +63,7 @@ pub enum ErrorKind {
     AuditFailed,
     OtelExportFailed,
     Cancelled,
+    CommandInvalid,
     // proxy 域
     Connect,
     Handshake,
@@ -96,6 +97,7 @@ impl ErrorKind {
             ErrorKind::AuditFailed => "audit_failed",
             ErrorKind::OtelExportFailed => "otel_export_failed",
             ErrorKind::Cancelled => "cancelled",
+            ErrorKind::CommandInvalid => "command_invalid",
             ErrorKind::Connect => "connect",
             ErrorKind::Handshake => "handshake",
             ErrorKind::InvalidArgument => "invalid_argument",

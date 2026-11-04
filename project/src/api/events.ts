@@ -4,6 +4,9 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type { ConnectionStateEvent } from "./types/ConnectionStateEvent";
 
 export const CONNECTION_STATE_CHANGED = "connection.state.changed";
+export const MENU_ACTION = "menu.action";
+export const MENU_ACTION_SETTINGS = "settings";
+export const MENU_ACTION_ABOUT = "about";
 
 export function listenConnectionState(
   handler: (event: ConnectionStateEvent) => void,

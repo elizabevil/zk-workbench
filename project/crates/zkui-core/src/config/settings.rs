@@ -160,12 +160,15 @@ impl Default for OtelSettings {
 #[ts(export)]
 pub struct LogSettings {
     pub level: String,
+    /// 为空表示使用默认的文档目录下 `zkui/logs`。
+    pub directory: String,
 }
 
 impl Default for LogSettings {
     fn default() -> Self {
         Self {
             level: DEFAULT_LOG_LEVEL.to_string(),
+            directory: String::new(),
         }
     }
 }

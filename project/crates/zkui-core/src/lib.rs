@@ -4,6 +4,7 @@
 //! 不依赖 Tauri，便于单独测试与复用。接口以 doc comment 作为契约。
 
 pub mod audit;
+pub mod command;
 pub mod config;
 pub mod connection;
 pub mod error;

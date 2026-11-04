@@ -10,8 +10,8 @@ use tracing_subscriber::fmt::MakeWriter;
 static GUARD: OnceLock<WorkerGuard> = OnceLock::new();
 
 /// 初始化文件日志。返回是否成功；失败时不影响应用启动。
-pub fn init() {
-    let Some(directory) = log_dir() else {
+pub fn init(configured: &str) {
+    let Some(directory) = log_dir(configured) else {
         return;
     };
     if std::fs::create_dir_all(&directory).is_err() {
@@ -27,8 +27,12 @@ pub fn init() {
         .try_init();
 }
 
-pub fn log_dir() -> Option<PathBuf> {
-    dirs::document_dir().map(|dir| dir.join("zkui").join("logs"))
+pub fn log_dir(configured: &str) -> Option<PathBuf> {
+    use zkui_core::config::constants::{APP_DIR, LOGS_DIR};
+    if !configured.trim().is_empty() {
+        return Some(PathBuf::from(configured.trim()));
+    }
+    dirs::document_dir().map(|dir| dir.join(APP_DIR).join(LOGS_DIR))
 }
 
 struct MakeRedacting {

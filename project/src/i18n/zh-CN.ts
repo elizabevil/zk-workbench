@@ -115,6 +115,13 @@ export default {
     saving: "保存中…",
     cancel: "取消",
   },
+  command: {
+    title: "命令",
+    placeholder: "输入命令，例如 ls / 或 get /path",
+    run: "执行",
+    running: "执行中…",
+    history: "历史",
+  },
   shell: {
     noConnection: "未连接",
     tree: "节点树",
@@ -227,6 +234,9 @@ export default {
       readP95: "读 P95",
       writeP50: "写 P50",
       writeP95: "写 P95",
+      directory: "日志目录",
+      directoryPlaceholder: "留空使用文档目录下的 zkui/logs",
+      restartHint: "修改日志目录后需重启应用生效。",
       hint: "默认不导出；开启后将向上述端点发送数据。",
     },
     logs: {
@@ -273,6 +283,7 @@ export default {
       invalid_path: "路径不合法",
       not_found: "连接不存在",
       closed: "连接已关闭",
+      command_invalid: "命令不合法",
       audit_failed: "审计写入失败",
       secret_store: "系统凭据存储不可用",
     },

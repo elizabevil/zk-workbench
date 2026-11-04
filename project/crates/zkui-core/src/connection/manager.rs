@@ -373,6 +373,10 @@ impl ConnectionManager {
         })
     }
 
+    pub(crate) fn client_for_command(&self, connection_id: &str) -> AppResult<Client> {
+        self.client_of(connection_id)
+    }
+
     fn client_of(&self, connection_id: &str) -> AppResult<Client> {
         let entries = self.entries.read().expect("connections lock poisoned");
         entries

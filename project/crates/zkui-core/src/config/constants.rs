@@ -12,3 +12,7 @@ pub const DEFAULT_LOG_LEVEL: &str = "info";
 pub const OTEL_PROTOCOL_HTTP_PROTOBUF: &str = "http/protobuf";
 /// 桌面通知默认级别。
 pub const NOTIFICATION_ERRORS: &str = "errors";
+/// 应用数据目录名（配置、日志、审计共用）。
+pub const APP_DIR: &str = "zkui";
+/// 日志子目录名。
+pub const LOGS_DIR: &str = "logs";

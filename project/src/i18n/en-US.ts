@@ -116,6 +116,13 @@ export default {
     saving: "Saving…",
     cancel: "Cancel",
   },
+  command: {
+    title: "Command",
+    placeholder: "Type a command, e.g. ls / or get /path",
+    run: "Run",
+    running: "Running…",
+    history: "History",
+  },
   shell: {
     noConnection: "Not connected",
     tree: "Node tree",
@@ -230,6 +237,9 @@ export default {
       readP95: "Read P95",
       writeP50: "Write P50",
       writeP95: "Write P95",
+      directory: "Log directory",
+      directoryPlaceholder: "Leave empty for Documents/zkui/logs",
+      restartHint: "Restart the app for the log directory change to take effect.",
       hint: "Off by default; when enabled, data is sent to the endpoint above.",
     },
     logs: {
@@ -274,6 +284,7 @@ export default {
       invalid_path: "Invalid path",
       not_found: "Connection not found",
       closed: "Connection closed",
+      command_invalid: "Invalid command",
       audit_failed: "Failed to write audit record",
       secret_store: "System credential store unavailable",
     },

@@ -131,3 +131,16 @@ pub fn cancelled() -> AppError {
         ErrorFields::default(),
     )
 }
+
+/// 命令解析或执行参数错误。
+pub fn command_invalid(detail: &str) -> AppError {
+    AppError::new(
+        ErrorKind::CommandInvalid,
+        ErrorScope::App,
+        2010,
+        ErrorFields {
+            detail: Some(detail.to_string()),
+            ..Default::default()
+        },
+    )
+}

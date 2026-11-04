@@ -10,3 +10,11 @@ pub struct AppPaths {
     pub config_path: String,
     pub log_dir: String,
 }
+
+/// 应用元信息，来自构建配置，不在前端写死。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[ts(export)]
+pub struct AppInfo {
+    pub name: String,
+    pub version: String,
+}
