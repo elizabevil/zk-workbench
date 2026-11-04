@@ -579,6 +579,8 @@ function onDeleted(outcome: DeleteOutcome): void {
             name="/"
             path="/"
             :depth="0"
+            prefix=""
+            :is-last="true"
             :selected-path="selectedPath"
             :expanded-paths="expandedPaths"
             @select="select"

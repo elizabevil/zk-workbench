@@ -11,6 +11,8 @@ const props = defineProps<{
   name: string;
   path: string;
   depth: number;
+  prefix: string;
+  isLast: boolean;
   selectedPath: string | null;
   expandedPaths: Set<string>;
 }>();
@@ -71,7 +73,6 @@ function childPath(name: string): string {
     <div
       class="row"
       :class="{ selected: path === selectedPath }"
-      :style="{ paddingLeft: `${depth * 14}px` }"
       role="treeitem"
       tabindex="0"
       :aria-selected="path === selectedPath"
@@ -79,7 +80,14 @@ function childPath(name: string): string {
       @keydown.enter.prevent="emit('select', path)"
       @keydown.space.prevent="emit('select', path)"
     >
-      <button class="twist" type="button" @click.stop="toggle">
+      <span v-if="depth === 0" class="prefix mono" />
+      <span v-else class="prefix mono">{{ prefix }}{{ isLast ? "└─" : "├─" }}</span>
+      <button
+        class="twist"
+        type="button"
+        :aria-expanded="expanded"
+        @click.stop="toggle"
+      >
         {{ expanded ? "▾" : "▸" }}
       </button>
       <button
@@ -126,12 +134,14 @@ function childPath(name: string): string {
 
     <div v-if="expanded">
       <TreeNodeItem
-        v-for="child in children ?? []"
+        v-for="(child, index) in children ?? []"
         :key="child"
         :connection-id="connectionId"
         :name="child"
         :path="childPath(child)"
         :depth="depth + 1"
+        :prefix="prefix + (isLast ? '   ' : '│  ')"
+        :is-last="index === (children?.length ?? 0) - 1"
         :selected-path="selectedPath"
         :expanded-paths="expandedPaths"
         @select="emit('select', $event)"
@@ -145,9 +155,8 @@ function childPath(name: string): string {
       <div
         v-if="children && children.length === 0"
         class="muted empty"
-        :style="{ paddingLeft: `${(depth + 1) * 14 + 20}px` }"
       >
-        —
+        {{ prefix }}{{ isLast ? "   " : "│  " }}└─ —
       </div>
     </div>
   </div>
