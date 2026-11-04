@@ -107,16 +107,29 @@ impl ErrorKind {
     }
 }
 
-/// 定位信息。始终输出全部字段，未使用时为 null，避免前端做可选字段判断。
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, TS)]
+/// 定位信息。字段恒出现，缺失语义用固定值表示：
+/// `path`/`connection_id`/`detail` 为空串，`version` 为 -1，`generation` 为 0。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 #[ts(export)]
 pub struct ErrorFields {
-    pub path: Option<String>,
-    pub version: Option<i32>,
-    pub connection_id: Option<String>,
-    #[ts(type = "number | null")]
-    pub generation: Option<u64>,
-    pub detail: Option<String>,
+    pub path: String,
+    pub version: i32,
+    pub connection_id: String,
+    #[ts(type = "number")]
+    pub generation: u64,
+    pub detail: String,
+}
+
+impl Default for ErrorFields {
+    fn default() -> Self {
+        Self {
+            path: String::new(),
+            version: -1,
+            connection_id: String::new(),
+            generation: 0,
+            detail: String::new(),
+        }
+    }
 }
 
 /// 对外错误形状。

@@ -4,4 +4,12 @@ export type LogSettings = { level: string,
 /**
  * 为空表示使用默认的文档目录下 `zkui/logs`。
  */
-directory: string, };
+directory: string, 
+/**
+ * 单个日志文件大小上限，默认 1 MiB。
+ */
+max_size_bytes: bigint, 
+/**
+ * 日志保留天数，默认 7 天。
+ */
+retention_days: number, };

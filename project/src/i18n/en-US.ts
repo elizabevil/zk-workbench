@@ -244,6 +244,8 @@ export default {
       writeP95: "Write P95",
       directory: "Log directory",
       directoryPlaceholder: "Leave empty for Documents/zkui/logs",
+      maxSize: "Max file size (bytes)",
+      retention: "Retention days",
       restartHint: "Restart the app for the log directory change to take effect.",
       hint: "Off by default; when enabled, data is sent to the endpoint above.",
     },

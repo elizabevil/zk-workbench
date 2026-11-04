@@ -8,7 +8,7 @@ pub fn invalid_path(path: &str) -> AppError {
         ErrorScope::App,
         2001,
         ErrorFields {
-            path: Some(path.to_string()),
+            path: path.to_string(),
             ..Default::default()
         },
     )
@@ -20,7 +20,7 @@ pub fn not_found(connection_id: &str) -> AppError {
         ErrorScope::App,
         2002,
         ErrorFields {
-            connection_id: Some(connection_id.to_string()),
+            connection_id: connection_id.to_string(),
             ..Default::default()
         },
     )
@@ -32,7 +32,7 @@ pub fn closed(connection_id: &str) -> AppError {
         ErrorScope::App,
         2003,
         ErrorFields {
-            connection_id: Some(connection_id.to_string()),
+            connection_id: connection_id.to_string(),
             ..Default::default()
         },
     )
@@ -44,7 +44,7 @@ pub fn invalid_argument(detail: &str) -> AppError {
         ErrorScope::Ipc,
         3001,
         ErrorFields {
-            detail: Some(detail.to_string()),
+            detail: detail.to_string(),
             ..Default::default()
         },
     )
@@ -56,9 +56,9 @@ pub fn stale_generation(connection_id: &str, expected: u64, actual: u64) -> AppE
         ErrorScope::Ipc,
         3002,
         ErrorFields {
-            connection_id: Some(connection_id.to_string()),
-            generation: Some(actual),
-            detail: Some(format!("expected {expected}, actual {actual}")),
+            connection_id: connection_id.to_string(),
+            generation: actual,
+            detail: format!("expected {expected}, actual {actual}"),
             ..Default::default()
         },
     )
@@ -77,7 +77,7 @@ pub fn proxy_failed(stage: &str, detail: &str) -> AppError {
         ErrorScope::Proxy,
         code,
         ErrorFields {
-            detail: Some(format!("{stage}: {detail}")),
+            detail: format!("{stage}: {detail}"),
             ..Default::default()
         },
     )
@@ -90,7 +90,7 @@ pub fn secret_store_failed(detail: &str) -> AppError {
         ErrorScope::App,
         2006,
         ErrorFields {
-            detail: Some(detail.to_string()),
+            detail: detail.to_string(),
             ..Default::default()
         },
     )
@@ -103,7 +103,7 @@ pub fn audit_failed(detail: &str) -> AppError {
         ErrorScope::App,
         2007,
         ErrorFields {
-            detail: Some(detail.to_string()),
+            detail: detail.to_string(),
             ..Default::default()
         },
     )
@@ -116,7 +116,7 @@ pub fn otel_failed(detail: &str) -> AppError {
         ErrorScope::App,
         2008,
         ErrorFields {
-            detail: Some(detail.to_string()),
+            detail: detail.to_string(),
             ..Default::default()
         },
     )
@@ -139,7 +139,7 @@ pub fn command_invalid(detail: &str) -> AppError {
         ErrorScope::App,
         2010,
         ErrorFields {
-            detail: Some(detail.to_string()),
+            detail: detail.to_string(),
             ..Default::default()
         },
     )

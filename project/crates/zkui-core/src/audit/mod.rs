@@ -72,7 +72,7 @@ impl AuditEvent {
             after_version: VERSION_NONE,
             result: AuditResult::Failure,
             error_kind: format!("{}.{}", error.scope.as_str(), error.kind.as_str()),
-            detail: error.fields.detail.clone().unwrap_or_default(),
+            detail: error.fields.detail.clone(),
             actor: actor.to_string(),
         }
     }

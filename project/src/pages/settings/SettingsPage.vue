@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 
@@ -40,6 +40,24 @@ const metrics = ref<MetricsSnapshot | null>(null);
 const auditRows = ref<AuditRecord[]>([]);
 const auditMessage = ref("");
 const exportPath = ref("");
+
+const sections = [
+  "general",
+  "appearance",
+  "notifications",
+  "retry",
+  "task",
+  "proxy",
+  "audit",
+  "observability",
+  "logs",
+] as const;
+const activeSection = ref<string>("general");
+let observer: IntersectionObserver | undefined;
+
+function scrollToSection(id: string): void {
+  document.getElementById(`settings-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
 const otel = ref<OtelExportStatus | null>(null);
 const otelMessage = ref("");
 const passwords = ref<Record<number, string>>({});
@@ -106,7 +124,28 @@ onMounted(async () => {
   await loadMetrics();
   await loadAudit();
   await loadOtel();
+  await nextTick();
+  const container = document.querySelector(".settings-form");
+  const fieldsets = Array.from(container?.querySelectorAll("fieldset") ?? []);
+  fieldsets.forEach((element, index) => {
+    element.id = `settings-${sections[index] ?? index}`;
+  });
+  observer = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          activeSection.value = (entry.target.id || "").replace("settings-", "");
+        }
+      }
+    },
+    { root: container, rootMargin: "-10% 0px -70% 0px", threshold: 0 },
+  );
+  for (const fieldset of fieldsets) {
+    observer.observe(fieldset);
+  }
 });
+
+onUnmounted(() => observer?.disconnect());
 
 function moveProxy(index: number, delta: number): void {
   const profiles = store.settings?.proxy.profiles;
@@ -177,7 +216,20 @@ function removeProxy(index: number): void {
     <p v-if="store.error" class="error">{{ t(store.error.message_key) }}</p>
     <p v-if="!store.settings">{{ t("settings.loading") }}</p>
 
-    <form v-if="store.settings" class="sections" @submit.prevent="store.save()">
+    <div class="settings-layout">
+      <nav class="settings-nav">
+        <button
+          v-for="section in sections"
+          :key="section"
+          type="button"
+          :class="{ active: activeSection === section }"
+          @click="scrollToSection(section)"
+        >
+          {{ t(`settings.${section}.title`) }}
+        </button>
+      </nav>
+
+      <form v-if="store.settings" class="sections settings-form" @submit.prevent="store.save()">
       <fieldset>
         <legend>{{ t("settings.general.title") }}</legend>
         <label>
@@ -417,6 +469,14 @@ function removeProxy(index: number): void {
           <input v-model="store.settings.logs.directory" :placeholder="t('settings.logs.directoryPlaceholder')" />
         </label>
         <p class="hint">{{ t("settings.logs.restartHint") }}</p>
+        <label>
+          {{ t("settings.logs.maxSize") }}
+          <input v-model.number="store.settings.logs.max_size_bytes" min="4096" step="1024" type="number" />
+        </label>
+        <label>
+          {{ t("settings.logs.retention") }}
+          <input v-model.number="store.settings.logs.retention_days" min="0" type="number" />
+        </label>
         <p v-if="paths" class="hint">{{ t("settings.logs.config") }}: {{ paths.config_path }}</p>
         <p v-if="paths" class="hint">{{ t("settings.logs.dir") }}: {{ paths.log_dir }}</p>
       </fieldset>
@@ -425,7 +485,8 @@ function removeProxy(index: number): void {
         <button :disabled="store.saving" type="submit">{{ t("settings.save") }}</button>
         <button type="button" @click="resetSettings">{{ t("settings.resetConfig") }}</button>
       </div>
-    </form>
+      </form>
+    </div>
   </section>
 </template>
 
@@ -441,6 +502,42 @@ function removeProxy(index: number): void {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+.settings-layout {
+  display: flex;
+  gap: 20px;
+  min-height: 0;
+  flex: 1;
+}
+.settings-nav {
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 160px;
+  flex: none;
+}
+.settings-nav button {
+  text-align: left;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #9aa4b2;
+  cursor: pointer;
+}
+.settings-nav button.active {
+  background: rgb(37 99 235 / 22%);
+  color: #fff;
+}
+.settings-form {
+  flex: 1;
+  min-width: 0;
+  max-height: calc(100vh - 190px);
+  overflow-y: auto;
+  padding-right: 8px;
 }
 .sections {
   display: grid;

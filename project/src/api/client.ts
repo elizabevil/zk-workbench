@@ -12,14 +12,14 @@ import type { ErrorFields } from "./types/ErrorFields";
 export type InvokeRejection = AppError | string | Error;
 
 const EMPTY_FIELDS: ErrorFields = {
-  path: null,
-  version: null,
-  connection_id: null,
-  generation: null,
-  detail: null,
+  path: "",
+  version: -1,
+  connection_id: "",
+  generation: 0,
+  detail: "",
 };
 
-function ipcError(messageKey: string, detail: string | null): AppError {
+function ipcError(messageKey: string, detail: string): AppError {
   return {
     kind: "unknown",
     scope: "ipc",

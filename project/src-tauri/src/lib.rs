@@ -65,7 +65,8 @@ pub fn run() {
         ])
         .setup(|app| {
             let log_directory = app.state::<AppState>().settings.snapshot().logs.directory;
-            logging::init(&log_directory);
+            let logs = app.state::<AppState>().settings.snapshot().logs;
+            logging::init(&log_directory, logs.max_size_bytes, logs.retention_days);
             events::spawn_forwarder(app.handle().clone());
             otel::spawn_periodic(app.handle().clone());
             Ok(())

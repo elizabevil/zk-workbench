@@ -241,6 +241,8 @@ export default {
       writeP95: "写 P95",
       directory: "日志目录",
       directoryPlaceholder: "留空使用文档目录下的 zkui/logs",
+      maxSize: "单文件上限（字节）",
+      retention: "保留天数",
       restartHint: "修改日志目录后需重启应用生效。",
       hint: "默认不导出；开启后将向上述端点发送数据。",
     },

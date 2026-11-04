@@ -24,7 +24,7 @@ pub mod codes {
     pub const OTHER: i32 = -1;
 }
 
-fn build(kind: ErrorKind, code: i32, detail: Option<String>) -> AppError {
+fn build(kind: ErrorKind, code: i32, detail: String) -> AppError {
     AppError::new(
         kind,
         ErrorScope::Zk,
@@ -39,24 +39,40 @@ fn build(kind: ErrorKind, code: i32, detail: Option<String>) -> AppError {
 /// 把客户端错误映射为应用错误。
 pub fn map_zk_error(error: ZkError) -> AppError {
     match error {
-        ZkError::NoNode => build(ErrorKind::NoNode, codes::NO_NODE, None),
-        ZkError::NoAuth => build(ErrorKind::NoAuth, codes::NO_AUTH, None),
-        ZkError::BadVersion => build(ErrorKind::BadVersion, codes::BAD_VERSION, None),
+        ZkError::NoNode => build(ErrorKind::NoNode, codes::NO_NODE, String::new()),
+        ZkError::NoAuth => build(ErrorKind::NoAuth, codes::NO_AUTH, String::new()),
+        ZkError::BadVersion => build(ErrorKind::BadVersion, codes::BAD_VERSION, String::new()),
         ZkError::NoChildrenForEphemerals => build(
             ErrorKind::NoChildrenForEphemerals,
             codes::NO_CHILDREN_FOR_EPHEMERALS,
-            None,
+            String::new(),
         ),
-        ZkError::NodeExists => build(ErrorKind::NodeExists, codes::NODE_EXISTS, None),
-        ZkError::NotEmpty => build(ErrorKind::NotEmpty, codes::NOT_EMPTY, None),
-        ZkError::SessionExpired => build(ErrorKind::SessionExpired, codes::SESSION_EXPIRED, None),
-        ZkError::InvalidAcl => build(ErrorKind::InvalidAcl, codes::INVALID_ACL, None),
-        ZkError::AuthFailed => build(ErrorKind::AuthFailed, codes::AUTH_FAILED, None),
-        ZkError::QuotaExceeded => build(ErrorKind::QuotaExceeded, codes::QUOTA_EXCEEDED, None),
-        ZkError::Unimplemented => build(ErrorKind::Unimplemented, codes::UNIMPLEMENTED, None),
-        ZkError::Timeout => build(ErrorKind::Timeout, codes::TIMEOUT, None),
-        ZkError::ConnectionLoss => build(ErrorKind::ConnectionLoss, codes::CONNECTION_LOSS, None),
-        other => build(ErrorKind::Other, codes::OTHER, Some(other.to_string())),
+        ZkError::NodeExists => build(ErrorKind::NodeExists, codes::NODE_EXISTS, String::new()),
+        ZkError::NotEmpty => build(ErrorKind::NotEmpty, codes::NOT_EMPTY, String::new()),
+        ZkError::SessionExpired => build(
+            ErrorKind::SessionExpired,
+            codes::SESSION_EXPIRED,
+            String::new(),
+        ),
+        ZkError::InvalidAcl => build(ErrorKind::InvalidAcl, codes::INVALID_ACL, String::new()),
+        ZkError::AuthFailed => build(ErrorKind::AuthFailed, codes::AUTH_FAILED, String::new()),
+        ZkError::QuotaExceeded => build(
+            ErrorKind::QuotaExceeded,
+            codes::QUOTA_EXCEEDED,
+            String::new(),
+        ),
+        ZkError::Unimplemented => build(
+            ErrorKind::Unimplemented,
+            codes::UNIMPLEMENTED,
+            String::new(),
+        ),
+        ZkError::Timeout => build(ErrorKind::Timeout, codes::TIMEOUT, String::new()),
+        ZkError::ConnectionLoss => build(
+            ErrorKind::ConnectionLoss,
+            codes::CONNECTION_LOSS,
+            String::new(),
+        ),
+        other => build(ErrorKind::Other, codes::OTHER, other.to_string()),
     }
 }
 

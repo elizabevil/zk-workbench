@@ -42,20 +42,44 @@ impl Default for GeneralSettings {
     }
 }
 
+/// 桌面通知等级。
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+#[ts(rename_all = "snake_case", export)]
+pub enum NotificationLevel {
+    Off,
+    #[default]
+    Errors,
+    Warnings,
+    All,
+}
+
+impl NotificationLevel {
+    pub const ALL: [NotificationLevel; 4] = [
+        NotificationLevel::Off,
+        NotificationLevel::Errors,
+        NotificationLevel::Warnings,
+        NotificationLevel::All,
+    ];
+}
+
+/// 通知偏好：桌面通知等级、命令完成提醒与声音。
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(default)]
 #[ts(export)]
 pub struct NotificationSettings {
-    /// off | errors | warnings | all
-    pub desktop: String,
+    /// 桌面通知等级；默认仅错误。
+    pub desktop: NotificationLevel,
+    /// 命令执行完成时是否通知。
     pub command_finished: bool,
+    /// 通知是否伴随声音。
     pub sound: bool,
 }
 
 impl Default for NotificationSettings {
     fn default() -> Self {
         Self {
-            desktop: crate::config::constants::NOTIFICATION_ERRORS.to_string(),
+            desktop: NotificationLevel::Errors,
             command_finished: false,
             sound: false,
         }
@@ -162,6 +186,10 @@ pub struct LogSettings {
     pub level: String,
     /// 为空表示使用默认的文档目录下 `zkui/logs`。
     pub directory: String,
+    /// 单个日志文件大小上限，默认 1 MiB。
+    pub max_size_bytes: u64,
+    /// 日志保留天数，默认 7 天。
+    pub retention_days: u32,
 }
 
 impl Default for LogSettings {
@@ -169,6 +197,8 @@ impl Default for LogSettings {
         Self {
             level: DEFAULT_LOG_LEVEL.to_string(),
             directory: String::new(),
+            max_size_bytes: 1024 * 1024,
+            retention_days: 7,
         }
     }
 }

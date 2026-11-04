@@ -1,30 +1,88 @@
-//! 文件日志：用户文档目录 + 简单脱敏。
+//! 文件日志：按等级拆分、按大小轮转、按保留期清理。
 
+use std::fs::{File, OpenOptions};
 use std::io::{self, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
+use std::time::{Duration, SystemTime};
 
-use tracing_appender::non_blocking::{NonBlocking, WorkerGuard};
-use tracing_subscriber::fmt::MakeWriter;
+use tracing::{Level, Metadata};
+use tracing_appender::non_blocking::WorkerGuard;
+use tracing_subscriber::Layer;
+use tracing_subscriber::filter::filter_fn;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
 
-static GUARD: OnceLock<WorkerGuard> = OnceLock::new();
+static GUARDS: OnceLock<Vec<WorkerGuard>> = OnceLock::new();
 
-/// 初始化文件日志。返回是否成功；失败时不影响应用启动。
-pub fn init(configured: &str) {
+/// 初始化文件日志。失败时不影响应用启动。
+pub fn init(configured: &str, max_size_bytes: u64, retention_days: u32) {
     let Some(directory) = log_dir(configured) else {
         return;
     };
     if std::fs::create_dir_all(&directory).is_err() {
         return;
     }
-    let appender = tracing_appender::rolling::daily(&directory, "zkui.log");
-    let (writer, guard) = tracing_appender::non_blocking(appender);
-    let _ = GUARD.set(guard);
-    let _ = tracing_subscriber::fmt()
-        .with_ansi(false)
-        .with_target(true)
-        .with_writer(MakeRedacting { inner: writer })
+    cleanup(&directory, retention_days);
+
+    let max = max_size_bytes.max(4096);
+    let mut guards = Vec::new();
+    let mut open = |name: &str| {
+        let path = directory.join(name);
+        let writer = RotatingFile::new(path, max).ok()?;
+        let (non_blocking, guard) = tracing_appender::non_blocking(writer);
+        guards.push(guard);
+        Some(non_blocking)
+    };
+
+    let (Some(error), Some(warn), Some(info), Some(debug)) = (
+        open("error.log"),
+        open("warn.log"),
+        open("info.log"),
+        open("debug.log"),
+    ) else {
+        return;
+    };
+
+    let _ = tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::fmt::layer()
+                .with_ansi(false)
+                .with_target(true)
+                .with_writer(error)
+                .with_filter(filter_fn(|meta: &Metadata<'_>| {
+                    *meta.level() == Level::ERROR
+                })),
+        )
+        .with(
+            tracing_subscriber::fmt::layer()
+                .with_ansi(false)
+                .with_target(true)
+                .with_writer(warn)
+                .with_filter(filter_fn(|meta: &Metadata<'_>| {
+                    *meta.level() == Level::WARN
+                })),
+        )
+        .with(
+            tracing_subscriber::fmt::layer()
+                .with_ansi(false)
+                .with_target(true)
+                .with_writer(info)
+                .with_filter(filter_fn(|meta: &Metadata<'_>| {
+                    *meta.level() == Level::INFO
+                })),
+        )
+        .with(
+            tracing_subscriber::fmt::layer()
+                .with_ansi(false)
+                .with_target(true)
+                .with_writer(debug)
+                .with_filter(filter_fn(|meta: &Metadata<'_>| {
+                    *meta.level() == Level::DEBUG || *meta.level() == Level::TRACE
+                })),
+        )
         .try_init();
+    let _ = GUARDS.set(guards);
 }
 
 pub fn log_dir(configured: &str) -> Option<PathBuf> {
@@ -35,33 +93,88 @@ pub fn log_dir(configured: &str) -> Option<PathBuf> {
     dirs::document_dir().map(|dir| dir.join(APP_DIR).join(LOGS_DIR))
 }
 
-struct MakeRedacting {
-    inner: NonBlocking,
+struct RotatingFile {
+    path: PathBuf,
+    file: File,
+    size: u64,
+    max: u64,
 }
 
-impl<'a> MakeWriter<'a> for MakeRedacting {
-    type Writer = RedactingWriter<NonBlocking>;
+impl RotatingFile {
+    fn new(path: PathBuf, max: u64) -> io::Result<Self> {
+        let file = OpenOptions::new().create(true).append(true).open(&path)?;
+        let size = file.metadata()?.len();
+        Ok(Self {
+            path,
+            file,
+            size,
+            max,
+        })
+    }
 
-    fn make_writer(&'a self) -> Self::Writer {
-        RedactingWriter {
-            inner: self.inner.clone(),
-        }
+    fn rotate(&mut self) -> io::Result<()> {
+        self.file.flush()?;
+        let backup = self.path.with_extension("log.1");
+        let _ = std::fs::remove_file(&backup);
+        std::fs::rename(&self.path, &backup)?;
+        self.file = OpenOptions::new()
+            .create(true)
+            .write(true)
+            .truncate(true)
+            .open(&self.path)?;
+        self.size = 0;
+        Ok(())
     }
 }
 
-struct RedactingWriter<W: Write> {
-    inner: W,
-}
-
-impl<W: Write> Write for RedactingWriter<W> {
+impl Write for RotatingFile {
     fn write(&mut self, buffer: &[u8]) -> io::Result<usize> {
         let text = String::from_utf8_lossy(buffer);
-        self.inner.write_all(redact(&text).as_bytes())?;
+        let redacted = redact(&text);
+        let bytes = redacted.as_bytes();
+        if self.size + bytes.len() as u64 > self.max {
+            self.rotate()?;
+        }
+        self.file.write_all(bytes)?;
+        self.size += bytes.len() as u64;
         Ok(buffer.len())
     }
 
     fn flush(&mut self) -> io::Result<()> {
-        self.inner.flush()
+        self.file.flush()
+    }
+}
+
+fn cleanup(directory: &Path, retention_days: u32) {
+    if retention_days == 0 {
+        return;
+    }
+    let cutoff = SystemTime::now()
+        .checked_sub(Duration::from_secs(
+            u64::from(retention_days) * 24 * 60 * 60,
+        ))
+        .unwrap_or(SystemTime::UNIX_EPOCH);
+    let Ok(entries) = std::fs::read_dir(directory) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let name = entry.file_name().to_string_lossy().to_string();
+        let ours = ["error.log", "warn.log", "info.log", "debug.log"]
+            .iter()
+            .any(|prefix| name.starts_with(prefix));
+        if !ours {
+            continue;
+        }
+        let Ok(metadata) = entry.metadata() else {
+            continue;
+        };
+        let Ok(modified) = metadata.modified() else {
+            continue;
+        };
+        if modified < cutoff {
+            let _ = std::fs::remove_file(path);
+        }
     }
 }
 
@@ -106,7 +219,7 @@ pub fn redact(text: &str) -> String {
                 .to_ascii_lowercase()
                 .starts_with("authorization")
             {
-                while cursor < text.len() && text[cursor..].starts_with(|c: char| c != '\n') {
+                while cursor < text.len() && !text[cursor..].starts_with('\n') {
                     cursor += 1;
                 }
             }
