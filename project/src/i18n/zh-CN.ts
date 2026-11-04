@@ -124,6 +124,11 @@ export default {
   },
   shell: {
     noConnection: "未连接",
+    inspector: "检查器",
+    timeline: "时间线",
+    timelineEmpty: "暂无该路径的变更记录",
+    retry: "重试",
+    closeTab: "关闭标签",
     tree: "节点树",
     treeHint: "按需加载将在 S4 提供",
     contentTitle: "选择节点",

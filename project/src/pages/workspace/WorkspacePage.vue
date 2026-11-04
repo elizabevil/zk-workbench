@@ -6,11 +6,12 @@ import { computed, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 import { isMap, isSeq, parseDocument } from "yaml";
-
+import { auditList } from "@/api/audit";
 import { type InvokeRejection, toAppError } from "@/api/client";
 import { nodeAcl, nodeData, nodeStat } from "@/api/node";
 import type { AclEntry } from "@/api/types/AclEntry";
 import type { AppError } from "@/api/types/AppError";
+import type { AuditRecord } from "@/api/types/AuditRecord";
 import type { ConnectionSnapshot } from "@/api/types/ConnectionSnapshot";
 import type { DeleteOutcome } from "@/api/types/DeleteOutcome";
 import type { NodeData } from "@/api/types/NodeData";
@@ -23,6 +24,7 @@ import NodeDeleteDialog from "@/components/NodeDeleteDialog.vue";
 import NodeEditor from "@/components/NodeEditor.vue";
 import TreeNodeItem from "@/components/TreeNodeItem.vue";
 import { useConnectionStore } from "@/stores/connection";
+import { useTabsStore } from "@/stores/tabs";
 import { decodeUtf8Base64, hexPreview } from "@/utils/encoding";
 
 hljs.registerLanguage("json", jsonLanguage);
@@ -31,6 +33,7 @@ hljs.registerLanguage("yaml", yamlLanguage);
 const { t } = useI18n();
 const router = useRouter();
 const store = useConnectionStore();
+const tabs = useTabsStore();
 
 const menuOpen = ref(false);
 const dialogOpen = ref(false);
@@ -53,6 +56,8 @@ const deleteTarget = ref<string | null>(null);
 const retryPath = ref<string | null>(null);
 const toast = ref("");
 const jumpPath = ref("");
+const loadToken = ref(0);
+const timeline = ref<AuditRecord[]>([]);
 
 const connectionId = computed(() => store.snapshot?.connection_id ?? "");
 const stat = computed<NodeStat | null>(() => data.value?.stat ?? statView.value);
@@ -135,6 +140,7 @@ async function loadStat(path: string): Promise<void> {
   if (!connectionId.value) {
     return;
   }
+  const token = ++loadToken.value;
   loadingData.value = true;
   dataError.value = null;
   data.value = null;
@@ -142,6 +148,9 @@ async function loadStat(path: string): Promise<void> {
   largePending.value = false;
   try {
     const value = await nodeStat(connectionId.value, path);
+    if (token !== loadToken.value) {
+      return;
+    }
     statView.value = value;
     if (value.data_length > PREVIEW_BYTES) {
       largePending.value = true;
@@ -149,9 +158,13 @@ async function loadStat(path: string): Promise<void> {
     }
     await loadData(path);
   } catch (raw) {
-    dataError.value = toAppError(raw as InvokeRejection);
+    if (token === loadToken.value) {
+      dataError.value = toAppError(raw as InvokeRejection);
+    }
   } finally {
-    loadingData.value = false;
+    if (token === loadToken.value) {
+      loadingData.value = false;
+    }
   }
 }
 
@@ -161,7 +174,27 @@ function select(path: string): void {
   format.value = "raw";
   acls.value = null;
   aclError.value = null;
+  if (connectionId.value) {
+    tabs.open(connectionId.value, path);
+  }
   void loadStat(path);
+  void loadTimeline(path);
+}
+
+function closeTab(path: string): void {
+  tabs.close(connectionId.value, path);
+  if (selectedPath.value === path) {
+    const remaining = tabs.tabsFor(connectionId.value);
+    select(remaining[remaining.length - 1] ?? "/");
+  }
+}
+
+async function loadTimeline(path: string): Promise<void> {
+  try {
+    timeline.value = await auditList(10, 0, path);
+  } catch {
+    timeline.value = [];
+  }
 }
 
 async function loadAcl(): Promise<void> {
@@ -412,8 +445,8 @@ function onDeleted(outcome: DeleteOutcome): void {
               <button
                 type="button"
                 class="tiny"
-                :disabled="!data || !data.is_text || data.truncated"
-                :title="data && !data.is_text ? t('data.notEditable') : ''"
+                :disabled="!data?.is_text || data.truncated"
+                :title="data?.is_text === false ? t('data.notEditable') : ''"
                 @click="editorOpen = true"
               >
                 {{ t("data.edit") }}
@@ -422,6 +455,27 @@ function onDeleted(outcome: DeleteOutcome): void {
                 {{ t("data.delete") }}
               </button>
             </div>
+          </div>
+
+          <div class="node-tabs">
+            <button
+              v-for="tab in tabs.tabsFor(connectionId)"
+              :key="tab"
+              type="button"
+              class="node-tab"
+              :class="{ active: tab === selectedPath }"
+              @click="select(tab)"
+            >
+              {{ tab }}
+              <button
+                class="close"
+                type="button"
+                :aria-label="t('shell.closeTab')"
+                @click.stop="closeTab(tab)"
+              >
+                ×
+              </button>
+            </button>
           </div>
 
           <div class="tabs">
@@ -493,7 +547,7 @@ function onDeleted(outcome: DeleteOutcome): void {
 
             <div v-else-if="activeTab === 'acl'" class="acl-pane">
               <p v-if="aclError" class="error">{{ t(aclError.message_key) }}</p>
-              <table v-else-if="acls && acls.length" class="acl-table">
+              <table v-else-if="acls?.length" class="acl-table">
                 <thead>
                   <tr>
                     <th>{{ t("data.scheme") }}</th>
@@ -529,6 +583,27 @@ function onDeleted(outcome: DeleteOutcome): void {
           </template>
         </div>
       </section>
+
+      <aside class="inspector">
+        <div class="aside-head">{{ t("shell.inspector") }}</div>
+        <dl v-if="stat" class="inspector-grid">
+          <div><dt>{{ t("shell.path") }}</dt><dd class="mono">{{ stat.path }}</dd></div>
+          <div><dt>{{ t("shell.version") }}</dt><dd>{{ stat.version }}</dd></div>
+          <div><dt>{{ t("shell.cversion") }}</dt><dd>{{ stat.cversion }}</dd></div>
+          <div><dt>{{ t("shell.children") }}</dt><dd>{{ stat.num_children }}</dd></div>
+          <div><dt>{{ t("shell.dataLength") }}</dt><dd>{{ stat.data_length }}</dd></div>
+          <div><dt>{{ t("shell.ephemeral") }}</dt><dd>{{ stat.ephemeral_owner === 0 ? t("shell.persistent") : stat.ephemeral_owner }}</dd></div>
+          <div><dt>{{ t("shell.mtime") }}</dt><dd>{{ new Date(stat.mtime).toLocaleString() }}</dd></div>
+        </dl>
+        <div class="aside-head timeline-head">{{ t("shell.timeline") }}</div>
+        <ul v-if="timeline.length" class="timeline">
+          <li v-for="entry in timeline" :key="entry.id">
+            <span class="mono">{{ entry.op }}</span>
+            <span class="muted">{{ new Date(entry.ts).toLocaleTimeString() }}</span>
+          </li>
+        </ul>
+        <p v-else class="muted">{{ t("shell.timelineEmpty") }}</p>
+      </aside>
     </div>
 
     <CommandPanel
@@ -884,6 +959,77 @@ function onDeleted(outcome: DeleteOutcome): void {
 .stat-grid dd {
   margin: 0;
   font-family: ui-monospace, monospace;
+}
+.node-tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+}
+.node-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 6px 6px 0 0;
+  background: rgb(16 20 24 / 60%);
+  color: #cbd5e1;
+  cursor: pointer;
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.node-tab.active {
+  background: rgb(37 99 235 / 25%);
+  color: #fff;
+}
+.node-tab .close {
+  color: #9aa4b2;
+}
+.inspector {
+  width: 260px;
+  padding: 12px;
+  overflow: auto;
+  border-left: 1px solid rgb(255 255 255 / 8%);
+  background: rgb(10 13 16 / 70%);
+}
+.inspector-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+}
+.inspector-grid div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  padding: 3px 0;
+  border-bottom: 1px solid rgb(255 255 255 / 5%);
+}
+.inspector-grid dt {
+  color: #9aa4b2;
+}
+.inspector-grid dd {
+  margin: 0;
+}
+.mono {
+  font-family: ui-monospace, monospace;
+}
+.timeline-head {
+  margin-top: 16px;
+}
+.timeline {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+}
+.timeline li {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 0;
+  border-bottom: 1px solid rgb(255 255 255 / 5%);
 }
 .statusbar {
   display: flex;

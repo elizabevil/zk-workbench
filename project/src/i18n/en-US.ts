@@ -125,6 +125,11 @@ export default {
   },
   shell: {
     noConnection: "Not connected",
+    inspector: "Inspector",
+    timeline: "Timeline",
+    timelineEmpty: "No changes recorded for this path",
+    retry: "Retry",
+    closeTab: "Close tab",
     tree: "Node tree",
     treeHint: "Lazy loading arrives in S4",
     contentTitle: "Select a node",

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, ref, watch } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import type { ConnectionProfile } from "@/api/types/ConnectionProfile";
 import type { ConnectionSnapshot } from "@/api/types/ConnectionSnapshot";
@@ -24,9 +24,11 @@ const group = ref("");
 const localError = ref("");
 const nameInput = ref<HTMLInputElement | null>(null);
 
+const dialogError = computed(() => profiles.error ?? store.error);
+
 watch(
   () => props.open,
-  (open) => {
+  async (open) => {
     if (open) {
       localError.value = "";
       if (props.profile) {
@@ -40,7 +42,8 @@ watch(
         displayName.value = "local";
         group.value = "";
       }
-      void nextTick(() => nameInput.value?.focus());
+      await nextTick();
+      nameInput.value?.focus();
     }
   },
 );
@@ -105,11 +108,9 @@ async function submit(): Promise<void> {
         </label>
 
         <p v-if="localError" class="error">{{ localError }}</p>
-        <p v-else-if="profiles.error || store.error" class="error">
-          {{ t((profiles.error ?? store.error)!.message_key) }}
-          <span v-if="(profiles.error ?? store.error)!.fields.detail">
-            （{{ (profiles.error ?? store.error)!.fields.detail }}）
-          </span>
+        <p v-else-if="dialogError" class="error">
+          {{ t(dialogError.message_key) }}
+          <span v-if="dialogError.fields.detail">（{{ dialogError.fields.detail }}）</span>
         </p>
 
         <div class="actions">

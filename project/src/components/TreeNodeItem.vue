@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
+import { useI18n } from "vue-i18n";
 
 import { type InvokeRejection, toAppError } from "@/api/client";
 import { nodeChildren } from "@/api/node";
@@ -12,6 +13,8 @@ const props = defineProps<{
   depth: number;
 }>();
 
+const { t } = useI18n();
+const localError = ref(false);
 const emit = defineEmits<{
   select: [path: string];
   error: [error: AppError];
@@ -31,9 +34,11 @@ async function toggle(): Promise<void> {
     return;
   }
   loading.value = true;
+  localError.value = false;
   try {
     children.value = await nodeChildren(props.connectionId, props.path);
   } catch (raw) {
+    localError.value = true;
     const error = toAppError(raw as InvokeRejection);
     emit("error", error);
   } finally {
@@ -56,6 +61,9 @@ function childPath(name: string): string {
         {{ name }}
       </button>
       <span v-if="loading" class="muted">…</span>
+      <button v-else-if="localError" class="retry" type="button" @click="toggle">
+        {{ t("shell.retry") }}
+      </button>
     </div>
 
     <div v-if="expanded">
@@ -106,6 +114,13 @@ function childPath(name: string): string {
 }
 .label:hover {
   color: #93c5fd;
+}
+.retry {
+  border: none;
+  background: transparent;
+  color: #f87171;
+  cursor: pointer;
+  font-size: 11px;
 }
 .muted {
   color: #9aa4b2;
