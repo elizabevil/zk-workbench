@@ -7,9 +7,12 @@ import { type InvokeRejection, toAppError } from "@/api/client";
 import { nodeData } from "@/api/node";
 import type { AppError } from "@/api/types/AppError";
 import type { ConnectionSnapshot } from "@/api/types/ConnectionSnapshot";
+import type { DeleteOutcome } from "@/api/types/DeleteOutcome";
 import type { NodeData } from "@/api/types/NodeData";
 import type { NodeStat } from "@/api/types/NodeStat";
 import ConnectionDialog from "@/components/ConnectionDialog.vue";
+import NodeCreateDialog from "@/components/NodeCreateDialog.vue";
+import NodeDeleteDialog from "@/components/NodeDeleteDialog.vue";
 import NodeEditor from "@/components/NodeEditor.vue";
 import TreeNodeItem from "@/components/TreeNodeItem.vue";
 import { useConnectionStore } from "@/stores/connection";
@@ -29,6 +32,8 @@ const activeTab = ref<"data" | "stat">("data");
 const formatted = ref(false);
 const loadingData = ref(false);
 const editorOpen = ref(false);
+const createOpen = ref(false);
+const deleteOpen = ref(false);
 const toast = ref("");
 
 const connectionId = computed(() => store.snapshot?.connection_id ?? "");
@@ -52,6 +57,10 @@ const pretty = computed(() => {
 });
 const displayText = computed(() => (formatted.value && pretty.value ? pretty.value : text.value));
 const hexDump = computed(() => (data.value ? hexPreview(data.value.data_b64) : ""));
+const defaultChildPath = computed(() =>
+  selectedPath.value === "/" ? "/new" : `${selectedPath.value}/new`,
+);
+
 async function loadData(path: string): Promise<void> {
   if (!connectionId.value) {
     return;
@@ -140,6 +149,22 @@ function onSaved(stat: NodeStat): void {
   }
 }
 
+function onCreated(actualPath: string): void {
+  createOpen.value = false;
+  toast.value = t("create.created", { path: actualPath });
+  treeKey.value += 1;
+  select(actualPath);
+}
+
+function onDeleted(outcome: DeleteOutcome): void {
+  deleteOpen.value = false;
+  toast.value = outcome.failed_path
+    ? t("delete.failed", { path: outcome.failed_path, done: outcome.deleted })
+    : t("delete.done", { done: outcome.deleted });
+  treeKey.value += 1;
+  const parent = selectedPath.value?.replace(/\/[^/]+$/, "") || "/";
+  select(parent || "/");
+}
 </script>
 
 <template>
@@ -218,6 +243,9 @@ function onSaved(stat: NodeStat): void {
             <h2 class="path">{{ selectedPath }}</h2>
             <div class="toolbar">
               <button type="button" class="tiny" @click="refresh">{{ t("data.refresh") }}</button>
+              <button type="button" class="tiny" @click="createOpen = true">
+                {{ t("data.create") }}
+              </button>
               <button
                 type="button"
                 class="tiny"
@@ -226,6 +254,9 @@ function onSaved(stat: NodeStat): void {
                 @click="editorOpen = true"
               >
                 {{ t("data.edit") }}
+              </button>
+              <button type="button" class="tiny danger" @click="deleteOpen = true">
+                {{ t("data.delete") }}
               </button>
             </div>
           </div>
@@ -314,6 +345,22 @@ function onSaved(stat: NodeStat): void {
       @close="editorOpen = false"
       @saved="onSaved"
       @reload="editorOpen = false; loadData(selectedPath ?? '/')"
+    />
+    <NodeCreateDialog
+      :open="createOpen"
+      :connection-id="connectionId"
+      :default-path="defaultChildPath"
+      @close="createOpen = false"
+      @created="onCreated"
+    />
+    <NodeDeleteDialog
+      v-if="selectedPath"
+      :open="deleteOpen"
+      :connection-id="connectionId"
+      :path="selectedPath"
+      :has-children="(stat?.num_children ?? 0) > 0"
+      @close="deleteOpen = false"
+      @deleted="onDeleted"
     />
   </div>
 </template>

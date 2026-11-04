@@ -6,14 +6,14 @@ use std::sync::{Arc, RwLock};
 
 use base64::Engine;
 use tokio::sync::broadcast;
-use zookeeper_client::{Client, SessionState};
+use zookeeper_client::{Acls, Client, CreateMode, Error as ZkError, SessionState};
 
 use super::handle::ConnectionHandle;
 use super::state::ConnectionState;
 use crate::config::{Settings, SettingsStore};
 use crate::error::{AppError, AppResult, app};
 use crate::ipc::connection::{ConnectionSnapshot, ConnectionStateEvent, CreateConnection};
-use crate::ipc::node::{NodeData, NodeStat};
+use crate::ipc::node::{DeleteOutcome, DeletePreview, NodeCreateMode, NodeData, NodeStat};
 use crate::transport::{RelayHandle, no_proxy, proxy::ProxyProfile, relay};
 
 struct Entry {
@@ -209,14 +209,6 @@ impl ConnectionManager {
         })
     }
 
-    fn client_of(&self, connection_id: &str) -> AppResult<Client> {
-        let entries = self.entries.read().expect("connections lock poisoned");
-        entries
-            .get(connection_id)
-            .map(|entry| entry.handle.client().clone())
-            .ok_or_else(|| Box::new(app::not_found(connection_id)))
-    }
-
     /// 读取节点原始数据与 Stat。
     pub async fn data(&self, connection_id: &str, path: &str) -> AppResult<NodeData> {
         let client = self.client_of(connection_id)?;
@@ -242,6 +234,110 @@ impl ConnectionManager {
         let client = self.client_of(connection_id)?;
         let stat = client.set_data(path, &data, Some(expected_version)).await?;
         Ok(stat_of(path, &stat))
+    }
+
+    /// 创建节点，返回实际路径（顺序节点由服务端追加后缀）。
+    pub async fn create_node(
+        &self,
+        connection_id: &str,
+        path: &str,
+        data: Vec<u8>,
+        mode: NodeCreateMode,
+        create_parents: bool,
+    ) -> AppResult<String> {
+        let client = self.client_of(connection_id)?;
+        if create_parents {
+            ensure_parents(&client, path).await?;
+        }
+        let (mode, sequential) = match mode {
+            NodeCreateMode::Persistent => (CreateMode::Persistent, false),
+            NodeCreateMode::Ephemeral => (CreateMode::Ephemeral, false),
+            NodeCreateMode::PersistentSequential => (CreateMode::PersistentSequential, true),
+            NodeCreateMode::EphemeralSequential => (CreateMode::EphemeralSequential, true),
+        };
+        let options = mode.with_acls(Acls::anyone_all());
+        let (_stat, sequence) = client.create(path, &data, &options).await?;
+        Ok(if sequential {
+            format!("{path}{sequence}")
+        } else {
+            path.to_string()
+        })
+    }
+
+    /// 删除影响预览；递归时最多遍历 5001 条以判断是否超过 5000。
+    pub async fn delete_preview(
+        &self,
+        connection_id: &str,
+        path: &str,
+        recursive: bool,
+    ) -> AppResult<DeletePreview> {
+        if !recursive {
+            return Ok(DeletePreview {
+                path: path.to_string(),
+                total: 1,
+                paths: vec![path.to_string()],
+                truncated: false,
+            });
+        }
+        let (total, paths, truncated) =
+            collect_tree(&self.client_of(connection_id)?, path, 5000).await?;
+        Ok(DeletePreview {
+            path: path.to_string(),
+            total,
+            paths,
+            truncated,
+        })
+    }
+
+    /// 删除节点。递归删除按深度优先、子节点先删；遇到失败立即停止并报告未执行数量。
+    pub async fn delete_node(
+        &self,
+        connection_id: &str,
+        path: &str,
+        recursive: bool,
+    ) -> AppResult<DeleteOutcome> {
+        let client = self.client_of(connection_id)?;
+        if !recursive {
+            client.delete(path, None).await?;
+            return Ok(DeleteOutcome {
+                deleted: 1,
+                failed_path: None,
+                failed_error: None,
+                unexecuted: 0,
+            });
+        }
+
+        let paths = collect_all(&client, path).await?;
+        let mut deleted = 0u64;
+        let total = paths.len() as u64;
+        for target in paths.iter().rev() {
+            match client.delete(target, None).await {
+                Ok(()) => deleted += 1,
+                Err(error) => {
+                    let remaining = total.saturating_sub(deleted).saturating_sub(1);
+                    return Ok(DeleteOutcome {
+                        deleted,
+                        failed_path: Some(target.clone()),
+                        failed_error: Some(crate::error::zk::map_zk_error(error)),
+                        unexecuted: remaining,
+                    });
+                }
+            }
+        }
+        Ok(DeleteOutcome {
+            deleted,
+            failed_path: None,
+            failed_error: None,
+            unexecuted: 0,
+        })
+    }
+
+    fn client_of(&self, connection_id: &str) -> AppResult<Client> {
+        let entries = self.entries.read().expect("connections lock poisoned");
+        entries
+            .get(connection_id)
+            .map(|entry| entry.handle.client().clone())
+            .ok_or_else(|| Box::new(app::not_found(connection_id)))
     }
 
     /// 读取直接子节点，按名称排序。
@@ -399,4 +495,75 @@ fn stat_of(path: &str, stat: &zookeeper_client::Stat) -> NodeStat {
         ctime: stat.ctime,
         mtime: stat.mtime,
     }
+}
+
+async fn ensure_parents(client: &Client, path: &str) -> AppResult<()> {
+    let segments: Vec<&str> = path.trim_start_matches('/').split('/').collect();
+    if segments.len() <= 1 {
+        return Ok(());
+    }
+    let mut current = String::new();
+    for segment in &segments[..segments.len() - 1] {
+        current.push('/');
+        current.push_str(segment);
+        if current.is_empty() {
+            continue;
+        }
+        let options = CreateMode::Persistent.with_acls(Acls::anyone_all());
+        match client.create(&current, &[], &options).await {
+            Ok(_) => {}
+            Err(ZkError::NodeExists) => {}
+            Err(error) => return Err(Box::new(error.into())),
+        }
+    }
+    Ok(())
+}
+
+/// 收集子树路径，`limit` 为返回条数上限；总数最多统计到 `limit + 1`。
+async fn collect_tree(
+    client: &Client,
+    root: &str,
+    limit: usize,
+) -> AppResult<(u64, Vec<String>, bool)> {
+    let mut queue = std::collections::VecDeque::from([root.to_string()]);
+    let mut paths = Vec::new();
+    let mut total = 0u64;
+    while let Some(path) = queue.pop_front() {
+        total += 1;
+        if paths.len() < limit {
+            paths.push(path.clone());
+        }
+        if total > limit as u64 {
+            return Ok((total, paths, true));
+        }
+        let (children, _) = client.get_children(&path).await?;
+        for child in children {
+            let child_path = if path == "/" {
+                format!("/{child}")
+            } else {
+                format!("{path}/{child}")
+            };
+            queue.push_back(child_path);
+        }
+    }
+    Ok((total, paths, false))
+}
+
+/// 收集完整子树（删除使用）。
+async fn collect_all(client: &Client, root: &str) -> AppResult<Vec<String>> {
+    let mut queue = std::collections::VecDeque::from([root.to_string()]);
+    let mut paths = Vec::new();
+    while let Some(path) = queue.pop_front() {
+        paths.push(path.clone());
+        let (children, _) = client.get_children(&path).await?;
+        for child in children {
+            let child_path = if path == "/" {
+                format!("/{child}")
+            } else {
+                format!("{path}/{child}")
+            };
+            queue.push_back(child_path);
+        }
+    }
+    Ok(paths)
 }

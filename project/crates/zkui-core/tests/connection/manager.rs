@@ -188,3 +188,58 @@ async fn children_and_stat_read_root() {
     );
     manager.close(&snapshot.connection_id).expect("关闭失败");
 }
+
+#[tokio::test]
+#[ignore = "需要 ZooKeeper 环境"]
+async fn create_set_read_delete_cycle() {
+    use zkui_core::error::ErrorKind;
+    use zkui_core::ipc::node::NodeCreateMode;
+
+    let manager = ConnectionManager::new();
+    let snapshot = manager.create(request()).await.expect("连接失败");
+    let id = snapshot.connection_id.clone();
+    let base = format!("/zkui-it-{}", std::process::id());
+    let leaf = format!("{base}/a");
+
+    manager
+        .create_node(
+            &id,
+            &leaf,
+            b"one".to_vec(),
+            NodeCreateMode::Persistent,
+            true,
+        )
+        .await
+        .expect("创建失败");
+
+    let data = manager.data(&id, &leaf).await.expect("读取数据失败");
+    assert!(data.is_text);
+    assert_eq!(data.byte_len, 3);
+
+    let updated = manager
+        .set_data(&id, &leaf, b"two".to_vec(), data.stat.version)
+        .await
+        .expect("写入失败");
+    assert_eq!(updated.version, data.stat.version + 1);
+
+    let conflict = manager
+        .set_data(&id, &leaf, b"x".to_vec(), data.stat.version)
+        .await
+        .expect_err("旧版本应冲突");
+    assert_eq!(conflict.kind, ErrorKind::BadVersion);
+
+    let preview = manager
+        .delete_preview(&id, &base, true)
+        .await
+        .expect("预览失败");
+    assert!(preview.total >= 2);
+
+    let outcome = manager
+        .delete_node(&id, &base, true)
+        .await
+        .expect("删除失败");
+    assert!(outcome.deleted >= 2);
+    assert!(outcome.failed_path.is_none());
+
+    manager.close(&id).expect("关闭失败");
+}
