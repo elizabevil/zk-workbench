@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, RwLock};
+use std::time::Instant;
 
 use base64::Engine;
 use tokio::sync::broadcast;
@@ -13,7 +14,9 @@ use super::state::ConnectionState;
 use crate::config::{Settings, SettingsStore};
 use crate::error::{AppError, AppResult, app};
 use crate::ipc::connection::{ConnectionSnapshot, ConnectionStateEvent, CreateConnection};
+use crate::ipc::metrics::MetricsSnapshot;
 use crate::ipc::node::{DeleteOutcome, DeletePreview, NodeCreateMode, NodeData, NodeStat};
+use crate::metrics::Metrics;
 use crate::transport::{RelayHandle, no_proxy, proxy::ProxyProfile, relay};
 
 struct Entry {
@@ -27,6 +30,7 @@ struct Entry {
 /// 连接管理器。同一管理器下的连接互相隔离。
 pub struct ConnectionManager {
     settings: Option<std::sync::Arc<SettingsStore>>,
+    metrics: Arc<Metrics>,
     entries: RwLock<HashMap<String, Entry>>,
     events: broadcast::Sender<ConnectionStateEvent>,
     next_id: AtomicU64,
@@ -48,6 +52,7 @@ impl ConnectionManager {
         let (events, _) = broadcast::channel(256);
         Self {
             settings,
+            metrics: Arc::new(Metrics::default()),
             entries: RwLock::new(HashMap::new()),
             events,
             next_id: AtomicU64::new(1),
@@ -59,6 +64,11 @@ impl ConnectionManager {
             .as_ref()
             .map(|store| store.snapshot())
             .unwrap_or_default()
+    }
+
+    /// 指标快照。
+    pub fn metrics(&self) -> MetricsSnapshot {
+        self.metrics.snapshot()
     }
 
     /// 订阅连接状态事件。
@@ -89,12 +99,16 @@ impl ConnectionManager {
         let mut established: Option<(Client, Option<RelayHandle>)> = None;
         'attempts: for attempt in 0..attempts {
             for proxy in &proxies {
+                self.metrics.record_connect_attempt();
                 match self.try_connect(&endpoint, proxy.as_ref()).await {
                     Ok(pair) => {
                         established = Some(pair);
                         break 'attempts;
                     }
-                    Err(error) => last_error = Some(error),
+                    Err(error) => {
+                        self.metrics.record_connect_failure();
+                        last_error = Some(error);
+                    }
                 }
             }
             if attempt + 1 < attempts {
@@ -212,7 +226,10 @@ impl ConnectionManager {
     /// 读取节点原始数据与 Stat。
     pub async fn data(&self, connection_id: &str, path: &str) -> AppResult<NodeData> {
         let client = self.client_of(connection_id)?;
+        let started = Instant::now();
         let (bytes, stat) = client.get_data(path).await?;
+        self.metrics
+            .record_read(started.elapsed().as_millis() as u64);
         let is_text = std::str::from_utf8(&bytes).is_ok();
         Ok(NodeData {
             path: path.to_string(),
@@ -232,7 +249,10 @@ impl ConnectionManager {
         expected_version: i32,
     ) -> AppResult<NodeStat> {
         let client = self.client_of(connection_id)?;
+        let started = Instant::now();
         let stat = client.set_data(path, &data, Some(expected_version)).await?;
+        self.metrics
+            .record_write(started.elapsed().as_millis() as u64);
         Ok(stat_of(path, &stat))
     }
 
@@ -256,7 +276,11 @@ impl ConnectionManager {
             NodeCreateMode::EphemeralSequential => (CreateMode::EphemeralSequential, true),
         };
         let options = mode.with_acls(Acls::anyone_all());
+        let started = Instant::now();
         let (_stat, sequence) = client.create(path, &data, &options).await?;
+        self.metrics
+            .record_write(started.elapsed().as_millis() as u64);
+        self.metrics.record_create();
         Ok(if sequential {
             format!("{path}{sequence}")
         } else {
@@ -324,6 +348,7 @@ impl ConnectionManager {
                 }
             }
         }
+        self.metrics.record_delete(deleted);
         Ok(DeleteOutcome {
             deleted,
             failed_path: None,
@@ -343,7 +368,10 @@ impl ConnectionManager {
     /// 读取直接子节点，按名称排序。
     pub async fn children(&self, connection_id: &str, path: &str) -> AppResult<Vec<String>> {
         let client = self.client_of(connection_id)?;
+        let started = Instant::now();
         let (mut children, _stat) = client.get_children(path).await?;
+        self.metrics
+            .record_read(started.elapsed().as_millis() as u64);
         children.sort();
         Ok(children)
     }
@@ -351,7 +379,10 @@ impl ConnectionManager {
     /// 读取节点 Stat。
     pub async fn stat(&self, connection_id: &str, path: &str) -> AppResult<NodeStat> {
         let client = self.client_of(connection_id)?;
+        let started = Instant::now();
         let (_data, stat) = client.get_data(path).await?;
+        self.metrics
+            .record_read(started.elapsed().as_millis() as u64);
         Ok(NodeStat {
             path: path.to_string(),
             version: stat.version,
@@ -407,6 +438,7 @@ impl ConnectionManager {
 
     fn spawn_state_watcher(&self, handle: Arc<ConnectionHandle>) {
         let events = self.events.clone();
+        let metrics = self.metrics.clone();
         let mut watcher = handle.client().state_watcher();
         let mut previous = handle.state();
         tokio::spawn(async move {
@@ -420,6 +452,7 @@ impl ConnectionManager {
                         ConnectionState::Disconnected | ConnectionState::Expired
                     )
                 {
+                    metrics.record_reconnect();
                     let generation = handle.bump_generation();
                     handle.set_state(ConnectionState::Connected);
                     let _ = events.send(ConnectionStateEvent {

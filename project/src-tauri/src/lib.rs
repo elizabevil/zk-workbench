@@ -16,6 +16,7 @@ pub fn run() {
             commands::connection::connection_snapshot,
             commands::connection::connection_close,
             commands::connection::connection_list,
+            commands::metrics::metrics_snapshot,
             commands::node::node_children,
             commands::node::node_stat,
             commands::node::node_data,

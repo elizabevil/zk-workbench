@@ -5,8 +5,10 @@ import { useRouter } from "vue-router";
 
 import { appPaths } from "@/api/app";
 import { type InvokeRejection, toAppError } from "@/api/client";
+import { metricsSnapshot } from "@/api/metrics";
 import { proxyPasswordClear, proxyPasswordSet, proxyTest } from "@/api/proxy";
 import type { AppPaths } from "@/api/types/AppPaths";
+import type { MetricsSnapshot } from "@/api/types/MetricsSnapshot";
 import type { ProxyProfile } from "@/api/types/ProxyProfile";
 import { LOCALES } from "@/i18n/locale";
 import { NOTIFICATION_LEVELS, PROXY_KINDS } from "@/settings/constants";
@@ -30,13 +32,19 @@ const noProxyText = computed({
 });
 
 const paths = ref<AppPaths | null>(null);
+const metrics = ref<MetricsSnapshot | null>(null);
 const passwords = ref<Record<number, string>>({});
 const testTarget = ref("127.0.0.1:2181");
 const testMessage = ref("");
 
+async function loadMetrics(): Promise<void> {
+  metrics.value = await metricsSnapshot();
+}
+
 onMounted(async () => {
   await store.load();
   paths.value = await appPaths();
+  await loadMetrics();
 });
 
 function moveProxy(index: number, delta: number): void {
@@ -263,6 +271,26 @@ function removeProxy(index: number): void {
           />
         </label>
         <p class="hint">{{ t("settings.observability.hint") }}</p>
+
+        <div class="metrics-head">
+          <span>{{ t("settings.observability.metrics") }}</span>
+          <button type="button" @click="loadMetrics">
+            {{ t("settings.observability.refresh") }}
+          </button>
+        </div>
+        <dl v-if="metrics" class="metrics">
+          <div><dt>{{ t("settings.observability.connects") }}</dt><dd>{{ metrics.connect_attempts }}</dd></div>
+          <div><dt>{{ t("settings.observability.failures") }}</dt><dd>{{ metrics.connect_failures }}</dd></div>
+          <div><dt>{{ t("settings.observability.reconnects") }}</dt><dd>{{ metrics.reconnects }}</dd></div>
+          <div><dt>{{ t("settings.observability.reads") }}</dt><dd>{{ metrics.node_reads }}</dd></div>
+          <div><dt>{{ t("settings.observability.writes") }}</dt><dd>{{ metrics.node_writes }}</dd></div>
+          <div><dt>{{ t("settings.observability.creates") }}</dt><dd>{{ metrics.node_creates }}</dd></div>
+          <div><dt>{{ t("settings.observability.deletes") }}</dt><dd>{{ metrics.node_deletes }}</dd></div>
+          <div><dt>{{ t("settings.observability.readP50") }}</dt><dd>{{ metrics.read_p50_ms }} ms</dd></div>
+          <div><dt>{{ t("settings.observability.readP95") }}</dt><dd>{{ metrics.read_p95_ms }} ms</dd></div>
+          <div><dt>{{ t("settings.observability.writeP50") }}</dt><dd>{{ metrics.write_p50_ms }} ms</dd></div>
+          <div><dt>{{ t("settings.observability.writeP95") }}</dt><dd>{{ metrics.write_p95_ms }} ms</dd></div>
+        </dl>
       </fieldset>
 
       <fieldset>
@@ -333,6 +361,33 @@ label.inline {
 .actions {
   display: flex;
   gap: 12px;
+}
+.metrics-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px 16px;
+  margin: 0;
+}
+.metrics div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid rgb(255 255 255 / 6%);
+}
+.metrics dt {
+  color: #9aa4b2;
+  font-size: 12px;
+}
+.metrics dd {
+  margin: 0;
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
 }
 .preview {
   height: 48px;
