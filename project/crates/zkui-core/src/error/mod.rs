@@ -52,6 +52,8 @@ pub enum ErrorKind {
     AppInvalidPath,
     AppNotFound,
     AppClosed,
+    ProxyConnect,
+    ProxyHandshake,
     IpcInvalidArgument,
     IpcStaleGeneration,
 }

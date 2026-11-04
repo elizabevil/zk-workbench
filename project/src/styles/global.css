@@ -1,0 +1,12 @@
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: #101418;
+  color: #e6e6e6;
+  font-family: system-ui, sans-serif;
+}

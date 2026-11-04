@@ -40,6 +40,10 @@ export default {
       timeout: "操作超时",
       other: "ZooKeeper 返回未知错误",
     },
+    proxy: {
+      connect: "代理连接失败",
+      handshake: "代理握手失败",
+    },
     app: {
       invalid_path: "路径不合法",
       not_found: "连接不存在",

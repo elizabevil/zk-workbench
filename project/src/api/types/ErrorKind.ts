@@ -3,4 +3,4 @@
 /**
  * 错误类别。`zk_*` 与 ZooKeeper 错误一一对应，`app_*` / `ipc_*` 为应用侧扩展。
  */
-export type ErrorKind = "zk_no_node" | "zk_no_auth" | "zk_bad_version" | "zk_node_exists" | "zk_not_empty" | "zk_session_expired" | "zk_auth_failed" | "zk_connection_loss" | "zk_no_children_for_ephemerals" | "zk_invalid_acl" | "zk_quota_exceeded" | "zk_unimplemented" | "zk_timeout" | "zk_other" | "app_invalid_path" | "app_not_found" | "app_closed" | "ipc_invalid_argument" | "ipc_stale_generation";
+export type ErrorKind = "zk_no_node" | "zk_no_auth" | "zk_bad_version" | "zk_node_exists" | "zk_not_empty" | "zk_session_expired" | "zk_auth_failed" | "zk_connection_loss" | "zk_no_children_for_ephemerals" | "zk_invalid_acl" | "zk_quota_exceeded" | "zk_unimplemented" | "zk_timeout" | "zk_other" | "app_invalid_path" | "app_not_found" | "app_closed" | "proxy_connect" | "proxy_handshake" | "ipc_invalid_argument" | "ipc_stale_generation";

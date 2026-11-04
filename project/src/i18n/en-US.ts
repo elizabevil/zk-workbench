@@ -40,6 +40,10 @@ export default {
       timeout: "Operation timed out",
       other: "Unknown ZooKeeper error",
     },
+    proxy: {
+      connect: "Proxy connection failed",
+      handshake: "Proxy handshake failed",
+    },
     app: {
       invalid_path: "Invalid path",
       not_found: "Connection not found",

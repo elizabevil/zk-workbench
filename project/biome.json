@@ -7,12 +7,24 @@
   },
   "linter": {
     "enabled": true,
-    "rules": { "recommended": true }
+    "rules": {
+      "recommended": true
+    }
   },
   "javascript": {
-    "formatter": { "quoteStyle": "double", "semicolons": "always" }
+    "formatter": {
+      "quoteStyle": "double",
+      "semicolons": "always"
+    }
   },
   "html": {
     "experimentalFullSupportEnabled": true
+  },
+  "files": {
+    "includes": [
+      "src/**",
+      "!src/api/types/**",
+      "!src/vite-env.d.ts"
+    ]
   }
 }

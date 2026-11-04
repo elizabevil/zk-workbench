@@ -11,10 +11,12 @@ use super::handle::ConnectionHandle;
 use super::state::ConnectionState;
 use crate::error::{AppResult, app};
 use crate::ipc::connection::{ConnectionSnapshot, ConnectionStateEvent, CreateConnection};
+use crate::transport::{RelayHandle, relay};
 
 struct Entry {
     handle: Arc<ConnectionHandle>,
     display_name: String,
+    _relay: Option<RelayHandle>,
 }
 
 /// 连接管理器。同一管理器下的连接互相隔离。
@@ -50,7 +52,15 @@ impl ConnectionManager {
         if request.endpoint.trim().is_empty() {
             return Err(Box::new(app::invalid_argument("endpoint 不能为空")));
         }
-        let client = Client::connect(&request.endpoint).await?;
+        let (connect_endpoint, relay) = match request.proxy.clone() {
+            Some(profile) => {
+                let relay = relay::start(request.endpoint.clone(), profile).await?;
+                (relay.endpoint(), Some(relay))
+            }
+            None => (request.endpoint.clone(), None),
+        };
+
+        let client = self.connect_with_retry(&connect_endpoint).await?;
         let id = format!("conn-{}", self.next_id.fetch_add(1, Ordering::SeqCst));
         let handle = Arc::new(ConnectionHandle::new(
             id.clone(),
@@ -77,10 +87,33 @@ impl ConnectionManager {
                 Entry {
                     handle,
                     display_name: snapshot.display_name.clone(),
+                    _relay: relay,
                 },
             );
 
         Ok(snapshot)
+    }
+
+    async fn connect_with_retry(&self, endpoint: &str) -> AppResult<Client> {
+        const DELAYS_MS: [u64; 4] = [3000, 6000, 10000, 10000];
+        let mut last_error = None;
+        for attempt in 0..5 {
+            match Client::connect(endpoint).await {
+                Ok(client) => return Ok(client),
+                Err(error) => {
+                    last_error = Some(error);
+                    if let Some(delay) = DELAYS_MS.get(attempt) {
+                        tracing::warn!(
+                            attempt = attempt + 1,
+                            delay_ms = delay,
+                            "连接失败，准备重试"
+                        );
+                        tokio::time::sleep(std::time::Duration::from_millis(*delay)).await;
+                    }
+                }
+            }
+        }
+        Err(Box::new(last_error.expect("至少尝试一次").into()))
     }
 
     /// 关闭连接并广播关闭事件。

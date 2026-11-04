@@ -12,7 +12,21 @@ fn request() -> CreateConnection {
         endpoint: endpoint(),
         display_name: "spike".to_string(),
         identity: None,
+        proxy: None,
     }
+}
+
+fn proxy_profile() -> Option<zkui_core::transport::ProxyProfile> {
+    let endpoint = std::env::var("ZK_PROXY_ENDPOINT").ok()?;
+    let (host, port) = endpoint.rsplit_once(':')?;
+    Some(zkui_core::transport::ProxyProfile {
+        name: "env".to_string(),
+        kind: zkui_core::transport::ProxyKind::Socks5,
+        host: host.to_string(),
+        port: port.parse().ok()?,
+        username: None,
+        password: None,
+    })
 }
 
 #[tokio::test]
@@ -52,4 +66,19 @@ async fn empty_endpoint_is_rejected() {
     request.endpoint = "  ".to_string();
     let error = manager.create(request).await.expect_err("空地址应失败");
     assert_eq!(error.kind, zkui_core::error::ErrorKind::IpcInvalidArgument);
+}
+
+#[tokio::test]
+#[ignore = "需要 ZooKeeper 与代理环境"]
+async fn create_connection_through_socks5() {
+    let Some(proxy) = proxy_profile() else {
+        eprintln!("未设置 ZK_PROXY_ENDPOINT，跳过");
+        return;
+    };
+    let manager = ConnectionManager::new();
+    let mut request = request();
+    request.proxy = Some(proxy);
+    let snapshot = manager.create(request).await.expect("经代理创建连接失败");
+    assert_eq!(snapshot.state, ConnectionState::Connected);
+    manager.close(&snapshot.connection_id).expect("关闭失败");
 }

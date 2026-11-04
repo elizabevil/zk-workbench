@@ -6,6 +6,7 @@
 pub mod connection;
 pub mod error;
 pub mod ipc;
+pub mod transport;
 
 /// 返回 crate 版本，用于启动自检与日志。
 pub fn version() -> &'static str {

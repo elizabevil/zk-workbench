@@ -63,3 +63,22 @@ pub fn stale_generation(connection_id: &str, expected: u64, actual: u64) -> AppE
         },
     )
 }
+
+/// 代理阶段失败。`stage` 取值：connect / handshake / relay。
+pub fn proxy_failed(stage: &str, detail: &str) -> AppError {
+    let kind = if stage == "handshake" {
+        ErrorKind::ProxyHandshake
+    } else {
+        ErrorKind::ProxyConnect
+    };
+    let code = if stage == "handshake" { 2005 } else { 2004 };
+    AppError::new(
+        kind,
+        ErrorScope::App,
+        code,
+        ErrorFields {
+            detail: Some(format!("{stage}: {detail}")),
+            ..Default::default()
+        },
+    )
+}

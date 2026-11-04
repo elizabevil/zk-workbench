@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::connection::{ConnectionState, Identity};
+use crate::transport::ProxyProfile;
 
 /// 创建连接的入参（S1 仅内存，不落盘，不含凭据）。
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -15,6 +16,9 @@ pub struct CreateConnection {
     pub display_name: String,
     /// 可选认证身份；凭据本身不进入 DTO。
     pub identity: Option<Identity>,
+    /// 可选代理；None 表示直连。
+    #[serde(default)]
+    pub proxy: Option<ProxyProfile>,
 }
 
 /// 连接快照。

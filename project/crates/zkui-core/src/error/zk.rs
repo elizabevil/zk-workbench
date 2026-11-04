@@ -58,6 +58,8 @@ pub fn message_key_for(kind: ErrorKind) -> &'static str {
         ErrorKind::AppInvalidPath => "error.app.invalid_path",
         ErrorKind::AppNotFound => "error.app.not_found",
         ErrorKind::AppClosed => "error.app.closed",
+        ErrorKind::ProxyConnect => "error.proxy.connect",
+        ErrorKind::ProxyHandshake => "error.proxy.handshake",
         ErrorKind::IpcInvalidArgument => "error.ipc.invalid_argument",
         ErrorKind::IpcStaleGeneration => "error.ipc.stale_generation",
     }

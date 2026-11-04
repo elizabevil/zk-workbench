@@ -21,6 +21,7 @@ export const useConnectionStore = defineStore("connection", () => {
         endpoint,
         display_name: displayName,
         identity: null,
+        proxy: null,
       });
     } catch (raw) {
       error.value = raw as AppError;
