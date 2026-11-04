@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import { nextTick, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import type { ConnectionProfile } from "@/api/types/ConnectionProfile";
 import type { ConnectionSnapshot } from "@/api/types/ConnectionSnapshot";
 import { useConnectionStore } from "@/stores/connection";
 import { useProfilesStore } from "@/stores/profiles";
 
-const props = defineProps<{ open: boolean }>();
+const props = defineProps<{ open: boolean; profile?: ConnectionProfile | null }>();
 const emit = defineEmits<{
   close: [];
   connected: [snapshot: ConnectionSnapshot];
+  saved: [];
 }>();
 
 const { t } = useI18n();
@@ -26,6 +28,15 @@ watch(
   (open) => {
     if (open) {
       localError.value = "";
+      if (props.profile) {
+        displayName.value = props.profile.name;
+        host.value = props.profile.host;
+        port.value = props.profile.port;
+      } else {
+        host.value = "127.0.0.1";
+        port.value = 2181;
+        displayName.value = "local";
+      }
       void nextTick(() => nameInput.value?.focus());
     }
   },
@@ -42,8 +53,17 @@ async function submit(): Promise<void> {
   }
   localError.value = "";
   const name = displayName.value.trim() || `${host.value}:${port.value}`;
-  const saved = await profiles.save({ id: null, name, host: host.value.trim(), port: port.value });
+  const saved = await profiles.save({
+    id: props.profile?.id ?? null,
+    name,
+    host: host.value.trim(),
+    port: port.value,
+  });
   if (!saved) {
+    return;
+  }
+  if (props.profile) {
+    emit("saved");
     return;
   }
   const created = await store.connect({
@@ -61,7 +81,7 @@ async function submit(): Promise<void> {
   <Teleport to="body">
     <div v-if="open" class="overlay">
       <form class="dialog" @submit.prevent="submit">
-        <h2>{{ t("home.new") }}</h2>
+        <h2>{{ profile ? t("home.editTitle") : t("home.new") }}</h2>
 
         <label>
           {{ t("home.name") }}
@@ -87,7 +107,7 @@ async function submit(): Promise<void> {
         <div class="actions">
           <button type="button" @click="emit('close')">{{ t("home.cancel") }}</button>
           <button :disabled="store.loading" type="submit">
-            {{ store.loading ? t("home.connecting") : t("home.connect") }}
+            {{ store.loading ? t("home.connecting") : profile ? t("home.save") : t("home.connect") }}
           </button>
         </div>
       </form>

@@ -3,6 +3,9 @@ export default {
   home: {
     title: "Connections",
     subtitle: "Open an existing connection or create a new one",
+    edit: "Edit",
+    editTitle: "Edit connection",
+    save: "Save",
     delete: "Delete",
     confirmDelete: 'Delete profile "{name}"?',
     connected: "Connected",

@@ -13,6 +13,7 @@ const router = useRouter();
 const connections = useConnectionStore();
 const profiles = useProfilesStore();
 const dialogOpen = ref(false);
+const editTarget = ref<ConnectionProfile | null>(null);
 
 const hasProfiles = computed(() => profiles.profiles.length > 0);
 
@@ -24,6 +25,22 @@ function sessionOf(profile: ConnectionProfile): ConnectionSnapshot | undefined {
   return connections.connections.find(
     (item) => item.host === profile.host && item.port === profile.port && item.state === "connected",
   );
+}
+
+function create(): void {
+  editTarget.value = null;
+  dialogOpen.value = true;
+}
+
+function edit(profile: ConnectionProfile): void {
+  editTarget.value = profile;
+  dialogOpen.value = true;
+}
+
+async function saved(): Promise<void> {
+  dialogOpen.value = false;
+  editTarget.value = null;
+  await profiles.load();
 }
 
 async function open(profile: ConnectionProfile): Promise<void> {
@@ -72,7 +89,7 @@ async function connected(): Promise<void> {
           <h1>{{ t("home.title") }}</h1>
           <p class="muted">{{ t("home.subtitle") }}</p>
         </div>
-        <button type="button" class="primary" @click="dialogOpen = true">
+        <button type="button" class="primary" @click="create">
           {{ t("home.new") }}
         </button>
       </div>
@@ -91,6 +108,9 @@ async function connected(): Promise<void> {
             <button type="button" class="primary" @click="open(profile)">
               {{ sessionOf(profile) ? t("home.open") : t("home.connect") }}
             </button>
+            <button type="button" class="ghost" @click="edit(profile)">
+              {{ t("home.edit") }}
+            </button>
             <button type="button" class="ghost" @click="remove(profile)">
               {{ t("home.delete") }}
             </button>
@@ -101,7 +121,7 @@ async function connected(): Promise<void> {
       <div v-else class="empty">
         <h2>{{ t("home.empty") }}</h2>
         <p class="muted">{{ t("home.emptyHint") }}</p>
-        <button type="button" class="primary" @click="dialogOpen = true">
+        <button type="button" class="primary" @click="create">
           {{ t("home.new") }}
         </button>
       </div>
@@ -111,8 +131,10 @@ async function connected(): Promise<void> {
 
     <ConnectionDialog
       :open="dialogOpen"
+      :profile="editTarget"
       @close="dialogOpen = false"
       @connected="connected"
+      @saved="saved"
     />
   </div>
 </template>

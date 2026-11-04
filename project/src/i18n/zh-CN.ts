@@ -3,6 +3,9 @@ export default {
   home: {
     title: "连接",
     subtitle: "选择一个已有连接，或新建连接开始工作",
+    edit: "编辑",
+    editTitle: "编辑连接",
+    save: "保存",
     delete: "删除",
     confirmDelete: "删除连接档案「{name}」？",
     connected: "已连接",
