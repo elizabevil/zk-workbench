@@ -4,4 +4,4 @@ import type { NodeStat } from "./NodeStat";
 /**
  * 节点数据。`data_b64` 为原始字节，前端按需解码展示。
  */
-export type NodeData = { path: string, data_b64: string, byte_len: number, is_text: boolean, stat: NodeStat, };
+export type NodeData = { path: string, data_b64: string, byte_len: number, is_text: boolean, truncated: boolean, stat: NodeStat, };

@@ -34,6 +34,7 @@ pub struct NodeData {
     #[ts(type = "number")]
     pub byte_len: u64,
     pub is_text: bool,
+    pub truncated: bool,
     pub stat: NodeStat,
 }
 

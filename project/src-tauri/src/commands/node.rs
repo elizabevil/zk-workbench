@@ -41,8 +41,9 @@ pub async fn node_data(
     state: State<'_, AppState>,
     connection_id: String,
     path: String,
+    max_bytes: Option<u64>,
 ) -> AppResult<NodeData> {
-    state.manager.data(&connection_id, &path).await
+    state.manager.data(&connection_id, &path, max_bytes).await
 }
 
 #[tauri::command]

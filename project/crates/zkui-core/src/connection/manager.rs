@@ -226,18 +226,30 @@ impl ConnectionManager {
     }
 
     /// 读取节点原始数据与 Stat。
-    pub async fn data(&self, connection_id: &str, path: &str) -> AppResult<NodeData> {
+    pub async fn data(
+        &self,
+        connection_id: &str,
+        path: &str,
+        max_bytes: Option<u64>,
+    ) -> AppResult<NodeData> {
         let client = self.client_of(connection_id)?;
         let started = Instant::now();
         let (bytes, stat) = client.get_data(path).await?;
         self.metrics
             .record_read(started.elapsed().as_millis() as u64);
-        let is_text = std::str::from_utf8(&bytes).is_ok();
+        let byte_len = bytes.len() as u64;
+        let limit = max_bytes
+            .map(|value| value.min(byte_len))
+            .unwrap_or(byte_len);
+        let prefix = &bytes[..limit as usize];
+        let truncated = limit < byte_len;
+        let is_text = std::str::from_utf8(prefix).is_ok();
         Ok(NodeData {
             path: path.to_string(),
-            data_b64: base64::engine::general_purpose::STANDARD.encode(&bytes),
-            byte_len: bytes.len() as u64,
+            data_b64: base64::engine::general_purpose::STANDARD.encode(prefix),
+            byte_len,
             is_text,
+            truncated,
             stat: stat_of(path, &stat),
         })
     }
@@ -410,26 +422,14 @@ impl ConnectionManager {
         Ok(children)
     }
 
-    /// 读取节点 Stat。
+    /// 读取节点 Stat。使用 getChildren 的响应，避免为了 Stat 拉取完整数据。
     pub async fn stat(&self, connection_id: &str, path: &str) -> AppResult<NodeStat> {
         let client = self.client_of(connection_id)?;
         let started = Instant::now();
-        let (_data, stat) = client.get_data(path).await?;
+        let (_children, stat) = client.get_children(path).await?;
         self.metrics
             .record_read(started.elapsed().as_millis() as u64);
-        Ok(NodeStat {
-            path: path.to_string(),
-            version: stat.version,
-            cversion: stat.cversion,
-            aversion: stat.aversion,
-            data_length: stat.data_length,
-            num_children: stat.num_children,
-            ephemeral_owner: stat.ephemeral_owner,
-            czxid: stat.czxid,
-            mzxid: stat.mzxid,
-            ctime: stat.ctime,
-            mtime: stat.mtime,
-        })
+        Ok(stat_of(path, &stat))
     }
 
     /// 列出全部连接快照，按连接 id 排序。

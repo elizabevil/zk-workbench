@@ -1,10 +1,14 @@
 <script setup lang="ts">
+import hljs from "highlight.js/lib/core";
+import jsonLanguage from "highlight.js/lib/languages/json";
+import yamlLanguage from "highlight.js/lib/languages/yaml";
 import { computed, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
+import { isMap, isSeq, parseDocument } from "yaml";
 
 import { type InvokeRejection, toAppError } from "@/api/client";
-import { nodeAcl, nodeData } from "@/api/node";
+import { nodeAcl, nodeData, nodeStat } from "@/api/node";
 import type { AclEntry } from "@/api/types/AclEntry";
 import type { AppError } from "@/api/types/AppError";
 import type { ConnectionSnapshot } from "@/api/types/ConnectionSnapshot";
@@ -12,12 +16,16 @@ import type { DeleteOutcome } from "@/api/types/DeleteOutcome";
 import type { NodeData } from "@/api/types/NodeData";
 import type { NodeStat } from "@/api/types/NodeStat";
 import ConnectionDialog from "@/components/ConnectionDialog.vue";
+import NodeBinaryEditor from "@/components/NodeBinaryEditor.vue";
 import NodeCreateDialog from "@/components/NodeCreateDialog.vue";
 import NodeDeleteDialog from "@/components/NodeDeleteDialog.vue";
 import NodeEditor from "@/components/NodeEditor.vue";
 import TreeNodeItem from "@/components/TreeNodeItem.vue";
 import { useConnectionStore } from "@/stores/connection";
 import { decodeUtf8Base64, hexPreview } from "@/utils/encoding";
+
+hljs.registerLanguage("json", jsonLanguage);
+hljs.registerLanguage("yaml", yamlLanguage);
 
 const { t } = useI18n();
 const router = useRouter();
@@ -32,16 +40,19 @@ const dataError = ref<AppError | null>(null);
 const activeTab = ref<"data" | "stat" | "acl">("data");
 const acls = ref<AclEntry[] | null>(null);
 const aclError = ref<AppError | null>(null);
-const formatted = ref(false);
+const format = ref<"raw" | "json" | "yaml">("raw");
 const loadingData = ref(false);
+const statView = ref<NodeStat | null>(null);
+const largePending = ref(false);
 const editorOpen = ref(false);
 const createOpen = ref(false);
 const deleteOpen = ref(false);
+const binaryOpen = ref(false);
 const toast = ref("");
 const jumpPath = ref("");
 
 const connectionId = computed(() => store.snapshot?.connection_id ?? "");
-const stat = computed<NodeStat | null>(() => data.value?.stat ?? null);
+const stat = computed<NodeStat | null>(() => data.value?.stat ?? statView.value);
 const stateLabel = computed(() =>
   store.snapshot ? t(`connection.state.${store.snapshot.state}`) : t("shell.noConnection"),
 );
@@ -49,7 +60,7 @@ const stateLabel = computed(() =>
 const text = computed(() =>
   data.value?.is_text ? decodeUtf8Base64(data.value.data_b64) : "",
 );
-const pretty = computed(() => {
+const jsonText = computed(() => {
   if (!text.value) {
     return null;
   }
@@ -59,22 +70,82 @@ const pretty = computed(() => {
     return null;
   }
 });
-const displayText = computed(() => (formatted.value && pretty.value ? pretty.value : text.value));
+const yamlText = computed(() => {
+  if (!text.value) {
+    return null;
+  }
+  try {
+    const document = parseDocument(text.value);
+    if (document.errors.length > 0) {
+      return null;
+    }
+    const contents = document.contents;
+    if (!contents || (!isMap(contents) && !isSeq(contents))) {
+      return null;
+    }
+    return document.toString({ indent: 2 });
+  } catch {
+    return null;
+  }
+});
+const displayText = computed(() => {
+  if (format.value === "json") {
+    return jsonText.value ?? text.value;
+  }
+  if (format.value === "yaml") {
+    return yamlText.value ?? text.value;
+  }
+  return text.value;
+});
+const highlighted = computed(() => {
+  if (format.value === "raw") {
+    return "";
+  }
+  return hljs.highlight(displayText.value, { language: format.value }).value;
+});
 const hexDump = computed(() => (data.value ? hexPreview(data.value.data_b64) : ""));
 const defaultChildPath = computed(() =>
   selectedPath.value === "/" ? "/new" : `${selectedPath.value}/new`,
 );
 
-async function loadData(path: string): Promise<void> {
+const PREVIEW_BYTES = 256 * 1024;
+
+async function loadData(path: string, full = false): Promise<void> {
   if (!connectionId.value) {
     return;
   }
   loadingData.value = true;
   dataError.value = null;
   try {
-    data.value = await nodeData(connectionId.value, path);
+    data.value = await nodeData(connectionId.value, path, full ? null : PREVIEW_BYTES);
+    statView.value = data.value.stat;
+    largePending.value = false;
   } catch (raw) {
     data.value = null;
+    dataError.value = toAppError(raw as InvokeRejection);
+  } finally {
+    loadingData.value = false;
+  }
+}
+
+async function loadStat(path: string): Promise<void> {
+  if (!connectionId.value) {
+    return;
+  }
+  loadingData.value = true;
+  dataError.value = null;
+  data.value = null;
+  statView.value = null;
+  largePending.value = false;
+  try {
+    const value = await nodeStat(connectionId.value, path);
+    statView.value = value;
+    if (value.data_length > PREVIEW_BYTES) {
+      largePending.value = true;
+      return;
+    }
+    await loadData(path);
+  } catch (raw) {
     dataError.value = toAppError(raw as InvokeRejection);
   } finally {
     loadingData.value = false;
@@ -84,10 +155,10 @@ async function loadData(path: string): Promise<void> {
 function select(path: string): void {
   selectedPath.value = path;
   activeTab.value = "data";
-  formatted.value = false;
+  format.value = "raw";
   acls.value = null;
   aclError.value = null;
-  void loadData(path);
+  void loadStat(path);
 }
 
 async function loadAcl(): Promise<void> {
@@ -134,10 +205,16 @@ function jump(): void {
   select(path);
 }
 
+function loadFull(): void {
+  if (selectedPath.value) {
+    void loadData(selectedPath.value, true);
+  }
+}
+
 function refresh(): void {
   treeKey.value += 1;
   if (selectedPath.value) {
-    void loadData(selectedPath.value);
+    void loadStat(selectedPath.value);
   }
 }
 
@@ -145,7 +222,7 @@ watch(connectionId, () => {
   treeKey.value += 1;
   selectedPath.value = "/";
   data.value = null;
-  void loadData("/");
+  void loadStat("/");
 });
 
 watch(
@@ -153,7 +230,7 @@ watch(
   () => {
     treeKey.value += 1;
     if (selectedPath.value) {
-      void loadData(selectedPath.value);
+      void loadStat(selectedPath.value);
     }
   },
 );
@@ -170,7 +247,7 @@ onMounted(async () => {
     }
   }
   selectedPath.value = "/";
-  void loadData("/");
+  void loadStat("/");
 });
 
 function switchTo(snapshot: ConnectionSnapshot): void {
@@ -189,6 +266,13 @@ async function disconnect(): Promise<void> {
   if (store.connections.length === 0) {
     await router.replace("/");
   }
+}
+
+async function openBinaryEditor(): Promise<void> {
+  if (data.value?.truncated && selectedPath.value) {
+    await loadData(selectedPath.value, true);
+  }
+  binaryOpen.value = true;
 }
 
 function onSaved(stat: NodeStat): void {
@@ -311,7 +395,7 @@ function onDeleted(outcome: DeleteOutcome): void {
               <button
                 type="button"
                 class="tiny"
-                :disabled="!data || !data.is_text"
+                :disabled="!data || !data.is_text || data.truncated"
                 :title="data && !data.is_text ? t('data.notEditable') : ''"
                 @click="editorOpen = true"
               >
@@ -350,26 +434,43 @@ function onDeleted(outcome: DeleteOutcome): void {
           <p v-if="dataError" class="error">{{ t(dataError.message_key) }}</p>
           <p v-else-if="loadingData" class="muted">{{ t("delete.loading") }}</p>
 
-          <template v-else-if="data">
+          <template v-else-if="stat">
             <div v-if="activeTab === 'data'" class="data-pane">
+              <div v-if="!data" class="large-pending">
+                <p class="warn">{{ t("data.largeHint", { bytes: stat?.data_length }) }}</p>
+                <button type="button" class="tiny" @click="loadData(selectedPath ?? '/')">
+                  {{ t("data.loadData") }}
+                </button>
+              </div>
+              <template v-else>
               <div v-if="!data.is_text" class="binary">
                 <p class="warn">{{ t("data.binaryHint") }}</p>
                 <p class="muted">{{ t("data.bytes") }}: {{ data.byte_len }}</p>
+                <div>
+                  <button type="button" class="tiny" @click="openBinaryEditor">
+                    {{ t("data.replaceBinary") }}
+                  </button>
+                </div>
                 <pre class="hex">{{ hexDump }}</pre>
               </div>
               <template v-else>
                 <div class="data-toolbar">
                   <span class="muted">{{ t("data.bytes") }}: {{ data.byte_len }}</span>
-                  <button
-                    v-if="pretty"
-                    type="button"
-                    class="tiny"
-                    @click="formatted = !formatted"
-                  >
-                    {{ formatted ? t("data.raw") : t("data.formatted") }}
-                  </button>
+                  <select v-model="format" class="format-select">
+                    <option value="raw">{{ t("data.formatRaw") }}</option>
+                    <option value="json" :disabled="!jsonText">JSON</option>
+                    <option value="yaml" :disabled="!yamlText">YAML</option>
+                  </select>
+                  <template v-if="data.truncated">
+                    <span class="warn">{{ t("data.truncated") }}</span>
+                    <button type="button" class="tiny" @click="loadFull">
+                      {{ t("data.loadFull") }}
+                    </button>
+                  </template>
                 </div>
-                <pre class="text">{{ displayText || t("data.empty") }}</pre>
+                <pre v-if="format === 'raw'" class="text">{{ displayText || t("data.empty") }}</pre>
+                <pre v-else class="text hljs" v-html="highlighted" />
+              </template>
               </template>
             </div>
 
@@ -436,6 +537,17 @@ function onDeleted(outcome: DeleteOutcome): void {
       @close="editorOpen = false"
       @saved="onSaved"
       @reload="editorOpen = false; loadData(selectedPath ?? '/')"
+    />
+    <NodeBinaryEditor
+      v-if="data && !data.is_text"
+      :open="binaryOpen"
+      :connection-id="connectionId"
+      :path="selectedPath ?? '/'"
+      :version="data.stat.version"
+      :original-b64="data.data_b64"
+      :byte-len="data.byte_len"
+      @close="binaryOpen = false"
+      @saved="binaryOpen = false; onSaved($event)"
     />
     <NodeCreateDialog
       :open="createOpen"
@@ -661,6 +773,14 @@ function onDeleted(outcome: DeleteOutcome): void {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+.format-select {
+  padding: 4px 8px;
+  border-radius: 5px;
+  border: 1px solid #2a323c;
+  background: #101418;
+  color: inherit;
+  font-size: 12px;
 }
 .data-toolbar {
   display: flex;

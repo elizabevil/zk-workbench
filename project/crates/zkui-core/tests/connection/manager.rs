@@ -212,7 +212,7 @@ async fn create_set_read_delete_cycle() {
         .await
         .expect("创建失败");
 
-    let data = manager.data(&id, &leaf).await.expect("读取数据失败");
+    let data = manager.data(&id, &leaf, None).await.expect("读取数据失败");
     assert!(data.is_text);
     assert_eq!(data.byte_len, 3);
 

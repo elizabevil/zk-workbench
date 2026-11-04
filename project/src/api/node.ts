@@ -16,8 +16,12 @@ export function nodeStat(connectionId: string, path: string): Promise<NodeStat> 
   return call<NodeStat>("node_stat", { connectionId, path });
 }
 
-export function nodeData(connectionId: string, path: string): Promise<NodeData> {
-  return call<NodeData>("node_data", { connectionId, path });
+export function nodeData(
+  connectionId: string,
+  path: string,
+  maxBytes?: number | null,
+): Promise<NodeData> {
+  return call<NodeData>("node_data", { connectionId, path, maxBytes: maxBytes ?? null });
 }
 
 export function nodeSet(
