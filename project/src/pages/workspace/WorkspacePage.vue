@@ -6,10 +6,11 @@ import yamlLanguage from "highlight.js/lib/languages/yaml";
 import {computed, onMounted, onUnmounted, ref, watch} from "vue";
 import {useI18n} from "vue-i18n";
 
-import {KEY_ESCAPE} from "@/constants/keyboard";
+import {NButton, NDropdown, NInputNumber, NModal} from "naive-ui";
 import {useRouter} from "vue-router";
-import {NButton} from "naive-ui";
 import {isMap, isSeq, parseDocument} from "yaml";
+
+import {KEY_ESCAPE} from "@/constants/keyboard";
 import {auditList} from "@/api/audit";
 import {type InvokeRejection, toAppError} from "@/api/client";
 import {nodeAcl, nodeChildren, nodeData, nodeStat} from "@/api/node";
@@ -33,6 +34,7 @@ import {useTabsStore} from "@/stores/tabs";
 import {useUiStore} from "@/stores/ui";
 import {decodeUtf8Base64, hexPreview} from "@/utils/encoding";
 import {clampCommandHeight, loadCommandHeight, saveCommandHeight,} from "@/utils/layout";
+import {applyNumber} from "@/utils/number";
 import {normalizePath} from "@/utils/path";
 import {loadShortcuts, matchesShortcut, type ShortcutMap} from "@/utils/shortcuts";
 import {toRfc3339} from "@/utils/time";
@@ -67,6 +69,10 @@ const deleteTarget = ref<string | null>(null);
 const retryPath = ref<string | null>(null);
 const toast = ref("");
 let toastTimer = 0;
+const autoRefreshSeconds = ref<number>();
+const customRefreshOpen = ref(false);
+const customRefreshSeconds = ref(30);
+let autoRefreshTimer = 0;
 const jumpPath = ref("");
 const jumpInput = ref<HTMLInputElement | null>(null);
 const jumpCompletion = ref<{
@@ -251,6 +257,7 @@ const FORMAT_OPTIONS = [
   {value: "json" as const, label: "JSON"},
   {value: "yaml" as const, label: "YAML"},
 ];
+const AUTO_REFRESH_PRESETS = [1, 5, 10] as const;
 const loadToken = ref(0);
 const timeline = ref<AuditRecord[]>([]);
 
@@ -522,7 +529,72 @@ function refreshAll(): void {
   reloadData();
 }
 
-watch(connectionId, () => {
+const autoRefreshTitle = computed(() => {
+  if (autoRefreshSeconds.value === undefined) {
+    return t("data.autoRefresh");
+  }
+  return t("data.autoRefreshSeconds", {seconds: autoRefreshSeconds.value});
+});
+
+const autoRefreshOptions = computed(() => {
+  const active = autoRefreshSeconds.value;
+  const mark = (value: number | undefined) => (value === active ? "✓ " : "");
+  const customActive = active !== undefined && !AUTO_REFRESH_PRESETS.some((value) => value === active);
+  return [
+    {label: `${mark(undefined)}${t("data.autoRefreshOff")}`, key: "off"},
+    ...AUTO_REFRESH_PRESETS.map((seconds) => ({
+      label: `${mark(seconds)}${t("data.autoRefreshSeconds", {seconds})}`,
+      key: seconds,
+    })),
+    {label: `${customActive ? "✓ " : ""}${t("data.autoRefreshCustom")}`, key: "custom"},
+  ];
+});
+
+function setAutoRefresh(seconds: number | undefined): void {
+  window.clearInterval(autoRefreshTimer);
+  autoRefreshTimer = 0;
+  autoRefreshSeconds.value = seconds;
+  if (seconds === undefined) {
+    return;
+  }
+  if (selectedPath.value) {
+    void reloadData();
+  }
+  autoRefreshTimer = window.setInterval(() => {
+    if (selectedPath.value && !loadingData.value) {
+      void reloadData();
+    }
+  }, Math.max(1, seconds) * 1000);
+}
+
+function selectAutoRefresh(key: string | number): void {
+  if (key === "off") {
+    setAutoRefresh(undefined);
+    return;
+  }
+  if (key === "custom") {
+    customRefreshSeconds.value = autoRefreshSeconds.value ?? 30;
+    customRefreshOpen.value = true;
+    return;
+  }
+  if (typeof key === "number") {
+    setAutoRefresh(key);
+  }
+}
+
+function setCustomRefreshSeconds(value: number): void {
+  customRefreshSeconds.value = value;
+}
+
+function applyCustomRefresh(): void {
+  setAutoRefresh(Math.max(1, Math.round(customRefreshSeconds.value)));
+  customRefreshOpen.value = false;
+}
+
+watch(connectionId, (id) => {
+  if (!id) {
+    setAutoRefresh(undefined);
+  }
   treeKey.value += 1;
   selectedPath.value = "/";
   data.value = null;
@@ -559,17 +631,19 @@ onMounted(async () => {
 onUnmounted(() => {
   window.removeEventListener("keydown", onKeydown);
   window.clearTimeout(toastTimer);
+  window.clearInterval(autoRefreshTimer);
 });
 
 function onKeydown(event: KeyboardEvent): void {
   if (event.key === KEY_ESCAPE) {
     if (ui.aboutOpen) {
       ui.closeAbout();
-    } else if (editorOpen.value || createOpen.value || deleteOpen.value || binaryOpen.value) {
+    } else if (editorOpen.value || createOpen.value || deleteOpen.value || binaryOpen.value || customRefreshOpen.value) {
       editorOpen.value = false;
       createOpen.value = false;
       deleteOpen.value = false;
       binaryOpen.value = false;
+      customRefreshOpen.value = false;
     } else if (dialogOpen.value) {
       dialogOpen.value = false;
     } else if (menuOpen.value || toolsOpen.value) {
@@ -806,7 +880,22 @@ function onDeleted(outcome: DeleteOutcome): void {
                 {{ selectedPath }}
               </button>
               <div class="toolbar">
-                <NButton size="tiny" @click="reloadData">{{ t("data.refresh") }}</NButton>
+                <div :class="{active: autoRefreshSeconds !== undefined}" class="refresh-control">
+                  <NButton size="tiny" :title="t('data.refresh')" @click="reloadData">
+                    <template #icon>
+                      <svg aria-hidden="true" class="clock-icon" viewBox="0 0 16 16">
+                        <circle cx="8" cy="8" r="5.5"/>
+                        <path d="M8 4.5V8l2.5 1.5"/>
+                      </svg>
+                    </template>
+                    {{ t("data.refresh") }}
+                  </NButton>
+                  <NDropdown :options="autoRefreshOptions" trigger="click" @select="selectAutoRefresh">
+                    <button :title="autoRefreshTitle" class="refresh-caret" type="button">
+                      <span class="refresh-caret-triangle"/>
+                    </button>
+                  </NDropdown>
+                </div>
                 <NButton size="tiny" @click="openCreate">{{ t("data.create") }}</NButton>
                 <NButton
                   :disabled="!data?.is_text || data.truncated"
@@ -1152,6 +1241,33 @@ function onDeleted(outcome: DeleteOutcome): void {
       </button>
     </p>
 
+    <NModal
+      v-model:show="customRefreshOpen"
+      :close-on-esc="false"
+      :style="{width: '320px'}"
+      :title="t('data.autoRefreshCustomTitle')"
+      preset="card"
+    >
+      <div class="custom-refresh">
+        <span>{{ t("data.autoRefreshInterval") }}</span>
+        <NInputNumber
+          :max="3600"
+          :min="1"
+          :show-button="false"
+          :value="customRefreshSeconds"
+          class="custom-refresh-input"
+          @update:value="(value) => applyNumber(value, setCustomRefreshSeconds)"
+        />
+        <span>{{ t("data.seconds") }}</span>
+      </div>
+      <template #footer>
+        <div class="custom-refresh-actions">
+          <NButton @click="customRefreshOpen = false">{{ t("home.cancel") }}</NButton>
+          <NButton type="primary" @click="applyCustomRefresh">{{ t("settings.save") }}</NButton>
+        </div>
+      </template>
+    </NModal>
+
     <ConnectionDialog :open="dialogOpen" @close="dialogOpen = false" @connected="onConnected"/>
     <NodeEditor
         v-if="data"
@@ -1486,6 +1602,75 @@ function onDeleted(outcome: DeleteOutcome): void {
   display: flex;
   gap: 6px;
   flex: none;
+}
+
+.refresh-control {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.refresh-control :deep(.n-button) {
+  padding-right: 14px;
+}
+
+.clock-icon {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.4;
+}
+
+.refresh-control.active .clock-icon {
+  color: #22d3ee;
+}
+
+.refresh-caret {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+}
+
+.refresh-caret-triangle {
+  width: 0;
+  height: 0;
+  border-left: 3px solid transparent;
+  border-right: 3px solid transparent;
+  border-top: 4px solid #9aa4b2;
+}
+
+.refresh-control.active .refresh-caret-triangle {
+  border-top-color: #22d3ee;
+}
+
+.custom-refresh {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.custom-refresh-input {
+  width: 120px;
+}
+
+.custom-refresh-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .tabs {
