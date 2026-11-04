@@ -1,29 +1,45 @@
-<script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
-import { useI18n } from "vue-i18n";
-import { useRouter } from "vue-router";
+<script lang="ts" setup>
+import {
+  NAlert,
+  NButton,
+  NCheckbox,
+  NColorPicker,
+  NForm,
+  NFormItem,
+  NInput,
+  NInputNumber,
+  NSelect,
+  NSlider,
+} from "naive-ui";
+import {computed, nextTick, onMounted, onUnmounted, ref, watch} from "vue";
+import {useI18n} from "vue-i18n";
+import {useRouter} from "vue-router";
 
-import { appPaths } from "@/api/app";
-import { backgroundImageLoad, backgroundImageStore } from "@/api/appearance";
-import { type InvokeRejection, toAppError } from "@/api/client";
-import { proxyPasswordClear, proxyPasswordSet, proxyTest } from "@/api/proxy";
-import type { AppPaths } from "@/api/types/AppPaths";
-import type { ProxyProfile } from "@/api/types/ProxyProfile";
-import { LOCALES } from "@/i18n/locale";
-import { NOTIFICATION_LEVELS, PROXY_KINDS } from "@/settings/constants";
-import { useSettingsStore } from "@/stores/settings";
+import {appPaths} from "@/api/app";
+import {backgroundImageLoad, backgroundImageStore} from "@/api/appearance";
+import {type InvokeRejection, toAppError} from "@/api/client";
+import {proxyPasswordClear, proxyPasswordSet, proxyTest} from "@/api/proxy";
+import type {AppPaths} from "@/api/types/AppPaths";
+import type {Locale} from "@/api/types/Locale";
+import type {NotificationLevel} from "@/api/types/NotificationLevel";
+import type {ProxyProfile} from "@/api/types/ProxyProfile";
+import {LOCALES} from "@/i18n/locale";
+import {NOTIFICATION_LEVELS, PROXY_KINDS} from "@/settings/constants";
+import {useSettingsStore} from "@/stores/settings";
+import {useUiStore} from "@/stores/ui";
 import {
   DEFAULT_SHORTCUTS,
   eventToBinding,
   loadShortcuts,
+  saveShortcuts,
   type ShortcutAction,
   type ShortcutMap,
-  saveShortcuts,
 } from "@/utils/shortcuts";
 
-const { t } = useI18n();
+const {t} = useI18n();
 const router = useRouter();
 const store = useSettingsStore();
+const ui = useUiStore();
 
 const noProxyText = computed({
   get: () => store.settings?.proxy.no_proxy.join("\n") ?? "",
@@ -37,6 +53,17 @@ const noProxyText = computed({
       .filter((line) => line.length > 0);
   },
 });
+
+const localeOptions = LOCALES.map((locale) => ({label: locale, value: locale}));
+const proxyKindOptions = PROXY_KINDS.map((kind) => ({label: kind, value: kind}));
+const appearanceModeOptions = computed(() => [
+  {label: t("settings.appearance.solid"), value: "solid"},
+  {label: t("settings.appearance.gradient"), value: "gradient"},
+  {label: t("settings.appearance.image"), value: "image"},
+]);
+const notificationOptions = computed(() =>
+  NOTIFICATION_LEVELS.map((level) => ({label: level, value: level})),
+);
 
 const paths = ref<AppPaths | null>(null);
 
@@ -63,8 +90,9 @@ function scrollToSection(id: string): void {
     return;
   }
   const top = target.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop;
-  container.scrollTo({ top: top - 8, behavior: "smooth" });
+  container.scrollTo({top: top - 8, behavior: "smooth"});
 }
+
 const passwords = ref<Record<number, string>>({});
 const testTarget = ref("127.0.0.1:2181");
 const testMessage = ref("");
@@ -73,6 +101,108 @@ const proxySaved = ref("");
 let autoSaveTimer = 0;
 const shortcutSaved = ref("");
 const previewImage = ref("");
+
+function setLocale(value: unknown): void {
+  if (!store.settings) {
+    return;
+  }
+  if (value === "zh-CN" || value === "en-US") {
+    store.settings.general.locale = value as Locale;
+  }
+}
+
+// 后端把 u64 序列化为 JSON number，ts-rs 生成的类型是 bigint；这里只在类型层转换。
+function toU64(value: number): bigint {
+  return value as unknown as bigint;
+}
+
+function fromU64(value: bigint | number): number {
+  return Number(value);
+}
+
+function setAppearanceMode(value: unknown): void {
+  if (!store.settings) {
+    return;
+  }
+  if (value === "solid" || value === "gradient" || value === "image") {
+    store.settings.appearance.mode = value;
+  }
+}
+
+function setNotificationLevel(value: unknown): void {
+  if (!store.settings) {
+    return;
+  }
+  if (typeof value === "string" && (NOTIFICATION_LEVELS as readonly string[]).includes(value)) {
+    store.settings.notifications.desktop = value as NotificationLevel;
+  }
+}
+
+function setProxyKind(profile: ProxyProfile, value: unknown): void {
+  if (value === "socks5" || value === "http_connect") {
+    profile.kind = value;
+  }
+}
+
+function setGradientAngle(value: number | null): void {
+  if (store.settings && value !== null) {
+    store.settings.appearance.gradient_angle = value;
+  }
+}
+
+function setPanelOpacity(value: number | null): void {
+  if (store.settings && value !== null) {
+    store.settings.appearance.panel_opacity = value;
+  }
+}
+
+function setBackgroundBlur(value: number | null): void {
+  if (store.settings && value !== null) {
+    store.settings.appearance.background_blur = value;
+  }
+}
+
+function setFontSize(value: number | null): void {
+  if (store.settings && value !== null) {
+    store.settings.appearance.font_size = value;
+  }
+}
+
+function setMaxAttempts(value: number | null): void {
+  if (store.settings && value !== null) {
+    store.settings.retry.max_attempts = value;
+  }
+}
+
+function setInitialInterval(value: number | null): void {
+  if (store.settings && value !== null) {
+    store.settings.retry.initial_interval_ms = toU64(value);
+  }
+}
+
+function setMaxInterval(value: number | null): void {
+  if (store.settings && value !== null) {
+    store.settings.retry.max_interval_ms = toU64(value);
+  }
+}
+
+function setLogMaxSize(value: number | null): void {
+  if (store.settings && value !== null) {
+    store.settings.logs.max_size_mb = toU64(value);
+  }
+}
+
+function setLogRetention(value: number | null): void {
+  if (store.settings && value !== null) {
+    store.settings.logs.retention_days = value;
+  }
+}
+
+function setProxyPort(profile: ProxyProfile, value: number | null): void {
+  if (value !== null) {
+    profile.port = value;
+  }
+}
 
 watch(
   () => [store.settings?.appearance.mode, store.settings?.appearance.image_path] as const,
@@ -87,7 +217,7 @@ watch(
       previewImage.value = "";
     }
   },
-  { immediate: true },
+  {immediate: true},
 );
 
 const appearancePreview = computed(() => {
@@ -96,10 +226,10 @@ const appearancePreview = computed(() => {
     return {};
   }
   if (appearance.mode === "solid") {
-    return { background: appearance.color };
+    return {background: appearance.color};
   }
   if (appearance.mode === "image" && previewImage.value) {
-    return { background: `url("${previewImage.value}") center / cover` };
+    return {background: `url("${previewImage.value}") center / cover`};
   }
   return {
     background: `linear-gradient(${appearance.gradient_angle}deg, ${appearance.gradient_from}, ${appearance.gradient_to})`,
@@ -130,6 +260,7 @@ function clearBackground(): void {
     store.settings.appearance.image_path = "";
   }
 }
+
 const autoSaved = ref("");
 let lastProxyJson = "";
 let settingsLoaded = false;
@@ -150,7 +281,7 @@ function captureShortcut(action: ShortcutAction, event: KeyboardEvent): void {
 }
 
 function resetShortcuts(): void {
-  shortcuts.value = { ...DEFAULT_SHORTCUTS };
+  shortcuts.value = {...DEFAULT_SHORTCUTS};
   saveShortcuts(shortcuts.value);
 }
 
@@ -188,7 +319,7 @@ watch(
       }, 1500);
     }, 600);
   },
-  { deep: true },
+  {deep: true},
 );
 
 onMounted(async () => {
@@ -211,7 +342,7 @@ onMounted(async () => {
         }
       }
     },
-    { root: container, rootMargin: "-10% 0px -70% 0px", threshold: 0 },
+    {root: container, rootMargin: "-10% 0px -70% 0px", threshold: 0},
   );
   for (const fieldset of fieldsets) {
     observer.observe(fieldset);
@@ -276,8 +407,15 @@ function drop(index: number): void {
 async function applyProxy(): Promise<void> {
   await saveSettings();
   const profiles = store.settings?.proxy.profiles ?? [];
-  const active = profiles.length ? `${profiles[0].kind}://${profiles[0].host}:${profiles[0].port}` : t("settings.proxy.direct");
-  proxySaved.value = t("settings.proxy.saved", { target: active });
+  const active = profiles.length
+    ? `${profiles[0].kind}://${profiles[0].host}:${profiles[0].port}`
+    : t("settings.proxy.direct");
+  proxySaved.value = t("settings.proxy.saved", {target: active});
+}
+
+function submitSettings(event: Event): void {
+  event.preventDefault();
+  void saveSettings();
 }
 
 async function saveSettings(): Promise<void> {
@@ -306,10 +444,15 @@ function removeProxy(index: number): void {
   <section class="settings">
     <header class="header">
       <h1>{{ t("settings.title") }}</h1>
-      <button type="button" @click="router.push('/')">{{ t("settings.back") }}</button>
+      <div class="header-actions">
+        <span :title="t('settings.zoom')" class="zoom-badge">{{ ui.zoomPercent }}%</span>
+        <button type="button" @click="router.push('/')">{{ t("settings.back") }}</button>
+      </div>
     </header>
 
-    <p v-if="store.error" class="error">{{ t(store.error.message_key) }}</p>
+    <NAlert v-if="store.error" :bordered="false" type="error">
+      {{ t(store.error.message_key) }}
+    </NAlert>
     <p v-if="!store.settings">{{ t("settings.loading") }}</p>
 
     <div class="settings-layout">
@@ -317,339 +460,593 @@ function removeProxy(index: number): void {
         <button
           v-for="section in sections"
           :key="section"
-          type="button"
           :class="{ active: activeSection === section }"
+          type="button"
           @click="scrollToSection(section)"
         >
           {{ t(`settings.${section}.title`) }}
         </button>
       </nav>
 
-      <form v-if="store.settings" class="sections settings-form" @submit.prevent="saveSettings">
-      <fieldset>
-        <legend>{{ t("settings.general.title") }}</legend>
-        <label>
-          {{ t("settings.general.locale") }}
-          <select v-model="store.settings.general.locale">
-            <option v-for="locale in LOCALES" :key="locale" :value="locale">
-              {{ locale }}
-            </option>
-          </select>
-        </label>
-        <label>
-          {{ t("settings.general.theme") }}
-          <input v-model="store.settings.general.theme" />
-        </label>
-        <label class="inline">
-          <input v-model="store.settings.general.restore_last_connection" type="checkbox" />
-          {{ t("settings.general.restore") }}
-        </label>
-      </fieldset>
+      <NForm
+        v-if="store.settings"
+        :on-submit="submitSettings"
+        :show-feedback="false"
+        class="settings-form"
+        label-placement="left"
+        label-width="180"
+        size="small"
+      >
+        <fieldset>
+          <legend>{{ t("settings.general.title") }}</legend>
+          <NFormItem :label="t('settings.general.locale')">
+            <NSelect
+              :options="localeOptions"
+              :value="store.settings.general.locale"
+              class="control-sm"
+              @update:value="setLocale"
+            />
+          </NFormItem>
+          <NFormItem :label="t('settings.general.theme')">
+            <NInput v-model:value="store.settings.general.theme" class="control-md" />
+          </NFormItem>
+          <NFormItem :label="t('settings.general.restore')">
+            <NCheckbox v-model:checked="store.settings.general.restore_last_connection" />
+          </NFormItem>
+        </fieldset>
 
-      <fieldset>
-        <legend>{{ t("settings.appearance.title") }}</legend>
-        <label>
-          {{ t("settings.appearance.mode") }}
-          <select v-model="store.settings.appearance.mode">
-            <option value="solid">{{ t("settings.appearance.solid") }}</option>
-            <option value="gradient">{{ t("settings.appearance.gradient") }}</option>
-            <option value="image">{{ t("settings.appearance.image") }}</option>
-          </select>
-        </label>
-        <label v-if="store.settings.appearance.mode === 'solid'">
-          {{ t("settings.appearance.color") }}
-          <input v-model="store.settings.appearance.color" type="color" />
-        </label>
-        <template v-if="store.settings.appearance.mode === 'gradient'">
-          <label>
-            {{ t("settings.appearance.from") }}
-            <input v-model="store.settings.appearance.gradient_from" type="color" />
-          </label>
-          <label>
-            {{ t("settings.appearance.to") }}
-            <input v-model="store.settings.appearance.gradient_to" type="color" />
-          </label>
-          <label>
-            {{ t("settings.appearance.angle") }}
-            <input v-model.number="store.settings.appearance.gradient_angle" max="360" min="0" type="number" />
-          </label>
-        </template>
-        <template v-if="store.settings.appearance.mode === 'image'">
-          <label>
-            {{ t("settings.appearance.imageFile") }}
-            <input accept="image/png,image/jpeg,image/webp,image/gif" type="file" @change="pickBackground" />
-          </label>
-          <p class="hint">{{ store.settings.appearance.image_path || t("settings.appearance.noImage") }}</p>
-          <button type="button" @click="clearBackground">{{ t("settings.appearance.clearImage") }}</button>
-        </template>
-        <label>
-          {{ t("settings.appearance.panelOpacity") }}
-          <input v-model.number="store.settings.appearance.panel_opacity" max="100" min="0" type="range" />
-        </label>
-        <label>
-          {{ t("settings.appearance.backgroundBlur") }}
-          <input v-model.number="store.settings.appearance.background_blur" max="30" min="0" type="range" />
-        </label>
-        <label>
-          {{ t("settings.appearance.fontSize") }}
-          <input v-model.number="store.settings.appearance.font_size" max="22" min="10" type="number" />
-        </label>
-        <div class="preview" :style="appearancePreview" />
-      </fieldset>
+        <fieldset>
+          <legend>{{ t("settings.appearance.title") }}</legend>
+          <NFormItem :label="t('settings.appearance.mode')">
+            <NSelect
+              :options="appearanceModeOptions"
+              :value="store.settings.appearance.mode"
+              class="control-sm"
+              @update:value="setAppearanceMode"
+            />
+          </NFormItem>
+          <NFormItem v-if="store.settings.appearance.mode === 'solid'" :label="t('settings.appearance.color')">
+            <NColorPicker
+              v-model:value="store.settings.appearance.color"
+              :modes="['hex']"
+              :show-alpha="false"
+              class="control-color"
+            />
+          </NFormItem>
+          <template v-if="store.settings.appearance.mode === 'gradient'">
+            <NFormItem :label="t('settings.appearance.from')">
+              <NColorPicker
+                v-model:value="store.settings.appearance.gradient_from"
+                :modes="['hex']"
+                :show-alpha="false"
+                class="control-color"
+              />
+            </NFormItem>
+            <NFormItem :label="t('settings.appearance.to')">
+              <NColorPicker
+                v-model:value="store.settings.appearance.gradient_to"
+                :modes="['hex']"
+                :show-alpha="false"
+                class="control-color"
+              />
+            </NFormItem>
+            <NFormItem :label="t('settings.appearance.angle')">
+              <NInputNumber
+                :max="360"
+                :min="0"
+                :show-button="false"
+                :value="store.settings.appearance.gradient_angle"
+                class="control-xs"
+                @update:value="setGradientAngle"
+              />
+            </NFormItem>
+          </template>
+          <template v-if="store.settings.appearance.mode === 'image'">
+            <NFormItem :label="t('settings.appearance.imageFile')">
+              <input
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                class="file-input"
+                type="file"
+                @change="pickBackground"
+              />
+            </NFormItem>
+            <p class="hint">{{ store.settings.appearance.image_path || t("settings.appearance.noImage") }}</p>
+            <div class="actions">
+              <NButton size="small" @click="clearBackground">{{ t("settings.appearance.clearImage") }}</NButton>
+            </div>
+          </template>
+          <NFormItem :label="t('settings.appearance.panelOpacity')">
+            <div class="slider-control">
+              <NSlider
+                :max="100"
+                :min="0"
+                :value="store.settings.appearance.panel_opacity"
+                @update:value="setPanelOpacity"
+              />
+              <span class="slider-value">{{ store.settings.appearance.panel_opacity }}</span>
+            </div>
+          </NFormItem>
+          <NFormItem :label="t('settings.appearance.backgroundBlur')">
+            <div class="slider-control">
+              <NSlider
+                :max="30"
+                :min="0"
+                :value="store.settings.appearance.background_blur"
+                @update:value="setBackgroundBlur"
+              />
+              <span class="slider-value">{{ store.settings.appearance.background_blur }}</span>
+            </div>
+          </NFormItem>
+          <NFormItem :label="t('settings.appearance.fontSize')">
+            <NInputNumber
+              :max="22"
+              :min="10"
+              :show-button="false"
+              :value="store.settings.appearance.font_size"
+              class="control-xs"
+              @update:value="setFontSize"
+            />
+          </NFormItem>
+          <div :style="appearancePreview" class="preview" />
+        </fieldset>
 
-      <fieldset>
-        <legend>{{ t("settings.notifications.title") }}</legend>
-        <label>
-          {{ t("settings.notifications.desktop") }}
-          <select v-model="store.settings.notifications.desktop">
-            <option v-for="level in NOTIFICATION_LEVELS" :key="level" :value="level">
-              {{ level }}
-            </option>
-          </select>
-        </label>
-        <label class="inline">
-          <input v-model="store.settings.notifications.command_finished" type="checkbox" />
-          {{ t("settings.notifications.commandFinished") }}
-        </label>
-        <label class="inline">
-          <input v-model="store.settings.notifications.sound" type="checkbox" />
-          {{ t("settings.notifications.sound") }}
-        </label>
-      </fieldset>
+        <fieldset>
+          <legend>{{ t("settings.notifications.title") }}</legend>
+          <NFormItem :label="t('settings.notifications.desktop')">
+            <NSelect
+              :options="notificationOptions"
+              :value="store.settings.notifications.desktop"
+              class="control-sm"
+              @update:value="setNotificationLevel"
+            />
+          </NFormItem>
+          <NFormItem :label="t('settings.notifications.commandFinished')">
+            <NCheckbox v-model:checked="store.settings.notifications.command_finished" />
+          </NFormItem>
+          <NFormItem :label="t('settings.notifications.sound')">
+            <NCheckbox v-model:checked="store.settings.notifications.sound" />
+          </NFormItem>
+        </fieldset>
 
-      <fieldset>
-        <legend>{{ t("settings.retry.title") }}</legend>
-        <label class="inline">
-          <input v-model="store.settings.retry.auto_reconnect" type="checkbox" />
-          {{ t("settings.retry.autoReconnect") }}
-        </label>
-        <label>
-          {{ t("settings.retry.maxAttempts") }}
-          <input v-model.number="store.settings.retry.max_attempts" min="1" type="number" />
-        </label>
-        <label>
-          {{ t("settings.retry.initial") }}
-          <input v-model.number="store.settings.retry.initial_interval_ms" min="100" type="number" />
-        </label>
-        <label>
-          {{ t("settings.retry.max") }}
-          <input v-model.number="store.settings.retry.max_interval_ms" min="100" type="number" />
-        </label>
-      </fieldset>
+        <fieldset>
+          <legend>{{ t("settings.retry.title") }}</legend>
+          <NFormItem :label="t('settings.retry.autoReconnect')">
+            <NCheckbox v-model:checked="store.settings.retry.auto_reconnect" />
+          </NFormItem>
+          <NFormItem :label="t('settings.retry.maxAttempts')">
+            <NInputNumber
+              :min="1"
+              :show-button="false"
+              :value="store.settings.retry.max_attempts"
+              class="control-xs"
+              @update:value="setMaxAttempts"
+            />
+          </NFormItem>
+          <NFormItem :label="t('settings.retry.initial')">
+            <NInputNumber
+              :min="100"
+              :show-button="false"
+              :value="fromU64(store.settings.retry.initial_interval_ms)"
+              class="control-sm"
+              @update:value="setInitialInterval"
+            />
+          </NFormItem>
+          <NFormItem :label="t('settings.retry.max')">
+            <NInputNumber
+              :min="100"
+              :show-button="false"
+              :value="fromU64(store.settings.retry.max_interval_ms)"
+              class="control-sm"
+              @update:value="setMaxInterval"
+            />
+          </NFormItem>
+        </fieldset>
 
-      <fieldset>
-        <legend>{{ t("settings.task.title") }}</legend>
-        <label class="inline">
-          <input v-model="store.settings.task.continue_on_error" type="checkbox" />
-          {{ t("settings.task.continueOnError") }}
-        </label>
-      </fieldset>
+        <fieldset>
+          <legend>{{ t("settings.task.title") }}</legend>
+          <NFormItem :label="t('settings.task.continueOnError')">
+            <NCheckbox v-model:checked="store.settings.task.continue_on_error" />
+          </NFormItem>
+        </fieldset>
 
-      <fieldset>
-        <legend>{{ t("settings.proxy.title") }}</legend>
-        <label class="inline">
-          <input v-model="store.settings.proxy.enabled" type="checkbox" />
-          {{ t("settings.proxy.enabled") }}
-        </label>
-        <label>
-          {{ t("settings.proxy.noProxy") }}
-          <textarea v-model="noProxyText" rows="3" />
-        </label>
-        <ul class="proxy-list">
-        <li
-          v-for="(profile, index) in store.settings.proxy.profiles"
-          :key="index"
-          class="proxy-row"
-          @dragover.prevent
-          @drop="drop(index)"
-        >
-          <button
-            class="proxy-handle"
-            type="button"
-            draggable="true"
-            :title="t('settings.proxy.drag')"
-            @dragstart="dragStart(index)"
-          >
-            ⠿
-          </button>
-          <select v-model="profile.kind">
-            <option v-for="kind in PROXY_KINDS" :key="kind" :value="kind">
-              {{ kind }}
-            </option>
-          </select>
-          <input v-model="profile.host" :placeholder="t('settings.proxy.host')" />
-          <input v-model.number="profile.port" :placeholder="t('settings.proxy.port')" type="number" />
-          <input v-model="profile.username" :placeholder="t('settings.proxy.username')" />
-          <input
-            v-model="passwords[index]"
-            :placeholder="t('settings.proxy.password')"
-            type="password"
-          />
-          <div class="row-actions">
-            <button type="button" @click="testProxy(profile)">{{ t("settings.proxy.test") }}</button>
-            <button type="button" @click="clearPassword(profile)">
-              {{ t("settings.proxy.clearPassword") }}
-            </button>
-            <button type="button" @click="removeProxy(index)">{{ t("settings.proxy.remove") }}</button>
+        <fieldset>
+          <legend>{{ t("settings.proxy.title") }}</legend>
+          <NFormItem :label="t('settings.proxy.enabled')">
+            <NCheckbox v-model:checked="store.settings.proxy.enabled" />
+          </NFormItem>
+          <NFormItem :label="t('settings.proxy.noProxy')">
+            <NInput
+              v-model:value="noProxyText"
+              :autosize="{minRows: 3, maxRows: 6}"
+              class="control-wide"
+              type="textarea"
+            />
+          </NFormItem>
+
+          <div class="proxy-block">
+            <ul class="proxy-list">
+              <li
+                v-for="(profile, index) in store.settings.proxy.profiles"
+                :key="index"
+                class="proxy-row"
+                @dragover.prevent
+                @drop="drop(index)"
+              >
+                <button
+                  :title="t('settings.proxy.drag')"
+                  class="proxy-handle"
+                  draggable="true"
+                  type="button"
+                  @dragstart="dragStart(index)"
+                >
+                  ⠿
+                </button>
+                <NSelect
+                  :options="proxyKindOptions"
+                  :value="profile.kind"
+                  size="small"
+                  @update:value="(value) => setProxyKind(profile, value)"
+                />
+                <NInput v-model:value="profile.host" :placeholder="t('settings.proxy.host')" size="small" />
+                <NInputNumber
+                  :max="65535"
+                  :min="1"
+                  :show-button="false"
+                  :value="profile.port"
+                  size="small"
+                  @update:value="(value) => setProxyPort(profile, value)"
+                />
+                <NInput
+                  v-model:value="profile.username"
+                  :placeholder="t('settings.proxy.username')"
+                  size="small"
+                />
+                <NInput
+                  v-model:value="passwords[index]"
+                  :placeholder="t('settings.proxy.password')"
+                  show-password-on="click"
+                  size="small"
+                  type="password"
+                />
+                <div class="row-actions">
+                  <NButton size="tiny" @click="testProxy(profile)">{{ t("settings.proxy.test") }}</NButton>
+                  <NButton size="tiny" @click="clearPassword(profile)">
+                    {{ t("settings.proxy.clearPassword") }}
+                  </NButton>
+                  <NButton size="tiny" @click="removeProxy(index)">{{ t("settings.proxy.remove") }}</NButton>
+                </div>
+              </li>
+            </ul>
+            <div class="row-actions">
+              <NButton size="small" @click="addProxy">{{ t("settings.proxy.add") }}</NButton>
+              <NButton size="small" @click="applyProxy">{{ t("settings.proxy.apply") }}</NButton>
+            </div>
+            <p v-if="proxySaved" class="hint">{{ proxySaved }}</p>
           </div>
-        </li>
-        </ul>
-        <div class="row-actions">
-          <button type="button" @click="addProxy">{{ t("settings.proxy.add") }}</button>
-          <button type="button" @click="applyProxy">{{ t("settings.proxy.apply") }}</button>
-        </div>
-        <p v-if="proxySaved" class="hint">{{ proxySaved }}</p>
-        <label>
-          {{ t("settings.proxy.testTarget") }}
-          <input v-model="testTarget" />
-        </label>
-        <p v-if="testMessage" class="hint">{{ testMessage }}</p>
-      </fieldset>
 
-      <fieldset>
-        <legend>{{ t("settings.shortcuts.title") }}</legend>
-        <p class="hint">{{ t("settings.shortcuts.hint") }}</p>
-        <div v-for="action in SHORTCUT_ACTIONS" :key="action" class="shortcut-row">
-          <span>{{ t(`settings.shortcuts.${action}`) }}</span>
-          <input
-            :value="shortcuts[action]"
-            :placeholder="t('settings.shortcuts.press')"
-            readonly
-            @keydown.prevent="captureShortcut(action, $event)"
-            @focus="shortcutSaved = ''"
-          />
-        </div>
-        <div class="row-actions">
-          <button type="button" @click="resetShortcuts">{{ t("settings.shortcuts.reset") }}</button>
-          <span v-if="shortcutSaved" class="hint">{{ shortcutSaved }}</span>
-        </div>
-      </fieldset>
+          <NFormItem :label="t('settings.proxy.testTarget')">
+            <NInput v-model:value="testTarget" class="control-md" />
+          </NFormItem>
+          <p v-if="testMessage" class="hint">{{ testMessage }}</p>
+        </fieldset>
 
-      <fieldset>
-        <legend>{{ t("settings.logs.title") }}</legend>
-        <p class="hint">{{ t("settings.logs.hint") }}</p>
-        <label>
-          {{ t("settings.logs.directory") }}
-          <input v-model="store.settings.logs.directory" :placeholder="t('settings.logs.directoryPlaceholder')" />
-        </label>
-        <p class="hint">{{ t("settings.logs.restartHint") }}</p>
-        <label>
-          {{ t("settings.logs.maxSize") }}
-          <input v-model.number="store.settings.logs.max_size_mb" min="1" step="1" type="number" />
-        </label>
-        <label>
-          {{ t("settings.logs.retention") }}
-          <input v-model.number="store.settings.logs.retention_days" min="0" type="number" />
-        </label>
-        <p v-if="paths" class="hint">{{ t("settings.logs.config") }}: {{ paths.config_path }}</p>
-        <p v-if="paths" class="hint">{{ t("settings.logs.dir") }}: {{ paths.log_dir }}</p>
-      </fieldset>
+        <fieldset>
+          <legend>{{ t("settings.shortcuts.title") }}</legend>
+          <p class="hint">{{ t("settings.shortcuts.hint") }}</p>
+          <NFormItem
+            v-for="action in SHORTCUT_ACTIONS"
+            :key="action"
+            :label="t(`settings.shortcuts.${action}`)"
+          >
+            <input
+              :value="shortcuts[action]"
+              class="shortcut-input"
+              readonly
+              @focus="shortcutSaved = ''"
+              @keydown.prevent="captureShortcut(action, $event)"
+            />
+          </NFormItem>
+          <div class="row-actions">
+            <NButton size="small" @click="resetShortcuts">{{ t("settings.shortcuts.reset") }}</NButton>
+            <span v-if="shortcutSaved" class="hint">{{ shortcutSaved }}</span>
+          </div>
+        </fieldset>
 
-      <div class="actions">
-        <button :disabled="store.saving" type="button" @click="saveSettings">{{ t("settings.save") }}</button>
-        <button type="button" @click="resetSettings">{{ t("settings.resetConfig") }}</button>
-      </div>
-      </form>
+        <fieldset>
+          <legend>{{ t("settings.logs.title") }}</legend>
+          <p class="hint">{{ t("settings.logs.hint") }}</p>
+          <NFormItem :label="t('settings.logs.directory')">
+            <NInput
+              v-model:value="store.settings.logs.directory"
+              :placeholder="t('settings.logs.directoryPlaceholder')"
+              class="control-lg"
+            />
+          </NFormItem>
+          <p class="hint">{{ t("settings.logs.restartHint") }}</p>
+          <NFormItem :label="t('settings.logs.maxSize')">
+            <NInputNumber
+              :min="1"
+              :show-button="false"
+              :step="1"
+              :value="fromU64(store.settings.logs.max_size_mb)"
+              class="control-xs"
+              @update:value="setLogMaxSize"
+            />
+          </NFormItem>
+          <NFormItem :label="t('settings.logs.retention')">
+            <NInputNumber
+              :min="0"
+              :show-button="false"
+              :value="store.settings.logs.retention_days"
+              class="control-xs"
+              @update:value="setLogRetention"
+            />
+          </NFormItem>
+          <p v-if="paths" class="hint">{{ t("settings.logs.config") }}: {{ paths.config_path }}</p>
+          <p v-if="paths" class="hint">{{ t("settings.logs.dir") }}: {{ paths.log_dir }}</p>
+        </fieldset>
+
+        <div class="actions">
+          <NButton :loading="store.saving" type="primary" @click="saveSettings">
+            {{ t("settings.save") }}
+          </NButton>
+          <NButton @click="resetSettings">{{ t("settings.resetConfig") }}</NButton>
+          <span v-if="autoSaved" class="saved-tip">{{ autoSaved }}</span>
+        </div>
+      </NForm>
     </div>
   </section>
 </template>
 
-
 <style scoped>
 .settings {
+  box-sizing: border-box;
   height: 100%;
   overflow: hidden;
-  padding: 24px;
+  padding: 24px 32px;
   display: flex;
   flex-direction: column;
   gap: 16px;
   width: 100%;
-  max-width: 1180px;
-  margin: 0 auto;
+  max-width: none;
+  margin: 0;
 }
+
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 16px;
+  width: 100%;
 }
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.zoom-badge {
+  padding: 3px 9px;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 999px;
+  color: #9aa4b2;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.header-actions button {
+  padding: 6px 12px;
+  border: 1px solid rgb(255 255 255 / 15%);
+  border-radius: 6px;
+  background: rgb(255 255 255 / 8%);
+  color: #e6e6e6;
+  cursor: pointer;
+}
+
+.header-actions button:hover {
+  background: rgb(255 255 255 / 14%);
+}
+
 .settings-layout {
   display: flex;
-  gap: 2%;
+  gap: 32px;
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
   min-height: 0;
   flex: 1;
   overflow: hidden;
 }
+
 .settings-nav {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  flex: 0 0 18%;
+  justify-content: center;
+  gap: 6px;
+  flex: 0 0 200px;
+  padding: 8px 0;
   overflow-y: auto;
 }
+
 .settings-nav button {
-  text-align: left;
-  padding: 8px 10px;
+  width: 100%;
+  text-align: center;
+  padding: 10px 12px;
   border: none;
   border-radius: 6px;
   background: transparent;
   color: #9aa4b2;
   cursor: pointer;
 }
+
 .settings-nav button.active {
   background: rgb(37 99 235 / 22%);
   color: #fff;
 }
+
+@media (max-height: 680px) {
+  .settings-nav {
+    justify-content: flex-start;
+  }
+}
+
 .saved-tip {
   margin-left: 10px;
   font-size: 12px;
-  font-weight: 400;
   color: #34d399;
 }
+
 .settings-form {
+  display: flex;
   flex: 1;
+  flex-direction: column;
+  gap: 16px;
   min-width: 0;
   min-height: 0;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  margin: 0;
   padding-right: 4px;
+  overflow-y: auto;
 }
-.sections {
-  display: grid;
-  gap: 16px;
-  max-width: 900px;
-}
+
 fieldset {
   border: 1px solid #2a323c;
   border-radius: 6px;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 12px 16px;
+  padding: 14px 18px;
+  background: var(--panel-bg, rgb(0 0 0 / 35%));
 }
+
 legend {
   padding: 0 6px;
 }
-label {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-label.inline {
-  flex-direction: row;
+
+.settings-form :deep(.n-form-item) {
+  margin-bottom: 6px;
   align-items: center;
-  gap: 8px;
 }
-.shortcut-row {
-  display: grid;
-  grid-template-columns: 40% 1fr;
+
+.settings-form :deep(.n-form-item-label) {
+  padding-right: 20px;
+  color: #cbd5e1;
+  font-size: 13px;
+}
+
+.settings-form :deep(.n-form-item-blank) {
+  justify-content: flex-end;
+}
+
+.settings-form :deep(.n-form-item-blank) > * {
+  flex: none;
+}
+
+.control-xs {
+  width: 120px;
+}
+
+.control-sm {
+  width: 180px;
+}
+
+.control-md {
+  width: 320px;
+}
+
+.control-lg {
+  width: 420px;
+}
+
+.control-wide {
+  width: 100%;
+}
+
+.control-color {
+  width: 64px;
+}
+
+.settings-form :deep(.control-xs) {
+  width: 120px;
+}
+
+.settings-form :deep(.control-sm) {
+  width: 180px;
+}
+
+.settings-form :deep(.control-md) {
+  width: 320px;
+  max-width: 100%;
+}
+
+.settings-form :deep(.control-lg) {
+  width: 420px;
+  max-width: 100%;
+}
+
+.settings-form :deep(.control-wide) {
+  width: 100%;
+}
+
+.settings-form :deep(.control-color) {
+  width: 64px;
+}
+
+.slider-control {
+  display: flex;
   align-items: center;
   gap: 12px;
+  width: 360px;
+  max-width: 100%;
 }
-.shortcut-row input {
+
+.slider-control :deep(.n-slider) {
+  flex: 1;
+}
+
+.slider-value {
+  width: 2.5rem;
+  color: #9aa4b2;
+  font-size: 12px;
+  text-align: right;
+}
+
+.file-input {
+  width: 320px;
+  max-width: 100%;
+  color: #9aa4b2;
+  font: inherit;
+}
+
+.file-input::file-selector-button {
+  margin-right: 8px;
+  padding: 4px 8px;
+  border: 1px solid #2a323c;
+  border-radius: 4px;
+  background: #1d242c;
+  color: #e6e6e6;
+  cursor: pointer;
+}
+
+.shortcut-input {
+  width: 260px;
+  max-width: 100%;
+  padding: 5px 8px;
+  border: 1px solid #2a323c;
+  border-radius: 5px;
+  background: #101418;
+  color: #e6e6e6;
   font-family: ui-monospace, monospace;
+  font-size: 12px;
 }
+
+.proxy-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
 .proxy-list {
   display: flex;
   flex-direction: column;
@@ -658,101 +1055,56 @@ label.inline {
   padding: 0;
   list-style: none;
 }
+
 .proxy-row {
   display: grid;
-  grid-template-columns: 2% 1fr 1fr 0.6fr 1fr 1fr auto;
+  grid-template-columns: 1.5rem minmax(0, 0.8fr) minmax(0, 1.2fr) 6rem minmax(0, 1fr) minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
+  min-width: 0;
 }
+
+.proxy-row :deep(.n-input),
+.proxy-row :deep(.n-input-number),
+.proxy-row :deep(.n-base-selection) {
+  width: 100%;
+}
+
 .proxy-handle {
-  cursor: grab;
+  padding: 0;
+  border: none;
+  background: transparent;
   color: #9aa4b2;
+  cursor: grab;
   text-align: center;
 }
+
 .proxy-handle:active {
   cursor: grabbing;
 }
+
 .row-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
 }
+
 .actions {
   display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 12px;
 }
-.audit-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.audit-export {
-  display: flex;
-  gap: 8px;
-}
-.audit-export input {
-  flex: 1;
-  padding: 7px 9px;
-  border-radius: 6px;
-  border: 1px solid #2a323c;
-  background: #101418;
-  color: inherit;
-}
-.audit-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
-}
-.audit-table th,
-.audit-table td {
-  text-align: left;
-  padding: 6px 8px;
-  border-bottom: 1px solid rgb(255 255 255 / 8%);
-}
-.audit-table .mono {
-  font-family: ui-monospace, monospace;
-}
-.danger {
-  border-color: rgb(248 113 113 / 45%);
-  color: #f87171;
-}
-.metrics-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.metrics {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 8px 16px;
-  margin: 0;
-}
-.metrics div {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 4px 0;
-  border-bottom: 1px solid rgb(255 255 255 / 6%);
-}
-.metrics dt {
-  color: #9aa4b2;
-  font-size: 12px;
-}
-.metrics dd {
-  margin: 0;
-  font-family: ui-monospace, monospace;
-  font-size: 12px;
-}
+
 .preview {
   height: 48px;
   border: 1px solid #2a323c;
   border-radius: 6px;
 }
+
 .hint {
   color: #9aa4b2;
   margin: 0;
-}
-.error {
-  color: #ef4444;
+  font-size: 12px;
 }
 </style>

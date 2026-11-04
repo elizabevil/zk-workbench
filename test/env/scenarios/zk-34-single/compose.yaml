@@ -9,7 +9,7 @@ services:
     environment:
       ZOO_4LW_COMMANDS_WHITELIST: "*"
     healthcheck:
-      test: ["CMD-SHELL", "zkServer.sh status"]
+      test: [ "CMD-SHELL", "zkServer.sh status" ]
       interval: 5s
       timeout: 5s
       retries: 12

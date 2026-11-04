@@ -1,24 +1,22 @@
-<script setup lang="ts">
-import { computed, ref, watch } from "vue";
-import { useI18n } from "vue-i18n";
+<script lang="ts" setup>
+import {computed, ref, watch} from "vue";
+import {useI18n} from "vue-i18n";
 
-import { type InvokeRejection, toAppError } from "@/api/client";
-import { nodeChildren } from "@/api/node";
-import type { AppError } from "@/api/types/AppError";
+import {type InvokeRejection, toAppError} from "@/api/client";
+import {nodeChildren} from "@/api/node";
+import type {AppError} from "@/api/types/AppError";
 
 const props = defineProps<{
   connectionId: string;
   name: string;
   path: string;
   depth: number;
-  prefix: string;
-  isLast: boolean;
   selectedPath: string | null;
   expandedPaths: Set<string>;
 }>();
 
-const { t } = useI18n();
-const localError = ref(false);
+const {t} = useI18n();
+const localError = ref<AppError | null>(null);
 const emit = defineEmits<{
   select: [path: string];
   dblclick: [path: string];
@@ -26,7 +24,6 @@ const emit = defineEmits<{
   create: [path: string];
   edit: [path: string];
   delete: [path: string];
-  error: [error: AppError];
 }>();
 
 const loading = ref(false);
@@ -38,25 +35,24 @@ async function load(): Promise<void> {
     return;
   }
   loading.value = true;
-  localError.value = false;
+  localError.value = null;
   try {
     children.value = await nodeChildren(props.connectionId, props.path);
   } catch (raw) {
-    localError.value = true;
-    emit("error", toAppError(raw as InvokeRejection));
+    localError.value = toAppError(raw as InvokeRejection);
   } finally {
     loading.value = false;
   }
 }
 
 watch(
-  expanded,
-  (open) => {
-    if (open) {
-      void load();
-    }
-  },
-  { immediate: true },
+    expanded,
+    (open) => {
+      if (open) {
+        void load();
+      }
+    },
+    {immediate: true},
 );
 
 function toggle(): void {
@@ -71,151 +67,160 @@ function childPath(name: string): string {
 <template>
   <div class="node">
     <div
-      class="row"
-      :class="{ selected: path === selectedPath }"
-      role="treeitem"
-      tabindex="0"
-      :aria-selected="path === selectedPath"
-      @click="emit('select', path)"
-      @keydown.enter.prevent="emit('select', path)"
-      @keydown.space.prevent="emit('select', path)"
+        :aria-level="depth + 1"
+        :aria-selected="path === selectedPath"
+        :class="{ selected: path === selectedPath }"
+        class="row"
+        role="treeitem"
+        tabindex="0"
+        @click="emit('select', path)"
+        @keydown.enter.prevent="emit('select', path)"
+        @keydown.space.prevent="emit('select', path)"
     >
-      <span v-if="depth === 0" class="prefix mono" />
-      <span v-else class="prefix mono">{{ prefix }}{{ isLast ? "└─" : "├─" }}</span>
-      <button
-        class="twist"
-        type="button"
-        :aria-expanded="expanded"
-        @click.stop="toggle"
-      >
+      <span v-if="depth > 0" aria-hidden="true" class="dash">–</span>
+      <button :aria-expanded="expanded" class="twist" type="button" @click.stop="toggle">
         {{ expanded ? "▾" : "▸" }}
       </button>
       <button
-        class="label"
-        type="button"
-        @click="emit('select', path)"
-        @dblclick="emit('dblclick', path)"
+          class="label"
+          type="button"
+          @click="emit('select', path)"
+          @dblclick="emit('dblclick', path)"
       >
         {{ name }}
       </button>
       <span v-if="loading" class="muted">…</span>
-      <button v-else-if="localError" class="retry" type="button" @click="load">
+      <button
+          v-else-if="localError"
+          :title="t(localError.message_key)"
+          class="retry"
+          type="button"
+          @click="load"
+      >
         {{ t("shell.retry") }}
       </button>
       <div class="row-actions">
         <button
-          type="button"
-          class="action action-top"
-          :title="t('shell.newChild')"
-          @click.stop="emit('create', path)"
+            :title="t('shell.newChild')"
+            class="action action-top"
+            type="button"
+            @click.stop="emit('create', path)"
         >
           +
         </button>
         <button
-          v-if="path !== '/'"
-          type="button"
-          class="action action-right"
-          :title="t('shell.editNode')"
-          @click.stop="emit('edit', path)"
+            v-if="path !== '/'"
+            :title="t('shell.editNode')"
+            class="action action-right"
+            type="button"
+            @click.stop="emit('edit', path)"
         >
           ✎
         </button>
         <button
-          v-if="path !== '/'"
-          type="button"
-          class="action action-bottom"
-          :title="t('shell.deleteNode')"
-          @click.stop="emit('delete', path)"
+            v-if="path !== '/'"
+            :title="t('shell.deleteNode')"
+            class="action action-bottom"
+            type="button"
+            @click.stop="emit('delete', path)"
         >
           ×
         </button>
       </div>
     </div>
 
-    <div v-if="expanded">
+    <div v-if="expanded" class="children">
       <TreeNodeItem
-        v-for="(child, index) in children ?? []"
-        :key="child"
-        :connection-id="connectionId"
-        :name="child"
-        :path="childPath(child)"
-        :depth="depth + 1"
-        :prefix="prefix + (isLast ? '   ' : '│  ')"
-        :is-last="index === (children?.length ?? 0) - 1"
-        :selected-path="selectedPath"
-        :expanded-paths="expandedPaths"
-        @select="emit('select', $event)"
-        @dblclick="emit('dblclick', $event)"
-        @toggle="emit('toggle', $event)"
-        @create="emit('create', $event)"
-        @edit="emit('edit', $event)"
-        @delete="emit('delete', $event)"
-        @error="emit('error', $event)"
+          v-for="child in children ?? []"
+          :key="child"
+          :connection-id="connectionId"
+          :depth="depth + 1"
+          :expanded-paths="expandedPaths"
+          :name="child"
+          :path="childPath(child)"
+          :selected-path="selectedPath"
+          @create="emit('create', $event)"
+          @dblclick="emit('dblclick', $event)"
+          @delete="emit('delete', $event)"
+          @edit="emit('edit', $event)"
+          @select="emit('select', $event)"
+          @toggle="emit('toggle', $event)"
       />
-      <div
-        v-if="children && children.length === 0"
-        class="muted empty"
-      >
-        {{ prefix }}{{ isLast ? "   " : "│  " }}└─ —
-      </div>
+      <div v-if="children && children.length === 0" class="empty">—</div>
     </div>
   </div>
 </template>
 
 <style scoped>
 .node {
-  font-size: 12px;
+  font-size: 12.5px;
 }
+
 .row {
-  position: relative;
   display: flex;
   align-items: center;
-  gap: 2px;
-  padding: 1px 4px;
+  gap: 4px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 3px 6px;
   border-radius: 6px;
   cursor: pointer;
   white-space: nowrap;
 }
+
 .row:hover {
   background: rgb(255 255 255 / 5%);
 }
+
 .row.selected {
   background: rgb(34 211 238 / 8%);
   outline: 1px solid #22d3ee;
   outline-offset: -1px;
 }
-.prefix {
-  color: #303845;
+
+.dash {
+  flex: none;
+  color: rgb(148 163 184 / 42%);
   font-family: ui-monospace, monospace;
-  font-size: 11px;
   user-select: none;
 }
+
 .twist {
-  padding: 0 2px;
+  flex: none;
+  width: 1.1rem;
+  height: 1.1rem;
+  padding: 0;
   border: none;
   background: transparent;
   color: #9aa4b2;
   cursor: pointer;
   font-size: 10px;
+  line-height: 1;
 }
+
 .label {
-  padding: 1px 2px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0 2px;
   border: none;
   background: transparent;
   color: #d7dee8;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 12.5px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
 .row.selected .label {
   color: #fff;
   font-weight: 600;
 }
+
 .muted {
   color: #9aa4b2;
   font-size: 11px;
 }
+
 .retry {
   border: none;
   background: transparent;
@@ -223,57 +228,69 @@ function childPath(name: string): string {
   cursor: pointer;
   font-size: 11px;
 }
-.empty {
-  padding-left: 1.4rem;
+
+.children {
+  margin-left: 10px;
+  padding-left: 9px;
+  border-left: 1px solid rgb(148 163 184 / 22%);
 }
+
+.empty {
+  padding: 2px 6px;
+  color: #6b7280;
+  font-size: 11px;
+  user-select: none;
+}
+
 .row-actions {
-  position: absolute;
-  right: 4px;
-  top: 50%;
   display: inline-flex;
+  align-items: center;
   gap: 2px;
-  padding: 1px 3px;
-  border-radius: 999px;
-  background: rgb(0 0 0 / 45%);
+  max-width: 0;
+  overflow: hidden;
   opacity: 0;
   visibility: hidden;
-  pointer-events: none;
-  transform: translateY(-50%) scale(0.85);
-  transition:
-    opacity 100ms ease,
-    transform 100ms ease;
+  transition: max-width 120ms ease,
+  opacity 120ms ease;
 }
+
 .row:hover .row-actions,
-.row:focus-within .row-actions {
+.row:focus-within .row-actions,
+.row.selected .row-actions {
+  max-width: 7rem;
   opacity: 1;
   visibility: visible;
-  pointer-events: auto;
-  transform: translateY(-50%) scale(1);
 }
+
 .action {
-  width: 1rem;
-  height: 1rem;
+  flex: none;
+  width: 1.1rem;
+  height: 1.1rem;
   padding: 0;
   border: none;
   border-radius: 3px;
   background: transparent;
-  color: rgb(203 213 225 / 55%);
-  font-size: 0.7rem;
+  color: rgb(203 213 225 / 65%);
+  font-size: 0.75rem;
   line-height: 1;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
+
 .action-top {
-  color: rgb(52 211 153 / 60%);
+  color: rgb(52 211 153 / 70%);
 }
+
 .action-right {
-  color: rgb(96 165 250 / 60%);
+  color: rgb(96 165 250 / 70%);
 }
+
 .action-bottom {
-  color: rgb(248 113 113 / 60%);
+  color: rgb(248 113 113 / 70%);
 }
+
 .action:hover {
   background: rgb(255 255 255 / 10%);
   color: #fff;

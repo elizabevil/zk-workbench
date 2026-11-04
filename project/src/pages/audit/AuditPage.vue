@@ -1,15 +1,15 @@
-<script setup lang="ts">
-import { onMounted, onUnmounted, ref } from "vue";
-import { useI18n } from "vue-i18n";
-import { useRouter } from "vue-router";
+<script lang="ts" setup>
+import {onMounted, onUnmounted, ref} from "vue";
+import {useI18n} from "vue-i18n";
+import {useRouter} from "vue-router";
 
-import { auditClear, auditExport, auditList, auditPrune, auditVerify } from "@/api/audit";
-import { type InvokeRejection, toAppError } from "@/api/client";
-import type { AuditRecord } from "@/api/types/AuditRecord";
-import { useSettingsStore } from "@/stores/settings";
-import { toRfc3339 } from "@/utils/time";
+import {auditClear, auditExport, auditList, auditPrune, auditVerify} from "@/api/audit";
+import {type InvokeRejection, toAppError} from "@/api/client";
+import type {AuditRecord} from "@/api/types/AuditRecord";
+import {useSettingsStore} from "@/stores/settings";
+import {toRfc3339} from "@/utils/time";
 
-const { t } = useI18n();
+const {t} = useI18n();
 const router = useRouter();
 
 function goBack(): void {
@@ -19,6 +19,7 @@ function goBack(): void {
     void router.push("/");
   }
 }
+
 const store = useSettingsStore();
 const rows = ref<AuditRecord[]>([]);
 const message = ref("");
@@ -31,8 +32,8 @@ async function load(): Promise<void> {
 async function verify(): Promise<void> {
   const report = await auditVerify();
   message.value = report.ok
-    ? t("settings.audit.verified", { count: report.checked })
-    : t("settings.audit.broken", { id: report.broken_at });
+      ? t("settings.audit.verified", {count: report.checked})
+      : t("settings.audit.broken", {id: report.broken_at});
 }
 
 async function clear(): Promise<void> {
@@ -40,14 +41,14 @@ async function clear(): Promise<void> {
     return;
   }
   const cleared = await auditClear();
-  message.value = t("settings.audit.cleared", { count: cleared });
+  message.value = t("settings.audit.cleared", {count: cleared});
   await load();
 }
 
 async function prune(): Promise<void> {
   const days = store.settings?.audit.retention_days ?? 90;
   const removed = await auditPrune(days);
-  message.value = t("settings.audit.pruned", { count: removed });
+  message.value = t("settings.audit.pruned", {count: removed});
   await load();
 }
 
@@ -81,7 +82,7 @@ onUnmounted(() => window.removeEventListener("keydown", onEscape));
 </script>
 
 <template>
-  <main class="page">
+  <main class="page audit-page">
     <header class="head">
       <div>
         <h1>{{ t("settings.audit.title") }}</h1>
@@ -93,7 +94,7 @@ onUnmounted(() => window.removeEventListener("keydown", onEscape));
     <section v-if="store.settings" class="bar">
       <label>
         {{ t("settings.audit.retention") }}
-        <input v-model.number="store.settings.audit.retention_days" min="1" type="number" />
+        <input v-model.number="store.settings.audit.retention_days" min="1" type="number"/>
       </label>
       <button type="button" @click="saveRetention">{{ t("settings.save") }}</button>
       <button type="button" @click="load">{{ t("settings.audit.refresh") }}</button>
@@ -103,7 +104,7 @@ onUnmounted(() => window.removeEventListener("keydown", onEscape));
     </section>
 
     <section class="bar">
-      <input v-model="exportPath" :placeholder="t('settings.audit.exportPath')" />
+      <input v-model="exportPath" :placeholder="t('settings.audit.exportPath')"/>
       <button type="button" @click="exportLog">{{ t("settings.audit.export") }}</button>
       <span v-if="message" class="hint">{{ message }}</span>
     </section>
@@ -111,24 +112,24 @@ onUnmounted(() => window.removeEventListener("keydown", onEscape));
     <div class="table-wrap">
       <table class="audit-table">
         <thead>
-          <tr>
-            <th>{{ t("settings.audit.time") }}</th>
-            <th>{{ t("settings.audit.op") }}</th>
-            <th>{{ t("settings.audit.path") }}</th>
-            <th>{{ t("settings.audit.result") }}</th>
-            <th>{{ t("settings.audit.actor") }}</th>
-            <th>{{ t("settings.audit.detail") }}</th>
-          </tr>
+        <tr>
+          <th>{{ t("settings.audit.time") }}</th>
+          <th>{{ t("settings.audit.op") }}</th>
+          <th>{{ t("settings.audit.path") }}</th>
+          <th>{{ t("settings.audit.result") }}</th>
+          <th>{{ t("settings.audit.actor") }}</th>
+          <th>{{ t("settings.audit.detail") }}</th>
+        </tr>
         </thead>
         <tbody>
-          <tr v-for="row in rows" :key="row.id">
-            <td class="mono">{{ toRfc3339(row.ts) }}</td>
-            <td>{{ row.op }}</td>
-            <td class="mono">{{ row.path }}</td>
-            <td>{{ row.result }}</td>
-            <td>{{ row.actor }}</td>
-            <td>{{ row.detail }}</td>
-          </tr>
+        <tr v-for="row in rows" :key="row.id">
+          <td class="mono">{{ toRfc3339(row.ts) }}</td>
+          <td>{{ row.op }}</td>
+          <td class="mono">{{ row.path }}</td>
+          <td>{{ row.result }}</td>
+          <td>{{ row.actor }}</td>
+          <td>{{ row.detail }}</td>
+        </tr>
         </tbody>
       </table>
       <p v-if="!rows.length" class="hint">{{ t("settings.audit.empty") }}</p>
@@ -138,41 +139,78 @@ onUnmounted(() => window.removeEventListener("keydown", onEscape));
 
 <style scoped>
 .page {
+  box-sizing: border-box;
   height: 100%;
   overflow-y: auto;
   padding: 24px;
   display: flex;
   flex-direction: column;
   gap: 16px;
+  background: var(--panel-bg, rgb(0 0 0 / 50%));
+  backdrop-filter: blur(10px) saturate(120%);
 }
+
 .head {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 16px;
 }
+
 h1 {
   margin: 0 0 4px;
   font-size: 20px;
 }
+
 .bar {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
 }
+
 .bar input {
   min-width: 6rem;
 }
+
+.page button {
+  padding: 6px 12px;
+  border: 1px solid rgb(255 255 255 / 15%);
+  border-radius: 6px;
+  background: rgb(255 255 255 / 8%);
+  color: #e6e6e6;
+  cursor: pointer;
+}
+
+.page button:hover {
+  background: rgb(255 255 255 / 14%);
+}
+
+.page input {
+  padding: 6px 9px;
+  border: 1px solid #2a323c;
+  border-radius: 6px;
+  background: #101418;
+  color: #e6e6e6;
+}
+
+.audit-table th {
+  color: #9aa4b2;
+  font-weight: 600;
+  background: rgb(255 255 255 / 4%);
+}
+
 .table-wrap {
   flex: 1;
   overflow: auto;
 }
+
 .audit-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 12px;
 }
+
 .audit-table th,
 .audit-table td {
   text-align: left;
@@ -180,6 +218,7 @@ h1 {
   border-bottom: 1px solid rgb(255 255 255 / 8%);
   white-space: nowrap;
 }
+
 .mono {
   font-family: ui-monospace, monospace;
 }

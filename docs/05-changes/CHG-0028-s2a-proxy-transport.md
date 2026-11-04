@@ -11,15 +11,15 @@ last-updated: 2026-11-02
 
 ## 交付
 
-| 模块 | 内容 |
-|---|---|
-| `transport/proxy.rs` | `ProxyKind`（socks5/http_connect）、`ProxyProfile` |
-| `transport/no_proxy.rs` | 精确主机、`.suffix`、`*.suffix`、`*` 匹配，大小写不敏感 |
-| `transport/upstream.rs` | 直连、SOCKS5（含认证）、HTTP CONNECT（含 Basic 认证） |
-| `transport/relay.rs` | `127.0.0.1:0` 本地中继，每次接受连接重建上游，`Drop` 释放 |
-| `error` | 新增 `proxy_connect`、`proxy_handshake` 类别与文案 key |
-| `connection/manager.rs` | 连接可选代理；失败按 3s/6s/10s/10s 重试，最多 5 次 |
-| `ipc/connection.rs` | `CreateConnection.proxy` 字段，ts-rs 生成前端类型 |
+| 模块                    | 内容                                                      |
+|-------------------------|-----------------------------------------------------------|
+| `transport/proxy.rs`    | `ProxyKind`（socks5/http_connect）、`ProxyProfile`        |
+| `transport/no_proxy.rs` | 精确主机、`.suffix`、`*.suffix`、`*` 匹配，大小写不敏感   |
+| `transport/upstream.rs` | 直连、SOCKS5（含认证）、HTTP CONNECT（含 Basic 认证）     |
+| `transport/relay.rs`    | `127.0.0.1:0` 本地中继，每次接受连接重建上游，`Drop` 释放 |
+| `error`                 | 新增 `proxy_connect`、`proxy_handshake` 类别与文案 key    |
+| `connection/manager.rs` | 连接可选代理；失败按 3s/6s/10s/10s 重试，最多 5 次        |
+| `ipc/connection.rs`     | `CreateConnection.proxy` 字段，ts-rs 生成前端类型         |
 
 ## 真实环境验证
 
@@ -49,7 +49,7 @@ cargo test -p zkui-core --test transport --test connection -- --ignored --test-t
 - 客户端始终连接本地中继，代理协议对 `zookeeper-client` 透明；
 - 中继绑定临时端口，连接关闭或句柄释放即中止；
 - 代理失败返回 `proxy_connect` / `proxy_handshake`，`fields.detail` 含阶段，不误报为集群故障；
-- 重试策略固定为 5 次、3s/6s/10s/10s；**尚不可从设置修改**。
+- 重试策略固定为 5 次、3s/6s/10s/10s； **尚不可从设置修改**。
 
 ## 未完成
 

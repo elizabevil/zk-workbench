@@ -11,12 +11,12 @@ last-updated: 2026-11-03
 
 ## 变更
 
-| 层 | 内容 |
-|---|---|
-| core | `ConnectionManager::children`（直接子节点、排序）、`stat`（Stat 子集） |
-| DTO | `NodeStat { path, version, cversion, aversion, data_length, num_children, ephemeral_owner, czxid, mzxid, ctime, mtime }` |
-| 命令 | `node_children`、`node_stat` |
-| 前端 | 可展开树（按需加载、子节点缓存）、路径选中、Stat 面板、刷新 |
+| 层   | 内容                                                                                                                     |
+|------|--------------------------------------------------------------------------------------------------------------------------|
+| core | `ConnectionManager::children`（直接子节点、排序）、`stat`（Stat 子集）                                                   |
+| DTO  | `NodeStat { path, version, cversion, aversion, data_length, num_children, ephemeral_owner, czxid, mzxid, ctime, mtime }` |
+| 命令 | `node_children`、`node_stat`                                                                                             |
+| 前端 | 可展开树（按需加载、子节点缓存）、路径选中、Stat 面板、刷新                                                              |
 
 ## 行为
 

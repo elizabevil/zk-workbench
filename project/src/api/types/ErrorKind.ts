@@ -3,4 +3,31 @@
 /**
  * 错误类型，仅表示域内类型，不带域前缀；域由 `ErrorScope` 表示。
  */
-export type ErrorKind = "no_node" | "no_auth" | "bad_version" | "node_exists" | "not_empty" | "session_expired" | "auth_failed" | "connection_loss" | "no_children_for_ephemerals" | "invalid_acl" | "quota_exceeded" | "unimplemented" | "timeout" | "other" | "invalid_path" | "not_found" | "closed" | "secret_store" | "audit_failed" | "otel_export_failed" | "cancelled" | "command_invalid" | "connect" | "handshake" | "invalid_argument" | "stale_generation" | "unknown";
+export type ErrorKind =
+    "no_node"
+    | "no_auth"
+    | "bad_version"
+    | "node_exists"
+    | "not_empty"
+    | "session_expired"
+    | "auth_failed"
+    | "connection_loss"
+    | "no_children_for_ephemerals"
+    | "invalid_acl"
+    | "quota_exceeded"
+    | "unimplemented"
+    | "timeout"
+    | "other"
+    | "invalid_path"
+    | "not_found"
+    | "closed"
+    | "secret_store"
+    | "audit_failed"
+    | "otel_export_failed"
+    | "cancelled"
+    | "command_invalid"
+    | "connect"
+    | "handshake"
+    | "invalid_argument"
+    | "stale_generation"
+    | "unknown";

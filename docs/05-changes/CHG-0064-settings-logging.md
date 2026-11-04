@@ -11,7 +11,8 @@ last-updated: 2026-11-03
 
 ## 通知
 
-`NotificationSettings.desktop` 改为 `NotificationLevel` 枚举：`off / errors / warnings / all`，默认 `errors`；保留命令完成提醒与声音开关。场景：错误必达、警告可选、全部信息可开；命令完成单独控制。
+`NotificationSettings.desktop` 改为 `NotificationLevel` 枚举：`off / errors / warnings / all`，默认 `errors`
+；保留命令完成提醒与声音开关。场景：错误必达、警告可选、全部信息可开；命令完成单独控制。
 
 ## 日志
 

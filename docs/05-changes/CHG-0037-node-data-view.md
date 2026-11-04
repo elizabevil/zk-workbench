@@ -11,11 +11,11 @@ last-updated: 2026-11-03
 
 ## 交付
 
-| 层 | 内容 |
-|---|---|
-| DTO | `NodeData { path, data_b64, byte_len, is_text, stat }` |
-| core | `ConnectionManager::data`，按原始字节返回，UTF-8 判定 `is_text` |
-| 命令 | `node_data` |
+| 层   | 内容                                                                 |
+|------|----------------------------------------------------------------------|
+| DTO  | `NodeData { path, data_b64, byte_len, is_text, stat }`               |
+| core | `ConnectionManager::data`，按原始字节返回，UTF-8 判定 `is_text`      |
+| 命令 | `node_data`                                                          |
 | 前端 | 数据/Stat 标签页；文本原始与 JSON 格式化切换；二进制只读十六进制预览 |
 
 ## 行为

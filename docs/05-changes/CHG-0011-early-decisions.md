@@ -19,12 +19,12 @@ last-updated: 2026-11-02
 
 产品负责人确定为四档，新建时默认「永不保存」：
 
-| 范围 | 语义 | 存储 |
-|---|---|---|
-| 永不保存 | 仅本次连接有效，断开即失效 | 内存 |
-| for session | 保留到当前 ZooKeeper 会话关闭 | 内存 |
-| until restart | 保留到应用退出 | 内存 |
-| forever | 跨重启可用 | 系统凭据存储 |
+| 范围          | 语义                          | 存储         |
+|---------------|-------------------------------|--------------|
+| 永不保存      | 仅本次连接有效，断开即失效    | 内存         |
+| for session   | 保留到当前 ZooKeeper 会话关闭 | 内存         |
+| until restart | 保留到应用退出                | 内存         |
+| forever       | 跨重启可用                    | 系统凭据存储 |
 
 除 forever 外不得写入磁盘；无可用系统凭据存储时只能使用前三档。对应 `REQ-AUTH-CRED-003`、`REQ-AUTH-CRED-004`。
 
@@ -42,7 +42,8 @@ last-updated: 2026-11-02
 
 ### A5 大节点阈值
 
-预览 4 KiB、超过 1 MiB 提示、完整加载显式触发；标为实验值。因数值用户可见，按 `META.md` 第 9 节写入 `REQ-DATA-LARGE-002` 而非 `dec/`。
+预览 4 KiB、超过 1 MiB 提示、完整加载显式触发；标为实验值。因数值用户可见，按 `META.md` 第 9 节写入 `REQ-DATA-LARGE-002` 而非
+`dec/`。
 
 ### A6 平台最低版本
 
@@ -58,7 +59,8 @@ Windows 10 1809+、macOS 12+、Ubuntu 22.04+（WebKitGTK 2.40+），作为验证
 
 ## 影响文件
 
-`req/auth.stmts.md`、`req/conn.stmts.md`、`req/data.stmts.md`、`req/cli.stmts.md` 新增语句；`ver/` 补对应用例；新增 `ver/release.md`、`dec/platform.md`；`dec/tech-route.md` 的 `DEC-004` 补四档范围。
+`req/auth.stmts.md`、`req/conn.stmts.md`、`req/data.stmts.md`、`req/cli.stmts.md` 新增语句；`ver/` 补对应用例；新增
+`ver/release.md`、`dec/platform.md`；`dec/tech-route.md` 的 `DEC-004` 补四档范围。
 
 ## 非目标（Non-Goals）
 

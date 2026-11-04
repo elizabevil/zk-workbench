@@ -22,14 +22,16 @@ last-updated: 2026-11-02
 1. 子节点按需加载；缓存只作为浏览加速，不作为节点数据编辑依据。
 2. 路径直达与全局搜索是不同能力。路径直达是有限的定向请求；本地索引搜索只覆盖已加载节点；全树搜索若提供，应显式启动并控制负载。
 3. ZooKeeper Watcher 不能充当完整变更日志；缓存需结合 generation、TTL、局部失效和手动刷新。
-4. ZooKeeper 客户端是有状态 session。按逻辑连接复用长期客户端，不按单次操作创建连接；连接之间隔离 session、Watcher、generation、缓存和审计上下文。
+4. ZooKeeper 客户端是有状态 session。按逻辑连接复用长期客户端，不按单次操作创建连接；连接之间隔离
+   session、Watcher、generation、缓存和审计上下文。
 5. 缓存 TTL、连接上限和空闲策略目前没有证据支持固定数值，交由 TEST-002、TEST-003 实测并由产品确认。
 
 ## 来源与证据
 
 ### E-001 Apache ZooKeeper Programmer’s Guide
 
-[官方指南（3.4.9）](https://zookeeper.apache.org/doc/r3.4.9/zookeeperProgrammers.pdf) 描述 znode 树、读取/Stat、版本检查、session 和 Watcher。其 Watcher 章节说明经典 Watcher 为一次性通知，重新注册间隙可能发生多次变化。
+[官方指南（3.4.9）](https://zookeeper.apache.org/doc/r3.4.9/zookeeperProgrammers.pdf) 描述 znode 树、读取/Stat、版本检查、session
+和 Watcher。其 Watcher 章节说明经典 Watcher 为一次性通知，重新注册间隙可能发生多次变化。
 
 **支持**：version CAS 的依据、Watcher 不等同变更日志、客户端会话有状态。
 

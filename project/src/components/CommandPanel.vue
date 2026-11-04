@@ -1,12 +1,12 @@
-<script setup lang="ts">
-import { computed, ref, watch } from "vue";
-import { useI18n } from "vue-i18n";
+<script lang="ts" setup>
+import {computed, ref, watch} from "vue";
+import {useI18n} from "vue-i18n";
 
-import { type InvokeRejection, toAppError } from "@/api/client";
-import { COMMAND_NAMES, commandExecute, commandPreview } from "@/api/command";
-import { nodeChildren } from "@/api/node";
-import type { AppError } from "@/api/types/AppError";
-import { useHistoryStore } from "@/stores/history";
+import {type InvokeRejection, toAppError} from "@/api/client";
+import {COMMAND_NAMES, commandExecute, commandPreview} from "@/api/command";
+import {nodeChildren} from "@/api/node";
+import type {AppError} from "@/api/types/AppError";
+import {useHistoryStore} from "@/stores/history";
 
 const props = defineProps<{
   connectionId: string;
@@ -17,7 +17,7 @@ const emit = defineEmits<{
   refresh: [];
 }>();
 
-const { t } = useI18n();
+const {t} = useI18n();
 const input = ref("");
 const output = ref("");
 const running = ref(false);
@@ -43,8 +43,8 @@ async function complete(): Promise<void> {
       return;
     }
     const index =
-      completion.value?.prefix === token ? (completion.value.index + 1) % candidates.length : 0;
-    completion.value = { prefix: token, index };
+        completion.value?.prefix === token ? (completion.value.index + 1) % candidates.length : 0;
+    completion.value = {prefix: token, index};
     input.value = `${candidates[index]} `;
     return;
   }
@@ -56,14 +56,14 @@ async function complete(): Promise<void> {
   try {
     const children = await nodeChildren(props.connectionId, parent);
     const candidates = children
-      .filter((name) => name.startsWith(prefix))
-      .map((name) => `${parent === "/" ? "" : parent}/${name}`);
+        .filter((name) => name.startsWith(prefix))
+        .map((name) => `${parent === "/" ? "" : parent}/${name}`);
     if (candidates.length === 0) {
       return;
     }
     const index =
-      completion.value?.prefix === token ? (completion.value.index + 1) % candidates.length : 0;
-    completion.value = { prefix: token, index };
+        completion.value?.prefix === token ? (completion.value.index + 1) % candidates.length : 0;
+    completion.value = {prefix: token, index};
     input.value = value.slice(0, lastSpace + 1) + candidates[index];
   } catch {
     // 补全失败不打断输入
@@ -99,14 +99,14 @@ async function run(): Promise<void> {
 }
 
 watch(
-  () => history.draft,
-  (line) => {
-    if (line) {
-      input.value = line;
-      history.setDraft("");
-      void run();
-    }
-  },
+    () => history.draft,
+    (line) => {
+      if (line) {
+        input.value = line;
+        history.setDraft("");
+        void run();
+      }
+    },
 );
 
 function previous(): void {
@@ -137,57 +137,59 @@ function next(): void {
     </header>
 
     <div class="body">
-      <pre class="output">{{ output || t("command.emptyOutput") }}</pre>
+      <pre class="output" :class="{ 'output-error': error }">{{ output || t("command.emptyOutput") }}</pre>
     </div>
 
     <form class="input-row" @submit.prevent="run">
       <input
-        v-model="input"
-        :placeholder="t('command.placeholder')"
-        :disabled="running"
-        spellcheck="false"
-        @keydown.up.prevent="previous"
-        @keydown.down.prevent="next"
-        @keydown.tab.prevent="complete"
+          v-model="input"
+          :disabled="running"
+          :placeholder="t('command.placeholder')"
+          spellcheck="false"
+          @keydown.up.prevent="previous"
+          @keydown.down.prevent="next"
+          @keydown.tab.prevent="complete"
       />
       <button :disabled="!canRun" type="submit">
         {{ running ? t("command.running") : t("command.run") }}
       </button>
     </form>
-    <p v-if="error" class="error error-line">
-      {{ t(error.message_key) }}
-      <span v-if="error.fields.detail">：{{ error.fields.detail }}</span>
-    </p>
   </section>
 </template>
 
 <style scoped>
 .command {
+  box-sizing: border-box;
   display: grid;
-  grid-template-rows: auto 1fr auto auto;
+  grid-template-rows: auto 1fr auto;
   gap: 6px;
-  height: 24vh;
-  min-height: 150px;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
   padding: 8px 12px;
   border-top: 1px solid rgb(255 255 255 / 8%);
   background: rgb(10 13 16 / 92%);
 }
+
 .head-actions {
   display: flex;
   align-items: center;
   gap: 8px;
 }
+
 .head {
   display: flex;
   justify-content: space-between;
   font-size: 12px;
   color: #9aa4b2;
 }
+
 .body {
   display: flex;
   gap: 10px;
   min-height: 0;
 }
+
 .output {
   flex: 1;
   margin: 0;
@@ -201,10 +203,17 @@ function next(): void {
   line-height: 1.55;
   white-space: pre-wrap;
 }
+
+.output-error {
+  border-color: rgb(248 113 113 / 35%);
+  color: #f87171;
+}
+
 .input-row {
   display: flex;
   gap: 6px;
 }
+
 .input-row input {
   flex: 1;
   padding: 6px 9px;
@@ -215,6 +224,7 @@ function next(): void {
   font-family: ui-monospace, monospace;
   font-size: 12px;
 }
+
 button {
   padding: 6px 12px;
   border-radius: 5px;
@@ -223,15 +233,9 @@ button {
   color: inherit;
   cursor: pointer;
 }
+
 .muted {
   color: #9aa4b2;
   font-size: 11px;
-}
-.error {
-  color: #f87171;
-}
-.error-line {
-  margin: 0;
-  font-size: 12px;
 }
 </style>

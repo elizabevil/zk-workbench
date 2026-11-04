@@ -1,17 +1,17 @@
-<script setup lang="ts">
-import { onMounted, onUnmounted, ref } from "vue";
-import { useI18n } from "vue-i18n";
-import { useRouter } from "vue-router";
+<script lang="ts" setup>
+import {onMounted, onUnmounted, ref} from "vue";
+import {useI18n} from "vue-i18n";
+import {useRouter} from "vue-router";
 
-import { type InvokeRejection, toAppError } from "@/api/client";
-import { metricsSnapshot } from "@/api/metrics";
-import { otelExportNow, otelStatus } from "@/api/otel";
-import type { MetricsSnapshot } from "@/api/types/MetricsSnapshot";
-import type { OtelExportStatus } from "@/api/types/OtelExportStatus";
-import { useSettingsStore } from "@/stores/settings";
-import { toRfc3339 } from "@/utils/time";
+import {type InvokeRejection, toAppError} from "@/api/client";
+import {metricsSnapshot} from "@/api/metrics";
+import {otelExportNow, otelStatus} from "@/api/otel";
+import type {MetricsSnapshot} from "@/api/types/MetricsSnapshot";
+import type {OtelExportStatus} from "@/api/types/OtelExportStatus";
+import {useSettingsStore} from "@/stores/settings";
+import {toRfc3339} from "@/utils/time";
 
-const { t } = useI18n();
+const {t} = useI18n();
 const router = useRouter();
 
 function goBack(): void {
@@ -21,6 +21,7 @@ function goBack(): void {
     void router.push("/");
   }
 }
+
 const store = useSettingsStore();
 const metrics = ref<MetricsSnapshot | null>(null);
 const otel = ref<OtelExportStatus | null>(null);
@@ -62,7 +63,7 @@ onUnmounted(() => window.removeEventListener("keydown", onEscape));
 </script>
 
 <template>
-  <main class="page">
+  <main class="page observability-page">
     <header class="head">
       <div>
         <h1>{{ t("settings.observability.title") }}</h1>
@@ -73,16 +74,17 @@ onUnmounted(() => window.removeEventListener("keydown", onEscape));
 
     <section v-if="store.settings" class="card">
       <label class="inline">
-        <input v-model="store.settings.observability.otel.enabled" type="checkbox" />
+        <input v-model="store.settings.observability.otel.enabled" type="checkbox"/>
         {{ t("settings.observability.otlp") }}
       </label>
       <label>
         {{ t("settings.observability.endpoint") }}
-        <input v-model="store.settings.observability.otel.endpoint" />
+        <input v-model="store.settings.observability.otel.endpoint"/>
       </label>
       <label>
         {{ t("settings.observability.sampleRatio") }}
-        <input v-model.number="store.settings.observability.otel.sample_ratio" max="1" min="0" step="0.1" type="number" />
+        <input v-model.number="store.settings.observability.otel.sample_ratio" max="1" min="0" step="0.1"
+               type="number"/>
       </label>
       <div class="actions">
         <button type="button" @click="save">{{ t("settings.save") }}</button>
@@ -110,23 +112,29 @@ onUnmounted(() => window.removeEventListener("keydown", onEscape));
 
 <style scoped>
 .page {
+  box-sizing: border-box;
   height: 100%;
   overflow-y: auto;
   padding: 24px;
   display: flex;
   flex-direction: column;
   gap: 16px;
+  background: var(--panel-bg, rgb(0 0 0 / 50%));
+  backdrop-filter: blur(10px) saturate(120%);
 }
+
 .head {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 16px;
 }
+
 h1 {
   margin: 0 0 4px;
   font-size: 20px;
 }
+
 .card {
   display: flex;
   flex-direction: column;
@@ -135,20 +143,45 @@ h1 {
   border: 1px solid rgb(255 255 255 / 8%);
   border-radius: 8px;
 }
+
+.page button {
+  padding: 6px 12px;
+  border: 1px solid rgb(255 255 255 / 15%);
+  border-radius: 6px;
+  background: rgb(255 255 255 / 8%);
+  color: #e6e6e6;
+  cursor: pointer;
+}
+
+.page button:hover {
+  background: rgb(255 255 255 / 14%);
+}
+
+.page input {
+  padding: 6px 9px;
+  border: 1px solid #2a323c;
+  border-radius: 6px;
+  background: #101418;
+  color: #e6e6e6;
+}
+
 .inline {
   flex-direction: row;
   align-items: center;
   gap: 8px;
 }
+
 .actions {
   display: flex;
   gap: 8px;
 }
+
 .metrics {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
   gap: 8px;
 }
+
 .metric {
   display: flex;
   flex-direction: column;
@@ -157,10 +190,12 @@ h1 {
   border: 1px solid rgb(255 255 255 / 8%);
   border-radius: 6px;
 }
+
 .label {
   color: #9aa4b2;
   font-size: 11px;
 }
+
 .value {
   font-family: ui-monospace, monospace;
   font-size: 18px;

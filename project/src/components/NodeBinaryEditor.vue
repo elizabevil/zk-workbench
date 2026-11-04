@@ -1,12 +1,12 @@
-<script setup lang="ts">
-import { computed, ref, watch } from "vue";
-import { useI18n } from "vue-i18n";
+<script lang="ts" setup>
+import {computed, ref, watch} from "vue";
+import {useI18n} from "vue-i18n";
 
-import { type InvokeRejection, toAppError } from "@/api/client";
-import { nodeSet } from "@/api/node";
-import type { AppError } from "@/api/types/AppError";
-import type { NodeStat } from "@/api/types/NodeStat";
-import { decodeBase64Bytes, encodeBytesBase64 } from "@/utils/encoding";
+import {type InvokeRejection, toAppError} from "@/api/client";
+import {nodeSet} from "@/api/node";
+import type {AppError} from "@/api/types/AppError";
+import type {NodeStat} from "@/api/types/NodeStat";
+import {decodeBase64Bytes, encodeBytesBase64} from "@/utils/encoding";
 
 const props = defineProps<{
   open: boolean;
@@ -22,7 +22,7 @@ const emit = defineEmits<{
   saved: [stat: NodeStat];
 }>();
 
-const { t } = useI18n();
+const {t} = useI18n();
 const hex = ref("");
 const error = ref<AppError | null>(null);
 const localError = ref("");
@@ -30,15 +30,15 @@ const saving = ref(false);
 const fileName = ref("");
 
 watch(
-  () => props.open,
-  (open) => {
-    if (open) {
-      hex.value = "";
-      error.value = null;
-      localError.value = "";
-      fileName.value = "";
-    }
-  },
+    () => props.open,
+    (open) => {
+      if (open) {
+        hex.value = "";
+        error.value = null;
+        localError.value = "";
+        fileName.value = "";
+      }
+    },
 );
 
 const newBytes = computed<Uint8Array | null>(() => {
@@ -94,10 +94,10 @@ async function save(): Promise<void> {
   error.value = null;
   try {
     const stat = await nodeSet(
-      props.connectionId,
-      props.path,
-      encodeBytesBase64(newBytes.value),
-      props.version,
+        props.connectionId,
+        props.path,
+        encodeBytesBase64(newBytes.value),
+        props.version,
     );
     emit("saved", stat);
   } catch (raw) {
@@ -117,13 +117,13 @@ async function save(): Promise<void> {
 
         <label class="file">
           {{ t("binary.file") }}
-          <input type="file" @change="pickFile" />
+          <input type="file" @change="pickFile"/>
           <span v-if="fileName" class="muted">{{ fileName }}</span>
         </label>
 
         <label>
           {{ t("binary.hex") }}
-          <textarea v-model="hex" class="hex" spellcheck="false" />
+          <textarea v-model="hex" class="hex" spellcheck="false"/>
         </label>
 
         <p class="muted">
@@ -137,7 +137,7 @@ async function save(): Promise<void> {
 
         <div class="actions">
           <button type="button" @click="emit('close')">{{ t("binary.cancel") }}</button>
-          <button class="danger" :disabled="saving" type="button" @click="save">
+          <button :disabled="saving" class="danger" type="button" @click="save">
             {{ saving ? t("binary.saving") : t("binary.save") }}
           </button>
         </div>
@@ -155,6 +155,7 @@ async function save(): Promise<void> {
   background: rgb(0 0 0 / 55%);
   z-index: 95;
 }
+
 .dialog {
   width: min(720px, 94vw);
   display: flex;
@@ -165,21 +166,25 @@ async function save(): Promise<void> {
   background: #171c22;
   border: 1px solid #2a323c;
 }
+
 h2 {
   margin: 0;
   font-size: 17px;
 }
+
 .path {
   margin: 0;
   font-family: ui-monospace, monospace;
   word-break: break-all;
 }
+
 label {
   display: flex;
   flex-direction: column;
   gap: 4px;
   font-size: 13px;
 }
+
 .hex {
   min-height: 180px;
   padding: 10px;
@@ -190,11 +195,13 @@ label {
   font-family: ui-monospace, monospace;
   font-size: 12px;
 }
+
 .actions {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
 }
+
 button {
   padding: 7px 13px;
   border-radius: 6px;
@@ -203,15 +210,18 @@ button {
   color: inherit;
   cursor: pointer;
 }
+
 .danger {
   background: #b91c1c;
   border-color: #b91c1c;
 }
+
 .error {
   color: #ef4444;
   margin: 0;
   font-size: 13px;
 }
+
 .muted {
   color: #9aa4b2;
   font-size: 12px;

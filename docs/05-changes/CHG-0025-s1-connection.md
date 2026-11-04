@@ -11,13 +11,13 @@ last-updated: 2026-11-02
 
 ## 交付
 
-| 层 | 文件 |
-|---|---|
-| core 错误 | `error/mod.rs`、`error/zk.rs`、`error/app.rs` |
-| core 连接 | `connection/{mod,state,identity,handle,manager}.rs` |
-| core 契约 | `ipc/{mod,connection,events}.rs`，ts-rs 生成到 `src/api/types/` |
-| Tauri | `state.rs`、`commands/{mod,connection}.rs`、`events.rs`、`lib.rs` |
-| 前端 | `api/{client,connection,events}.ts`、`stores/connection.ts`、`pages/workbench/index.vue`、`i18n/*`、`router/index.ts`、`main.ts`、`App.vue` |
+| 层        | 文件                                                                                                                                        |
+|-----------|---------------------------------------------------------------------------------------------------------------------------------------------|
+| core 错误 | `error/mod.rs`、`error/zk.rs`、`error/app.rs`                                                                                               |
+| core 连接 | `connection/{mod,state,identity,handle,manager}.rs`                                                                                         |
+| core 契约 | `ipc/{mod,connection,events}.rs`，ts-rs 生成到 `src/api/types/`                                                                             |
+| Tauri     | `state.rs`、`commands/{mod,connection}.rs`、`events.rs`、`lib.rs`                                                                           |
+| 前端      | `api/{client,connection,events}.ts`、`stores/connection.ts`、`pages/workbench/index.vue`、`i18n/*`、`router/index.ts`、`main.ts`、`App.vue` |
 
 ## 行为
 
@@ -28,7 +28,8 @@ last-updated: 2026-11-02
 
 ## 事件命名
 
-采用 `<domain>.<entity>.<action>`（点分隔），替代最初的 `connection:state`。原因：Tauri 对冒号无限制，但点号在日志、SSE/WebSocket 桥接、URL 场景无需转义；事件名集中定义，便于后续追加新域。
+采用 `<domain>.<entity>.<action>`（点分隔），替代最初的 `connection:state`。原因：Tauri 对冒号无限制，但点号在日志、SSE/WebSocket
+桥接、URL 场景无需转义；事件名集中定义，便于后续追加新域。
 
 ## 验证
 

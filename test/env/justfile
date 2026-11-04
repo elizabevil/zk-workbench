@@ -19,9 +19,9 @@ list:
 up scenario:
     #!/usr/bin/env bash
     set -euo pipefail
-    dir="scenarios/{{scenario}}"
+    dir="scenarios/{{ scenario }}"
     if [ ! -f "$dir/compose.yaml" ]; then
-      echo "未知场景：{{scenario}}；可用场景见 just list" >&2
+      echo "未知场景：{{ scenario }}；可用场景见 just list" >&2
       exit 1
     fi
     runtime=""
@@ -41,9 +41,9 @@ up scenario:
 down scenario:
     #!/usr/bin/env bash
     set -euo pipefail
-    dir="scenarios/{{scenario}}"
+    dir="scenarios/{{ scenario }}"
     if [ ! -f "$dir/compose.yaml" ]; then
-      echo "未知场景：{{scenario}}；可用场景见 just list" >&2
+      echo "未知场景：{{ scenario }}；可用场景见 just list" >&2
       exit 1
     fi
     runtime=""

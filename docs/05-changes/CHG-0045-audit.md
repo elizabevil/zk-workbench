@@ -11,13 +11,13 @@ last-updated: 2026-11-03
 
 ## 交付
 
-| 层 | 内容 |
-|---|---|
-| 存储 | `<data_dir>/zkui/audit.db`，SQLite WAL；`audit_log` 表 |
-| 完整性 | 每条记录含 `prev_hash`/`hash`（SHA-256），提供校验并定位断链位置 |
-| 记录范围 | 仅本应用变更：`set`、`create`、`delete`；成功与失败都记录 |
-| 命令 | `audit_list`、`audit_verify`、`audit_prune`、`audit_clear`、`audit_export` |
-| 前端 | 设置页「审计」：最近 100 条、按路径过滤（命令支持）、校验、按保留期清理、清空（确认）、导出 SQLite 快照 |
+| 层       | 内容                                                                                                    |
+|----------|---------------------------------------------------------------------------------------------------------|
+| 存储     | `<data_dir>/zkui/audit.db`，SQLite WAL；`audit_log` 表                                                  |
+| 完整性   | 每条记录含 `prev_hash`/`hash`（SHA-256），提供校验并定位断链位置                                        |
+| 记录范围 | 仅本应用变更：`set`、`create`、`delete`；成功与失败都记录                                               |
+| 命令     | `audit_list`、`audit_verify`、`audit_prune`、`audit_clear`、`audit_export`                              |
+| 前端     | 设置页「审计」：最近 100 条、按路径过滤（命令支持）、校验、按保留期清理、清空（确认）、导出 SQLite 快照 |
 
 ## 行为
 

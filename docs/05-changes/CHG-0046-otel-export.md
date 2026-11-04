@@ -11,13 +11,13 @@ last-updated: 2026-11-03
 
 ## 交付
 
-| 项 | 内容 |
-|---|---|
-| 协议 | OTLP/HTTP + protobuf，`POST {endpoint}/v1/metrics` |
-| 指标 | 连接尝试/失败、重连、读写/创建/删除次数、读/写 P50/P95，全部为 Gauge |
-| 资源属性 | `service.name=zkui`、`service.version` |
-| 触发 | 用户显式启用后每 30s 自动导出；设置页「立即导出」手动触发 |
-| 状态 | 最近导出时间与最近错误显示在设置页；失败返回 `app.otel_export_failed` |
+| 项       | 内容                                                                  |
+|----------|-----------------------------------------------------------------------|
+| 协议     | OTLP/HTTP + protobuf，`POST {endpoint}/v1/metrics`                    |
+| 指标     | 连接尝试/失败、重连、读写/创建/删除次数、读/写 P50/P95，全部为 Gauge  |
+| 资源属性 | `service.name=zkui`、`service.version`                                |
+| 触发     | 用户显式启用后每 30s 自动导出；设置页「立即导出」手动触发             |
+| 状态     | 最近导出时间与最近错误显示在设置页；失败返回 `app.otel_export_failed` |
 
 ## 行为
 

@@ -17,7 +17,8 @@ last-updated: 2026-11-02
 
 ### DESIGN-001 有状态客户端复用
 
-行为约束见 `req/conn.stmts.md` 的 `REQ-CONN-SESSION-001`、`REQ-CONN-SESSION-002`；本节只保留设计意图：按逻辑连接复用长期客户端，不把 session 当作无状态连接借还。
+行为约束见 `req/conn.stmts.md` 的 `REQ-CONN-SESSION-001`、`REQ-CONN-SESSION-002`；本节只保留设计意图：按逻辑连接复用长期客户端，不把
+session 当作无状态连接借还。
 
 ### DESIGN-002 会话世代
 
@@ -25,7 +26,8 @@ last-updated: 2026-11-02
 
 ### DESIGN-003 树缓存与索引
 
-缓存 TTL、容量与淘汰策略见 `dec/data-strategy.md` 的 `DEC-020`；失效行为见 `req/ui.stmts.md` 的 `REQ-UI-TREE-002`、`REQ-UI-TREE-003`。
+缓存 TTL、容量与淘汰策略见 `dec/data-strategy.md` 的 `DEC-020`；失效行为见 `req/ui.stmts.md` 的 `REQ-UI-TREE-002`、
+`REQ-UI-TREE-003`。
 
 ### DESIGN-004 查询策略
 
@@ -33,7 +35,8 @@ last-updated: 2026-11-02
 
 ### DESIGN-005 Watcher 限制
 
-Watcher 语义见 `dec/data-strategy.md` 的 `DEC-022`；事件与旧 generation 的行为约束见 `req/conn.stmts.md` 的 `REQ-CONN-GEN-002`。
+Watcher 语义见 `dec/data-strategy.md` 的 `DEC-022`；事件与旧 generation 的行为约束见 `req/conn.stmts.md` 的
+`REQ-CONN-GEN-002`。
 
 ## 跨平台约定
 

@@ -11,14 +11,14 @@ last-updated: 2026-11-03
 
 ## 变更
 
-| 项 | 之前 | 之后 |
-|---|---|---|
+| 项                    | 之前                                                        | 之后                                                          |
+|-----------------------|-------------------------------------------------------------|---------------------------------------------------------------|
 | `opentelemetry-proto` | 默认特性（`full`：trace/logs/zpages/serde + tonic channel） | `default-features = false` + `gen-tonic-messages` + `metrics` |
-| `tonic` 依赖链 | 存在（channel/hyper-timeout/tonic-prost） | 已移除 |
-| `tauri-plugin-opener` | 注册但未使用 | 移除（Rust/npm/capability） |
-| `vue-i18n` 构建 | 默认 bundler 入口 | runtime-only 入口 |
+| `tonic` 依赖链        | 存在（channel/hyper-timeout/tonic-prost）                   | 已移除                                                        |
+| `tauri-plugin-opener` | 注册但未使用                                                | 移除（Rust/npm/capability）                                   |
+| `vue-i18n` 构建       | 默认 bundler 入口                                           | runtime-only 入口                                             |
 
-Rust 依赖数量：**242 → 228**（`cargo tree -p zkui-core` 去重统计）。
+Rust 依赖数量： **242 → 228**（`cargo tree -p zkui-core` 去重统计）。
 
 ## 保留项与原因
 

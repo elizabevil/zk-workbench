@@ -23,7 +23,8 @@ test/env/
 
 ## 决策
 
-1. 每个场景一个目录，端口固定且互不重叠：`zk-39-single` 2181、`zk-35-single` 2182、`zk-34-single` 2183、`zk-39-cluster` 2211–2213。
+1. 每个场景一个目录，端口固定且互不重叠：`zk-39-single` 2181、`zk-35-single` 2182、`zk-34-single` 2183、`zk-39-cluster`
+   2211–2213。
 2. 运行时自动探测：`docker compose` → `podman compose` → `podman-compose`；都不可用时报错，不尝试安装。
 3. justfile 只提供 `list`、`up <场景>`、`down <场景>`；`down` 带 `-v` 清理数据卷，保证下次从干净状态开始。
 4. 场景覆盖 3.4 / 3.5 / 3.9 与三节点集群，对应 `REQ-CONN-COMPAT-001` 与 `VER-CONN-COMPAT-001`。
@@ -51,7 +52,8 @@ test/env/
 
 ## 遗留
 
-- 镜像 tag 未验证：`zookeeper:3.4.14` 是否仍可拉取需实测。本环境 `/run/user/1000` 只读，podman 无法启动，本轮只做了 justfile 解析与 compose YAML 语法校验。
+- 镜像 tag 未验证：`zookeeper:3.4.14` 是否仍可拉取需实测。本环境 `/run/user/1000` 只读，podman 无法启动，本轮只做了 justfile
+  解析与 compose YAML 语法校验。
 - 3.4 场景是否提供 SASL/TLS 变体，待认证验证需要时再定。
 
 ## 验证

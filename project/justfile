@@ -24,6 +24,6 @@ test:
 
 # 需要 ZooKeeper 环境；默认连本机 2181。
 spike endpoint="127.0.0.1:2181":
-    ZK_SPIKE_ENDPOINT={{endpoint}} cargo test -p zkui-core -- --ignored --test-threads=1
+    ZK_SPIKE_ENDPOINT={{ endpoint }} cargo test -p zkui-core -- --ignored --test-threads=1
 
 check: fmt-check clippy lint typecheck test

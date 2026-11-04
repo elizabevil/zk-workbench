@@ -77,80 +77,83 @@ src/
 
 - `zookeeper-client` 自带重连与会话恢复，`Client: Clone + Send + Sync`，不自行实现重连循环。
 - `ConnectionHandle` 持有 `Client`、`generation`（原子计数器）、状态广播通道、身份与缓存命名空间。
-- 每个连接一个轻量后台任务消费 `StateWatcher`：状态变化时广播 `connection:state`，在 `Disconnected → SyncConnected` 或 `Expired` 时递增 generation。
+- 每个连接一个轻量后台任务消费 `StateWatcher`：状态变化时广播 `connection:state`，在 `Disconnected → SyncConnected` 或
+  `Expired` 时递增 generation。
 - 不引入 actor、连接池或每操作新建客户端；只有出现真实背压或多路复用需求时再评估。
 
 ## 5. IPC 契约
 
 ### 5.1 三段职责
 
-| 段 | 位置 | 内容 |
-|---|---|---|
-| DTO | `zkui-core/src/ipc/` | `serde` 结构体与错误形状，ts-rs 生成 TS 类型 |
-| 处理器 | `src-tauri/src/commands/` | 入参校验、调用 core、返回 DTO |
-| 调用层 | `src/api/` | `invoke` 封装、错误映射、事件订阅 |
+| 段     | 位置                      | 内容                                         |
+|--------|---------------------------|----------------------------------------------|
+| DTO    | `zkui-core/src/ipc/`      | `serde` 结构体与错误形状，ts-rs 生成 TS 类型 |
+| 处理器 | `src-tauri/src/commands/` | 入参校验、调用 core、返回 DTO                |
+| 调用层 | `src/api/`                | `invoke` 封装、错误映射、事件订阅            |
 
 ### 5.2 命令（首版）
 
-| 方向 | 命令 | 返回 |
-|---|---|---|
-| connection | `connection_create` | `{ connection_id }` |
-| connection | `connection_close` | `()` |
+| 方向       | 命令                  | 返回                                                                  |
+|------------|-----------------------|-----------------------------------------------------------------------|
+| connection | `connection_create`   | `{ connection_id }`                                                   |
+| connection | `connection_close`    | `()`                                                                  |
 | connection | `connection_snapshot` | `ConnectionSnapshot { state, generation, identity, session_timeout }` |
-| tree | `tree_children` | `ChildrenPage { children, stat, generation }` |
-| tree | `tree_locate` | `LocateResult { path, exists, generation }` |
-| node | `node_get` | `NodeView { data_b64, is_text, byte_len, stat, acl, generation }` |
-| node | `node_set` | `NodeStatDto` |
-| node | `node_create` | `CreateResult { path, stat }` |
-| node | `node_delete_preview` | `DeletePreview { paths, total, truncated, token }` |
-| node | `node_delete` | `DeleteReport { done, failed, skipped }` |
-| acl | `acl_get` / `acl_set` | `AclView` / `NodeStatDto` |
-| command | `command_execute` | `CommandResult` |
-| command | `command_complete` | `Vec<Completion>` |
+| tree       | `tree_children`       | `ChildrenPage { children, stat, generation }`                         |
+| tree       | `tree_locate`         | `LocateResult { path, exists, generation }`                           |
+| node       | `node_get`            | `NodeView { data_b64, is_text, byte_len, stat, acl, generation }`     |
+| node       | `node_set`            | `NodeStatDto`                                                         |
+| node       | `node_create`         | `CreateResult { path, stat }`                                         |
+| node       | `node_delete_preview` | `DeletePreview { paths, total, truncated, token }`                    |
+| node       | `node_delete`         | `DeleteReport { done, failed, skipped }`                              |
+| acl        | `acl_get` / `acl_set` | `AclView` / `NodeStatDto`                                             |
+| command    | `command_execute`     | `CommandResult`                                                       |
+| command    | `command_complete`    | `Vec<Completion>`                                                     |
 
 命名统一 snake_case；一个方向一个文件，禁止万能 `execute(action, payload)` 通道。
 
 ### 5.3 事件
 
-| 事件 | 载荷 |
-|---|---|
-| `connection.state.changed` | `{ connection_id, state, generation }` |
-| `tree.node.invalidated` | `{ connection_id, paths, generation }` |
+| 事件                         | 载荷                                       |
+|------------------------------|--------------------------------------------|
+| `connection.state.changed`   | `{ connection_id, state, generation }`     |
+| `tree.node.invalidated`      | `{ connection_id, paths, generation }`     |
 | `operation.progress.changed` | `{ request_id, done, total, message_key }` |
 
-事件名采用 `<domain>.<entity>.<action>` 点分隔：Tauri 本身对冒号无限制，但点号在日志、SSE/WebSocket 桥接与 URL 场景不需要转义；事件名集中定义在 `zkui-core/src/ipc/events.rs` 与 `src/api/events.ts`。
+事件名采用 `<domain>.<entity>.<action>` 点分隔：Tauri 本身对冒号无限制，但点号在日志、SSE/WebSocket 桥接与 URL
+场景不需要转义；事件名集中定义在 `zkui-core/src/ipc/events.rs` 与 `src/api/events.ts`。
 
 长操作（递归删除预览、将来全树搜索）带 `request_id`，提供 `operation_cancel`。
 
 ### 5.4 数据与错误
 
 - 节点数据：`data_b64` + `is_text` + `byte_len`；文本视图由前端按 `is_text` 解码，原始字节始终保留。
-- 错误：`{ kind, code, scope, message_key, fields }`；`scope` 表示域（`zk` / `app` / `proxy` / `ipc`），`kind` 为域内类型，`message_key` 固定为 `error.<scope>.<kind>`，由前端 i18n 渲染（`DEC-063`）。
+- 错误：`{ kind, code, scope, message_key, fields }`；`scope` 表示域（`zk` / `app` / `proxy` / `ipc`），`kind` 为域内类型，
+  `message_key` 固定为 `error.<scope>.<kind>`，由前端 i18n 渲染（`DEC-063`）。
 - generation：依赖旧缓存状态的请求必须携带，服务端不匹配即拒绝（`REQ-CONN-GEN-001`）。
 
 ## 6. 文件拆分阈值
 
-| 类型 | 阈值 | 处理 |
-|---|---|---|
-| Rust 模块文件 | 300 行或出现第二个职责 | 拆子模块，保持一个方向一个目录 |
-| Vue SFC | 250 行 | 拆子组件；页面只留布局与数据编排 |
-| TS 调用层 | 200 行 | 按方向拆文件，不堆到 `index.ts` |
-| 测试 | 按场景分文件 | 一个关注点一个文件，两套客户端不混放 |
+| 类型          | 阈值                   | 处理                                 |
+|---------------|------------------------|--------------------------------------|
+| Rust 模块文件 | 300 行或出现第二个职责 | 拆子模块，保持一个方向一个目录       |
+| Vue SFC       | 250 行                 | 拆子组件；页面只留布局与数据编排     |
+| TS 调用层     | 200 行                 | 按方向拆文件，不堆到 `index.ts`      |
+| 测试          | 按场景分文件           | 一个关注点一个文件，两套客户端不混放 |
 
 ## 7. 垂直切片
 
-| 切片 | 交付 | 关联语句 |
-|---|---|---|
-| S1 | 连接管理器、状态事件、快照；前端显示连接状态 | `REQ-CONN-STATE-001/002`、`REQ-CONN-GEN-001` |
-| S2 | 代理传输：SOCKS5、HTTP CONNECT、本地中继与错误分类 | `REQ-CONN-PROXY-001..003` |
-| S3 | 审计基础：SQLite schema、异步写入、哈希链、完整性校验 | `REQ-OPS-AUDIT-003..005` |
-| S4 | 树按需展开、路径直达、缓存失效事件 | `REQ-UI-TREE-001..005` |
-| S5 | 节点读取、Stat 与 ACL 只读展示 | `REQ-DATA-VIEW-001/002`、`REQ-AUTH-ACL-002` |
-| S6 | 编辑、diff、CAS 保存、冲突提示（接入变更审计） | `REQ-DATA-EDIT-001..005` |
-| S7 | 创建、删除预览与分项结果（接入变更审计） | `REQ-NODE-CREATE-*`、`REQ-NODE-DEL-*` |
-| S8 | 本地指标与可观测面板；OTel 导出开关 | `REQ-OPS-OBS-001/002` |
-| S9 | 命令区：词法、解析、执行、结果 | `REQ-CLI-SCOPE-006`、`REQ-CLI-FLAGS-003` |
-| S10 | 脚本、历史、补全 | `REQ-CLI-SCRIPT-*`、`REQ-UI-HISTORY-001` |
+| 切片 | 交付                                                  | 关联语句                                     |
+|------|-------------------------------------------------------|----------------------------------------------|
+| S1   | 连接管理器、状态事件、快照；前端显示连接状态          | `REQ-CONN-STATE-001/002`、`REQ-CONN-GEN-001` |
+| S2   | 代理传输：SOCKS5、HTTP CONNECT、本地中继与错误分类    | `REQ-CONN-PROXY-001..003`                    |
+| S3   | 审计基础：SQLite schema、异步写入、哈希链、完整性校验 | `REQ-OPS-AUDIT-003..005`                     |
+| S4   | 树按需展开、路径直达、缓存失效事件                    | `REQ-UI-TREE-001..005`                       |
+| S5   | 节点读取、Stat 与 ACL 只读展示                        | `REQ-DATA-VIEW-001/002`、`REQ-AUTH-ACL-002`  |
+| S6   | 编辑、diff、CAS 保存、冲突提示（接入变更审计）        | `REQ-DATA-EDIT-001..005`                     |
+| S7   | 创建、删除预览与分项结果（接入变更审计）              | `REQ-NODE-CREATE-*`、`REQ-NODE-DEL-*`        |
+| S8   | 本地指标与可观测面板；OTel 导出开关                   | `REQ-OPS-OBS-001/002`                        |
+| S9   | 命令区：词法、解析、执行、结果                        | `REQ-CLI-SCOPE-006`、`REQ-CLI-FLAGS-003`     |
+| S10  | 脚本、历史、补全                                      | `REQ-CLI-SCRIPT-*`、`REQ-UI-HISTORY-001`     |
 
 每个切片完成时：`just check` 通过，相关 `ver/` 用例从 `pending` 更新为真实结果。
 

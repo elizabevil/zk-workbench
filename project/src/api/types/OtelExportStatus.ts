@@ -3,4 +3,9 @@
 /**
  * OTel 导出状态。
  */
-export type OtelExportStatus = { enabled: boolean, endpoint: string, last_export_ts: number | null, last_error: string | null, };
+export type OtelExportStatus = {
+    enabled: boolean,
+    endpoint: string,
+    last_export_ts: number | null,
+    last_error: string | null,
+};

@@ -47,7 +47,8 @@ last-updated: 2026-11-02
 
 ## 首版基础节点操作（已迁移）
 
-本节的节点创建与删除条款已迁移为语句层规范，见 `req/node.stmts.md` 的 `REQ-NODE-CREATE-001` 至 `REQ-NODE-CREATE-007`、`REQ-NODE-DEL-001` 至 `REQ-NODE-DEL-008`；本节不再维护，冲突时以该文件为准。迁移记录见 `05-changes/CHG-0007`。
+本节的节点创建与删除条款已迁移为语句层规范，见 `req/node.stmts.md` 的 `REQ-NODE-CREATE-001` 至 `REQ-NODE-CREATE-007`、
+`REQ-NODE-DEL-001` 至 `REQ-NODE-DEL-008`；本节不再维护，冲突时以该文件为准。迁移记录见 `05-changes/CHG-0007`。
 
 ## JSON/YAML 查看与编辑
 
@@ -63,4 +64,5 @@ ACL 编辑已后置。首版是否只读显示 ACL 仍待确认，候选方案�
 
 ## 认证身份版本范围（已迁移）
 
-连接级认证与路径级身份的版本边界已迁移至 `req/conn.stmts.md` 的 `REQ-CONN-AUTH-001`、`REQ-CONN-AUTH-002`，ACL 相关见 `req/auth.stmts.md`；本节不再维护。
+连接级认证与路径级身份的版本边界已迁移至 `req/conn.stmts.md` 的 `REQ-CONN-AUTH-001`、`REQ-CONN-AUTH-002`，ACL 相关见
+`req/auth.stmts.md`；本节不再维护。

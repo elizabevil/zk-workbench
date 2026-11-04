@@ -19,27 +19,28 @@ last-updated: 2026-11-02
 
 ## 落地内容
 
-1. 语句层按域拆分：`conn`、`node`、`data`、`ui`、`cli`、`auth`、`ops` 七个文件，共 71 条语句（原 68 条 `accepted`、3 条 `proposed`；其中两条已由 `CHG-0009` 转为 accepted）。
+1. 语句层按域拆分：`conn`、`node`、`data`、`ui`、`cli`、`auth`、`ops` 七个文件，共 71 条语句（原 68 条 `accepted`、3 条 `proposed`
+   ；其中两条已由 `CHG-0009` 转为 accepted）。
 2. 验证层同步：`ver/` 七个文件，覆盖全部 accepted 语句，全部 `pending`。
 3. 决策层补充：`dec/data-strategy.md`（缓存、查询、Watcher）、`dec/tech-route.md` 增 `DEC-005`（Tauri 权限）。
 4. 门禁从 12 项扩到 15 项：域单一性、叙述层不得定义语句、accepted 语句来源追溯。
 5. 叙述层收敛：
-   - `prd.md` 只保留意图与方向索引，逐条指向 `req/`；
-   - `03-specs/tree-query-connections.md` 归档至 `99-archive/`，内容已全部迁出；
-   - `02-design/tech-design.md` 的 `DESIGN-001..005` 改为指针，选择移入 `dec/`；
-   - `04-test/test-plan.md` 只保留验证问题与故障场景，用例与结果在 `ver/`。
+    - `prd.md` 只保留意图与方向索引，逐条指向 `req/`；
+    - `03-specs/tree-query-connections.md` 归档至 `99-archive/`，内容已全部迁出；
+    - `02-design/tech-design.md` 的 `DESIGN-001..005` 改为指针，选择移入 `dec/`；
+    - `04-test/test-plan.md` 只保留验证问题与故障场景，用例与结果在 `ver/`。
 
 ## 迁移映射（域 → 来源）
 
-| 域 | 语句文件 | 主要来源 |
-|---|---|---|
-| 连接与会话 | `req/conn.stmts.md` | PRD-001/005/014/015、SPEC-CONN-001..003、DESIGN-001/002/005、CHG-0004 |
-| 节点 | `req/node.stmts.md` | SPEC-NODE-001/002、CHG-0006 |
-| 数据格式 | `req/data.stmts.md` | PRD-003/004/008/011、规格 JSON/YAML 与不可解码章节 |
-| 工作台与树 | `req/ui.stmts.md` | SPEC-TREE-001..004、ui-design、CHG-0004 F |
-| 命令行与脚本 | `req/cli.stmts.md` | PRD-012/013、规格 CLI 章节、CHG-0004 E |
-| ACL 与身份 | `req/auth.stmts.md` | PRD-003/010、规格 ACL 与认证章节 |
-| 巡检与追溯 | `req/ops.stmts.md` | PRD-006/007 |
+| 域           | 语句文件            | 主要来源                                                              |
+|--------------|---------------------|-----------------------------------------------------------------------|
+| 连接与会话   | `req/conn.stmts.md` | PRD-001/005/014/015、SPEC-CONN-001..003、DESIGN-001/002/005、CHG-0004 |
+| 节点         | `req/node.stmts.md` | SPEC-NODE-001/002、CHG-0006                                           |
+| 数据格式     | `req/data.stmts.md` | PRD-003/004/008/011、规格 JSON/YAML 与不可解码章节                    |
+| 工作台与树   | `req/ui.stmts.md`   | SPEC-TREE-001..004、ui-design、CHG-0004 F                             |
+| 命令行与脚本 | `req/cli.stmts.md`  | PRD-012/013、规格 CLI 章节、CHG-0004 E                                |
+| ACL 与身份   | `req/auth.stmts.md` | PRD-003/010、规格 ACL 与认证章节                                      |
+| 巡检与追溯   | `req/ops.stmts.md`  | PRD-006/007                                                           |
 
 ## 影响
 
@@ -65,7 +66,8 @@ last-updated: 2026-11-02
 
 ## 遗留
 
-- `REQ-DATA-BYTES-002`、`REQ-AUTH-ACL-002` 已由 `CHG-0009` 转为 accepted；`REQ-CONN-AUTH-003` 已由 `CHG-0010` 转为 accepted（`#deferred`，第二版）。
+- `REQ-DATA-BYTES-002`、`REQ-AUTH-ACL-002` 已由 `CHG-0009` 转为 accepted；`REQ-CONN-AUTH-003` 已由 `CHG-0010` 转为
+  accepted（`#deferred`，第二版）。
 - 连接、CLI、UI 域语句尚未经过实现验证，`ver/` 全部为 `pending`。
 - `docs/06-ai` 中仍有指向 `00-meta/docs-dir.md` 的历史表述，待单独清理。
 

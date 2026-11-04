@@ -3,8 +3,10 @@
 /**
  * ACL 条目（只读展示）。
  */
-export type AclEntry = { scheme: string, id: string, 
-/**
- * 权限字母组合：c/r/w/d/a。
- */
-permissions: string, };
+export type AclEntry = {
+    scheme: string, id: string,
+    /**
+     * 权限字母组合：c/r/w/d/a。
+     */
+    permissions: string,
+};

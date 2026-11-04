@@ -1,6 +1,6 @@
 # 测试环境编排
 
-本目录只负责**启动与销毁** ZooKeeper 测试环境，不执行任何用例。用例与结论记录在 `docs/ver/`。
+本目录只负责 **启动与销毁** ZooKeeper 测试环境，不执行任何用例。用例与结论记录在 `docs/ver/`。
 
 ## 结构
 
@@ -29,12 +29,12 @@ just --justfile test/env/justfile down zk-39-single
 
 ## 场景
 
-| 场景 | 镜像 | 宿主机端口 | 用途 |
-|---|---|---|---|
-| `zk-39-single` | `zookeeper:3.9` | 2181 | 首版主环境：节点 CRUD/CAS/ACL/认证/会话 |
-| `zk-35-single` | `zookeeper:3.5` | 2182 | 3.5 兼容性（`getAllChildrenNumber` 可用、`getEphemerals` 不可用） |
-| `zk-34-single` | `zookeeper:3.4.14` | 2183 | 3.4 最低版本兼容（`getEphemerals`、`getAllChildrenNumber` 应明确报错） |
-| `zk-39-cluster` | `zookeeper:3.9` ×3 | 2211/2212/2213 | 集群、会话重建、巡检（第三阶段） |
+| 场景            | 镜像               | 宿主机端口     | 用途                                                                   |
+|-----------------|--------------------|----------------|------------------------------------------------------------------------|
+| `zk-39-single`  | `zookeeper:3.9`    | 2181           | 首版主环境：节点 CRUD/CAS/ACL/认证/会话                                |
+| `zk-35-single`  | `zookeeper:3.5`    | 2182           | 3.5 兼容性（`getAllChildrenNumber` 可用、`getEphemerals` 不可用）      |
+| `zk-34-single`  | `zookeeper:3.4.14` | 2183           | 3.4 最低版本兼容（`getEphemerals`、`getAllChildrenNumber` 应明确报错） |
+| `zk-39-cluster` | `zookeeper:3.9` ×3 | 2211/2212/2213 | 集群、会话重建、巡检（第三阶段）                                       |
 
 ## 约定
 

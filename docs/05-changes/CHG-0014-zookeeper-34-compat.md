@@ -11,7 +11,7 @@ last-updated: 2026-11-02
 
 ## 决策
 
-1. 目标服务端最低版本：**ZooKeeper 3.4**。命令语法仍按 3.9 文档实现，但可用性以服务端实际能力为准，不支持时必须明确报错。
+1. 目标服务端最低版本： **ZooKeeper 3.4**。命令语法仍按 3.9 文档实现，但可用性以服务端实际能力为准，不支持时必须明确报错。
 2. 不把 zkCli 打包进应用（sidecar）；命令由应用内 Rust 解析器按 zkCli 文法解析后经 Rust 核心执行。
 
 ## 依据
@@ -34,7 +34,8 @@ last-updated: 2026-11-02
 
 ## 候选方案与权衡（Alternatives & Trade-offs）
 
-**打包 zkCli sidecar**：语法与行为天然一致，但会分裂 session（generation、Watcher、CAS、addauth、审计全部不共享），且需携带 JRE（约 150 MB+）或 native-image；命令摘要仍需自研解析器，收益有限。被拒绝。
+**打包 zkCli sidecar**：语法与行为天然一致，但会分裂 session（generation、Watcher、CAS、addauth、审计全部不共享），且需携带 JRE（约
+150 MB+）或 native-image；命令摘要仍需自研解析器，收益有限。被拒绝。
 
 **按服务端版本维护多套命令表**：维护成本高且容易与文档漂移；改为运行时能力探测 + 明确报错。
 

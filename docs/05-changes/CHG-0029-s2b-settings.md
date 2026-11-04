@@ -11,17 +11,18 @@ last-updated: 2026-11-02
 
 ## 交付
 
-| 层 | 内容 |
-|---|---|
-| core 配置 | `config/settings.rs`：Settings 及子结构、默认值、校验、重试间隔计算 |
-| core 存储 | `config/store.rs`：`<config_dir>/zkui/app.toml`，临时文件 + 重命名写入，重置删除覆盖文件 |
-| core 连接 | 连接管理器读取设置：有序代理档案、`no_proxy` 直连、重试参数；代理全部失败即报错，不静默回退直连 |
-| Tauri | `settings_get`、`settings_save`、`settings_reset`；`AppState` 共享 `Arc<SettingsStore>` |
-| 前端 | `api/settings.ts`、`stores/settings.ts`、`pages/settings/SettingsPage.vue`、`/settings` 路由、工作台入口、中英文文案 |
+| 层        | 内容                                                                                                                 |
+|-----------|----------------------------------------------------------------------------------------------------------------------|
+| core 配置 | `config/settings.rs`：Settings 及子结构、默认值、校验、重试间隔计算                                                  |
+| core 存储 | `config/store.rs`：`<config_dir>/zkui/app.toml`，临时文件 + 重命名写入，重置删除覆盖文件                             |
+| core 连接 | 连接管理器读取设置：有序代理档案、`no_proxy` 直连、重试参数；代理全部失败即报错，不静默回退直连                      |
+| Tauri     | `settings_get`、`settings_save`、`settings_reset`；`AppState` 共享 `Arc<SettingsStore>`                              |
+| 前端      | `api/settings.ts`、`stores/settings.ts`、`pages/settings/SettingsPage.vue`、`/settings` 路由、工作台入口、中英文文案 |
 
 ## 设置页分区
 
-通用（语言、主题、恢复上次连接）、通知（级别、命令完成、声音）、重试（开关、次数、初始/最大间隔）、任务（失败后继续）、代理（开关、`no_proxy`、档案增删与字段）、审计（保留天数）、可观测与日志（占位，后续切片补开关）。
+通用（语言、主题、恢复上次连接）、通知（级别、命令完成、声音）、重试（开关、次数、初始/最大间隔）、任务（失败后继续）、代理（开关、
+`no_proxy`、档案增删与字段）、审计（保留天数）、可观测与日志（占位，后续切片补开关）。
 
 ## 验证
 

@@ -11,7 +11,8 @@ last-updated: 2026-11-02
 
 ## 目的
 
-纠正当初对 CLI 需求的假设：原始需求是在 UI 命令区直接使用 ZooKeeper 官方 zkCli 语法（如 `get /node`），此前的语句把它当作「待定义的应用自研 DSL」。
+纠正当初对 CLI 需求的假设：原始需求是在 UI 命令区直接使用 ZooKeeper 官方 zkCli 语法（如 `get /node`），此前的语句把它当作「待定义的应用自研
+DSL」。
 
 ## 决策
 
@@ -26,7 +27,8 @@ last-updated: 2026-11-02
 ### 命令集（首版）
 
 - 支持：`ls`、`get`、`set`、`create`、`delete`、`deleteall`、`stat`、`getAcl`、`sync`、`help`。
-- 不支持并明确报错：`setAcl`（ACL 编辑后置）、`addauth`（认证在连接层）、配额命令、`close`/`quit`（连接由界面管理）、`history`/`redo`、四字命令（巡检属第三阶段）。
+- 不支持并明确报错：`setAcl`（ACL 编辑后置）、`addauth`（认证在连接层）、配额命令、`close`/`quit`（连接由界面管理）、`history`/
+  `redo`、四字命令（巡检属第三阶段）。
 
 ### flag
 
@@ -40,16 +42,16 @@ last-updated: 2026-11-02
 
 ## 语句变更
 
-| 原语句 | 处理 | 新语句 |
-|---|---|---|
-| `REQ-CLI-SCOPE-001` | supersede | `REQ-CLI-GRAMMAR-001` |
-| `REQ-CLI-SCOPE-002` | supersede | `REQ-CLI-GRAMMAR-001` |
-| — | 新增 | `REQ-CLI-SCOPE-003`（命令白名单） |
-| — | 新增 | `REQ-CLI-SCOPE-004`（-w / ls -R 不支持，未知 flag 报错） |
-| — | 新增 | `REQ-CLI-FLAGS-001`（支持的 flag 清单） |
-| — | 新增 | `REQ-CLI-SCOPE-005`（无应用扩展命令） |
-| — | 新增 | `REQ-CLI-DELETEALL-001`（deleteall 确认规则） |
-| — | 新增 | `REQ-CLI-SCRIPT-006`（`#` 注释） |
+| 原语句              | 处理      | 新语句                                                   |
+|---------------------|-----------|----------------------------------------------------------|
+| `REQ-CLI-SCOPE-001` | supersede | `REQ-CLI-GRAMMAR-001`                                    |
+| `REQ-CLI-SCOPE-002` | supersede | `REQ-CLI-GRAMMAR-001`                                    |
+| —                   | 新增      | `REQ-CLI-SCOPE-003`（命令白名单）                        |
+| —                   | 新增      | `REQ-CLI-SCOPE-004`（-w / ls -R 不支持，未知 flag 报错） |
+| —                   | 新增      | `REQ-CLI-FLAGS-001`（支持的 flag 清单）                  |
+| —                   | 新增      | `REQ-CLI-SCOPE-005`（无应用扩展命令）                    |
+| —                   | 新增      | `REQ-CLI-DELETEALL-001`（deleteall 确认规则）            |
+| —                   | 新增      | `REQ-CLI-SCRIPT-006`（`#` 注释）                         |
 
 未受影响并继续有效：补全、保存、顺序执行、首错停止、写操作摘要、结果展示与隔离。
 
@@ -69,7 +71,8 @@ last-updated: 2026-11-02
 
 **保留应用自研 DSL**：与用户原始需求不符，且用户需重新学习命令；被拒绝。
 
-**全量兼容 zkCli（含 -w、ls -R、setAcl、addauth、配额、history/redo）**：与首版 ACL 后置、按需加载、缓存失效策略冲突，且部分命令能力未验证；被拒绝，改为白名单 + 明确报错。
+**全量兼容 zkCli（含 -w、ls -R、setAcl、addauth、配额、history/redo）**：与首版 ACL
+后置、按需加载、缓存失效策略冲突，且部分命令能力未验证；被拒绝，改为白名单 + 明确报错。
 
 **用 `:` 前缀提供应用扩展命令**：首版无实际需要，且会增加语法歧义；被拒绝，留作后续选项。
 

@@ -1,12 +1,12 @@
-<script setup lang="ts">
-import { computed, ref, watch } from "vue";
-import { useI18n } from "vue-i18n";
+<script lang="ts" setup>
+import {computed, ref, watch} from "vue";
+import {useI18n} from "vue-i18n";
 
-import { type InvokeRejection, toAppError } from "@/api/client";
-import { nodeDelete, nodeDeletePreview, nodeDeletePreviewCancel } from "@/api/node";
-import type { AppError } from "@/api/types/AppError";
-import type { DeleteOutcome } from "@/api/types/DeleteOutcome";
-import type { DeletePreview } from "@/api/types/DeletePreview";
+import {type InvokeRejection, toAppError} from "@/api/client";
+import {nodeDelete, nodeDeletePreview, nodeDeletePreviewCancel} from "@/api/node";
+import type {AppError} from "@/api/types/AppError";
+import type {DeleteOutcome} from "@/api/types/DeleteOutcome";
+import type {DeletePreview} from "@/api/types/DeletePreview";
 
 const props = defineProps<{
   open: boolean;
@@ -21,7 +21,7 @@ const emit = defineEmits<{
   deleted: [outcome: DeleteOutcome];
 }>();
 
-const { t } = useI18n();
+const {t} = useI18n();
 const recursive = ref(false);
 const preview = ref<DeletePreview | null>(null);
 const loading = ref(false);
@@ -30,44 +30,44 @@ const requestId = ref("");
 const cancelled = ref(false);
 
 watch(
-  () => [props.open, recursive.value] as const,
-  async ([open]) => {
-    if (!open) {
-      return;
-    }
-    preview.value = null;
-    error.value = null;
-    cancelled.value = false;
-    loading.value = true;
-    requestId.value = crypto.randomUUID();
-    try {
-      preview.value = await nodeDeletePreview(
-        props.connectionId,
-        props.path,
-        recursive.value,
-        requestId.value,
-      );
-    } catch (raw) {
-      const failure = toAppError(raw as InvokeRejection);
-      if (failure.kind === "cancelled") {
-        cancelled.value = true;
-      } else {
-        error.value = failure;
+    () => [props.open, recursive.value] as const,
+    async ([open]) => {
+      if (!open) {
+        return;
       }
-    } finally {
-      loading.value = false;
-    }
-  },
-  { immediate: true },
+      preview.value = null;
+      error.value = null;
+      cancelled.value = false;
+      loading.value = true;
+      requestId.value = crypto.randomUUID();
+      try {
+        preview.value = await nodeDeletePreview(
+            props.connectionId,
+            props.path,
+            recursive.value,
+            requestId.value,
+        );
+      } catch (raw) {
+        const failure = toAppError(raw as InvokeRejection);
+        if (failure.kind === "cancelled") {
+          cancelled.value = true;
+        } else {
+          error.value = failure;
+        }
+      } finally {
+        loading.value = false;
+      }
+    },
+    {immediate: true},
 );
 
 watch(
-  () => props.open,
-  (open) => {
-    if (open) {
-      recursive.value = props.initialRecursive ?? false;
-    }
-  },
+    () => props.open,
+    (open) => {
+      if (open) {
+        recursive.value = props.initialRecursive ?? false;
+      }
+    },
 );
 
 const canConfirm = computed(() => !props.hasChildren || recursive.value);
@@ -77,6 +77,7 @@ async function cancelPreview(): Promise<void> {
     await nodeDeletePreviewCancel(requestId.value);
   }
 }
+
 const totalLabel = computed(() => {
   if (!preview.value) {
     return "-";
@@ -103,7 +104,7 @@ async function confirm(): Promise<void> {
         <p class="path">{{ path }}</p>
 
         <label v-if="hasChildren" class="inline">
-          <input v-model="recursive" type="checkbox" />
+          <input v-model="recursive" type="checkbox"/>
           {{ t("delete.recursive") }}
         </label>
 
@@ -113,7 +114,7 @@ async function confirm(): Promise<void> {
           </p>
           <p v-if="loading" class="muted">
             {{ t("delete.loading") }}
-            <button type="button" class="tiny" @click="cancelPreview">
+            <button class="tiny" type="button" @click="cancelPreview">
               {{ t("delete.cancelPreview") }}
             </button>
           </p>
@@ -127,7 +128,7 @@ async function confirm(): Promise<void> {
 
         <div class="actions">
           <button type="button" @click="emit('close')">{{ t("delete.cancel") }}</button>
-          <button class="danger" :disabled="!canConfirm" type="button" @click="confirm">
+          <button :disabled="!canConfirm" class="danger" type="button" @click="confirm">
             {{ t("delete.confirm") }}
           </button>
         </div>
@@ -145,6 +146,7 @@ async function confirm(): Promise<void> {
   background: rgb(0 0 0 / 55%);
   z-index: 90;
 }
+
 .dialog {
   width: min(560px, 92vw);
   max-height: 80vh;
@@ -156,20 +158,24 @@ async function confirm(): Promise<void> {
   background: #171c22;
   border: 1px solid #2a323c;
 }
+
 h2 {
   margin: 0;
   font-size: 17px;
 }
+
 .path {
   margin: 0;
   font-family: ui-monospace, monospace;
   word-break: break-all;
 }
+
 label.inline {
   display: flex;
   align-items: center;
   gap: 8px;
 }
+
 .preview {
   display: flex;
   flex-direction: column;
@@ -181,17 +187,20 @@ label.inline {
   padding: 10px;
   background: #101418;
 }
+
 .paths {
   margin: 0;
   padding-left: 18px;
   font-family: ui-monospace, monospace;
   font-size: 12px;
 }
+
 .actions {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
 }
+
 button {
   padding: 7px 13px;
   border-radius: 6px;
@@ -200,15 +209,18 @@ button {
   color: inherit;
   cursor: pointer;
 }
+
 .danger {
   background: #b91c1c;
   border-color: #b91c1c;
 }
+
 .error {
   color: #ef4444;
   margin: 0;
   font-size: 13px;
 }
+
 .tiny {
   padding: 2px 8px;
   border-radius: 5px;
@@ -218,6 +230,7 @@ button {
   cursor: pointer;
   font-size: 12px;
 }
+
 .muted {
   color: #9aa4b2;
   margin: 0;

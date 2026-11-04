@@ -11,10 +11,10 @@ last-updated: 2026-11-03
 
 ## 交付
 
-| 层 | 内容 |
-|---|---|
-| core | `ConnectionManager::set_data`，使用读取时 version 做 CAS |
-| 命令 | `node_set`（base64 数据 + expected_version） |
+| 层   | 内容                                                                   |
+|------|------------------------------------------------------------------------|
+| core | `ConnectionManager::set_data`，使用读取时 version 做 CAS               |
+| 命令 | `node_set`（base64 数据 + expected_version）                           |
 | 前端 | 独立编辑缓冲、未保存状态、行级 diff 预览、确认保存、冲突提示与重新加载 |
 
 ## 行为

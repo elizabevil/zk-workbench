@@ -11,22 +11,24 @@ last-updated: 2026-11-02
 
 ## 决策
 
-| 项 | 决定 |
-|---|---|
-| 重试 | 默认开启，最多 5 次，间隔 3s 递增至上限 10s，可在设置中修改 |
-| 代理档案 | 允许多条，按配置顺序依次尝试，全部失败才报错 |
-| no_proxy | 首版提供，支持精确主机与域名后缀 |
-| 审计保留期 | 默认 90 天，可配置，清理二次确认 |
-| OTel | http/protobuf，端点与采样率可配置，默认关闭 |
-| 设置页 | 独立页面，含语言、主题、通知、重试、任务行为、代理、可观测、审计、日志，并提供恢复默认 |
+| 项         | 决定                                                                                   |
+|------------|----------------------------------------------------------------------------------------|
+| 重试       | 默认开启，最多 5 次，间隔 3s 递增至上限 10s，可在设置中修改                            |
+| 代理档案   | 允许多条，按配置顺序依次尝试，全部失败才报错                                           |
+| no_proxy   | 首版提供，支持精确主机与域名后缀                                                       |
+| 审计保留期 | 默认 90 天，可配置，清理二次确认                                                       |
+| OTel       | http/protobuf，端点与采样率可配置，默认关闭                                            |
+| 设置页     | 独立页面，含语言、主题、通知、重试、任务行为、代理、可观测、审计、日志，并提供恢复默认 |
 
 ## 语句变更
 
-新增：`REQ-CONN-PROXY-004`、`REQ-CONN-PROXY-005`、`REQ-CONN-RETRY-001`、`REQ-UI-SETTINGS-001`、`REQ-OPS-AUDIT-006`；各配一条 `pending` 用例。
+新增：`REQ-CONN-PROXY-004`、`REQ-CONN-PROXY-005`、`REQ-CONN-RETRY-001`、`REQ-UI-SETTINGS-001`、`REQ-OPS-AUDIT-006`；各配一条
+`pending` 用例。
 
 ## 配置模型
 
-`config/app.toml` 增加 `[notifications]`、`[retry]`、`[task]`、`[proxy]`（含有序 `[[proxy.profiles]]` 与 `no_proxy`）、`[observability.otel]`、`[audit]`。密码仍只进 keyring，不写入配置文件。
+`config/app.toml` 增加 `[notifications]`、`[retry]`、`[task]`、`[proxy]`（含有序 `[[proxy.profiles]]` 与 `no_proxy`）、
+`[observability.otel]`、`[audit]`。密码仍只进 keyring，不写入配置文件。
 
 ## 考虑点
 

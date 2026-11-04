@@ -11,12 +11,12 @@ last-updated: 2026-11-03
 
 ## 变更
 
-| 之前 | 之后 |
-|---|---|
+| 之前                                                                        | 之后                                                             |
+|-----------------------------------------------------------------------------|------------------------------------------------------------------|
 | `kind` 自带域前缀：`zk_no_node`、`app_invalid_path`、`ipc_invalid_argument` | `kind` 只表示类型：`no_node`、`invalid_path`、`invalid_argument` |
-| 域由前缀隐含，`scope` 仅 `zk/app/ipc` | `scope` 显式表示域：`zk`、`app`、`proxy`、`ipc` |
-| 代理错误挂在 `app` 域 | 代理独立为 `proxy` 域，错误码 `4001`（连接）/ `4002`（握手） |
-| `message_key` 由手写映射表维护 | 固定由 `error.<scope>.<kind>` 生成，映射表删除 |
+| 域由前缀隐含，`scope` 仅 `zk/app/ipc`                                       | `scope` 显式表示域：`zk`、`app`、`proxy`、`ipc`                  |
+| 代理错误挂在 `app` 域                                                       | 代理独立为 `proxy` 域，错误码 `4001`（连接）/ `4002`（握手）     |
+| `message_key` 由手写映射表维护                                              | 固定由 `error.<scope>.<kind>` 生成，映射表删除                   |
 
 示例：
 

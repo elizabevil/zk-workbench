@@ -9,7 +9,8 @@ last-updated: 2026-11-02
 
 # 技术验证与测试计划
 
-> 用例与实测结果记录在 `ver/` 的各域文件（`ver/node.md`、`ver/conn.md`、`ver/data.md`、`ver/ui.md`、`ver/cli.md`、`ver/auth.md`、`ver/ops.md`）。本文件只保留待回答的验证问题与故障场景，不记录执行结果。
+> 用例与实测结果记录在 `ver/` 的各域文件（`ver/node.md`、`ver/conn.md`、`ver/data.md`、`ver/ui.md`、`ver/cli.md`、
+> `ver/auth.md`、`ver/ops.md`）。本文件只保留待回答的验证问题与故障场景，不记录执行结果。
 
 ## 测试环境
 
@@ -21,11 +22,11 @@ just --justfile test/env/justfile up zk-39-single
 just --justfile test/env/justfile down zk-39-single
 ```
 
-| 场景 | 镜像 | 端口 | 用途 |
-|---|---|---|---|
-| `zk-39-single` | zookeeper:3.9 | 2181 | 首版主环境 |
-| `zk-35-single` | zookeeper:3.5 | 2182 | 3.5 兼容性 |
-| `zk-34-single` | zookeeper:3.4.14 | 2183 | 最低版本 3.4 |
+| 场景            | 镜像             | 端口           | 用途           |
+|-----------------|------------------|----------------|----------------|
+| `zk-39-single`  | zookeeper:3.9    | 2181           | 首版主环境     |
+| `zk-35-single`  | zookeeper:3.5    | 2182           | 3.5 兼容性     |
+| `zk-34-single`  | zookeeper:3.4.14 | 2183           | 最低版本 3.4   |
 | `zk-39-cluster` | zookeeper:3.9 ×3 | 2211/2212/2213 | 集群与会话重建 |
 
 运行时按 `docker compose` → `podman compose` → `podman-compose` 顺序探测；`down` 使用 `-v` 清理数据卷。
@@ -34,11 +35,14 @@ just --justfile test/env/justfile down zk-39-single
 
 ### TEST-001 Rust ZooKeeper 客户端能力
 
-验证候选 Rust 客户端在目标 ZooKeeper 环境下的连接、子节点读取、数据与 Stat 读取、version CAS、Watcher、断连和会话重建、认证及并发调用行为，并验证 Tauri 2 后端集成。
+验证候选 Rust 客户端在目标 ZooKeeper 环境下的连接、子节点读取、数据与 Stat 读取、version CAS、Watcher、断连和会话重建、认证及并发调用行为，并验证
+Tauri 2 后端集成。
 
 ### TEST-002 树缓存与快速查询负载
 
-用深树、宽树和高延迟环境验证按需加载、缓存命中、TTL 失效、Watcher 局部失效、generation 变化后缓存作废、路径直达及已加载范围搜索。记录请求数、响应时间、内存占用和数据新鲜度。结果用于决定 TTL 与容量，不预设 30 秒为最终值。
+用深树、宽树和高延迟环境验证按需加载、缓存命中、TTL 失效、Watcher 局部失效、generation
+变化后缓存作废、路径直达及已加载范围搜索。记录请求数、响应时间、内存占用和数据新鲜度。结果用于决定 TTL 与容量，不预设 30
+秒为最终值。
 
 ### TEST-003 多连接资源与生命周期
 

@@ -11,12 +11,12 @@ last-updated: 2026-11-02
 
 ## 1. 分层与权威
 
-| 层 | 位置 | 内容 | 权威性 |
-|---|---|---|---|
+| 层     | 位置                                               | 内容                   | 权威性               |
+|--------|----------------------------------------------------|------------------------|----------------------|
 | 规范层 | `req/`、`dec/`、`ver/`、`glossary.md`、`locks.yml` | 行为、选择、证据、术语 | 受门禁约束，唯一权威 |
-| 叙述层 | `changes/`、旧文档 | 背景、理由、调查、历史 | 无约束力，可自由演进 |
+| 叙述层 | `changes/`、旧文档                                 | 背景、理由、调查、历史 | 无约束力，可自由演进 |
 
-一句话：**行为只写在 `req/`，选择只写在 `dec/`，证据只写在 `ver/`，理由只写在 `changes/`。**
+一句话： **行为只写在 `req/`，选择只写在 `dec/`，证据只写在 `ver/`，理由只写在 `changes/`。**
 
 本规范只约束文档结构；`prompts/_common.md` 第 0 节的执行授权规则与 `06-ai/guardrails.md` 的审批边界优先级更高。
 
@@ -34,17 +34,18 @@ docs/
   99-archive/      冻结的旧文档
 ```
 
-域取值：`CONN`（连接与会话）、`NODE`（节点读写）、`DATA`（数据格式、大节点、导入导出）、`UI`（工作台、树与状态）、`CLI`（命令与脚本）、`AUTH`（ACL 与身份）、`OPS`（巡检与追溯）。子域按能力划分，如 `CREATE`、`DEL`、`TREE`、`STATE`。一个文件只放一个域。
+域取值：`CONN`（连接与会话）、`NODE`（节点读写）、`DATA`（数据格式、大节点、导入导出）、`UI`（工作台、树与状态）、`CLI`（命令与脚本）、
+`AUTH`（ACL 与身份）、`OPS`（巡检与追溯）。子域按能力划分，如 `CREATE`、`DEL`、`TREE`、`STATE`。一个文件只放一个域。
 
 ## 3. ID 与状态
 
-| 类型 | 格式 | 状态机 |
-|---|---|---|
+| 类型 | 格式                    | 状态机                                                 |
+|------|-------------------------|--------------------------------------------------------|
 | 语句 | `REQ-<域>-<子域>-<NNN>` | `draft → proposed → accepted → superseded / withdrawn` |
-| 决策 | `DEC-<NNN>` | `proposed → accepted → superseded` |
-| 验证 | `VER-<域>-<子域>-<NNN>` | `pending → passed / failed → stale` |
-| 变更 | `CHG-<NNNN>` | 只追加，不改状态 |
-| 术语 | `TERM <名>` | 只增不删；废弃标 `deprecated` |
+| 决策 | `DEC-<NNN>`             | `proposed → accepted → superseded`                     |
+| 验证 | `VER-<域>-<子域>-<NNN>` | `pending → passed / failed → stale`                    |
+| 变更 | `CHG-<NNNN>`            | 只追加，不改状态                                       |
+| 术语 | `TERM <名>`             | 只增不删；废弃标 `deprecated`                          |
 
 ID 永不复用。`superseded` 只能改状态字段与 `superseded-by`，正文一个字不动。
 
@@ -59,7 +60,7 @@ REQ-NODE-DEL-003   status: accepted   since: 2026-11-02   owner: 产品负责人
   验证：VER-NODE-DEL-003
 ```
 
-- 情态词只用：**必须 / 不得 / 应当 / 可以**。
+- 情态词只用： **必须 / 不得 / 应当 / 可以**。
 - **每条语句必须写在单行**，不得换行续写；需要拆分就拆成多条。
 - 一条语句只表达一个可验收断言。
 - 豁免行（可选，紧跟 `验证：` 行）：
@@ -71,7 +72,8 @@ REQ-NODE-DEL-003   status: accepted   since: 2026-11-02   owner: 产品负责人
 
 ## 5. 标签词表（封闭，13 个）
 
-`#capability` `#constraint` `#invariant` `#error` `#security` `#danger` `#confirm` `#preview` `#performance` `#threshold` `#ux` `#deferred` `#waived`
+`#capability` `#constraint` `#invariant` `#error` `#security` `#danger` `#confirm` `#preview` `#performance`
+`#threshold` `#ux` `#deferred` `#waived`
 
 新增标签必须单独提交并说明理由；语句出现词表外的标签即门禁失败。状态用 `status:` 字段，不是标签。
 
@@ -87,7 +89,8 @@ REQ-NODE-DEL-003   status: accepted   since: 2026-11-02   owner: 产品负责人
 
 - `accepted` 语句的正文 hash 记入 `locks.yml`，格式 `REQ-NODE-DEL-002: sha256:<hex>`。
 - 归一化：取 `语句：` 之后到行尾的单行文本，去除行尾空白，按 UTF-8 计算 sha256。
-- 语义变更 = 新 ID + 旧条款 `superseded`；非语义修订（错别字、标点）允许单独提交，提交信息必须含 `lock-update`，并用 `just --justfile docs/justfile lock` 重新生成锁表。
+- 语义变更 = 新 ID + 旧条款 `superseded`；非语义修订（错别字、标点）允许单独提交，提交信息必须含 `lock-update`，并用
+  `just --justfile docs/justfile lock` 重新生成锁表。
 - 门禁比对失败即 FAIL，不允许「先跑通再说」。
 
 ## 8. 技术中立
@@ -99,19 +102,19 @@ Rust  Tauri  Vue  Vite  WebView  npm  pnpm  cargo  SQLite
 zookeeper-client  zookeeper-async  keyring  CodeMirror  Monaco  Pinia
 ```
 
-例外：`JSON`、`YAML`、`HEX` 等**用户可见的数据格式**允许出现。技术选择只写在 `dec/`。
+例外：`JSON`、`YAML`、`HEX` 等 **用户可见的数据格式**允许出现。技术选择只写在 `dec/`。
 
 ## 9. 阈值归属
 
-| 类型 | 归属 | 判定 |
-|---|---|---|
-| 用户可观察的数字（预览前 100 条、`≥5000`、超时提示） | `req/` + `#threshold` | 用户能看到 |
-| 内部参数（缓存 TTL、连接上限、遍历并发、重试次数） | `dec/` | 只有开发者能看到 |
+| 类型                                                 | 归属                  | 判定             |
+|------------------------------------------------------|-----------------------|------------------|
+| 用户可观察的数字（预览前 100 条、`≥5000`、超时提示） | `req/` + `#threshold` | 用户能看到       |
+| 内部参数（缓存 TTL、连接上限、遍历并发、重试次数）   | `dec/`                | 只有开发者能看到 |
 
 ## 10. 测试周期
 
 - 每个周期在 `ver/` 记录 `CYCLE: <YYYY-MM-DD>` 及纳入的 REQ ID 列表。
-- 周期内：**REQ 冻结**（新增需负责人确认；supersede 需负责人签字并终止当前周期）、**DEC 放开**。
+- 周期内： **REQ 冻结**（新增需负责人确认；supersede 需负责人签字并终止当前周期）、 **DEC 放开**。
 - 依赖变更后执行 `grep -rn "<DEC-ID>" docs/ver/`，命中用例标 `stale`，重跑后才能恢复 `passed`。
 - 同一周期 `DEC` 选型变更 ≥3 次，判定选型不稳，停止打补丁，回到 Spike 重新评估并写 CHG。
 - `failed` 与修复后的 `passed` 都必须保留，不得覆盖历史结果。
@@ -120,9 +123,11 @@ zookeeper-client  zookeeper-async  keyring  CodeMirror  Monaco  Pinia
 
 `just --justfile docs/justfile check` 至少覆盖：
 
-v0：残留扫描、叙述层 frontmatter、本地链接、REQ 语法与 ID 唯一、标签合法、术语引用存在、`req/` 技术词扫描、accepted hash 匹配、supersede 链完整。
+v0：残留扫描、叙述层 frontmatter、本地链接、REQ 语法与 ID 唯一、标签合法、术语引用存在、`req/` 技术词扫描、accepted hash
+匹配、supersede 链完整。
 
-v1：VER 语法与 ID 唯一、引用存在、accepted 语句用例覆盖；`passed`/`failed`/`stale` 与结果文本一致；依赖已 `superseded` DEC 的用例必须 `stale`；`waived-until` 过期与豁免缺 owner/reason。
+v1：VER 语法与 ID 唯一、引用存在、accepted 语句用例覆盖；`passed`/`failed`/`stale` 与结果文本一致；依赖已 `superseded` DEC
+的用例必须 `stale`；`waived-until` 过期与豁免缺 owner/reason。
 
 v2：`req/` 域单一性（文件名域 = 语句域）、叙述层不得定义语句/用例/决策、`accepted` 语句必须有来源。
 

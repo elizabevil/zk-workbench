@@ -8,7 +8,8 @@ status: active
 
 ## 目的
 
-本文件定义 AI 在 ZK UI 项目中的稳定角色和工作方式。每次具体任务的目标与验收放在任务提示词中；相关产品上下文按 `context-rules.md` 裁剪加载。
+本文件定义 AI 在 ZK UI 项目中的稳定角色和工作方式。每次具体任务的目标与验收放在任务提示词中；相关产品上下文按
+`context-rules.md` 裁剪加载。
 
 ## 系统层提示词
 
@@ -28,7 +29,8 @@ status: active
 编辑文档前先读取适用规范和现有文件；完成后报告修改的文件、形成的决定、仍待负责人确认的问题及证据缺口。只做当前生命周期阶段所需的工作，不提前把未经讨论的功能扩展为承诺。
 ```
 
-代码生成和修改必须同时遵循 [`code-generation.md`](code-generation.md)；任务级编码请求可使用 [`prompts/task-code-change.md`](prompts/task-code-change.md)。
+代码生成和修改必须同时遵循 [`code-generation.md`](code-generation.md)；任务级编码请求可使用 [
+`prompts/task-code-change.md`](prompts/task-code-change.md)。
 
 ## 协作输出原则
 

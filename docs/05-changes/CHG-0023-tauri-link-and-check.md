@@ -52,7 +52,8 @@ just check
 
 ## 工具链修正：TypeScript 固定 6.0.x
 
-`vue-tsc` 3.3.14 通过 `typescript/lib/tsc` 子路径加载编译器。TS 7 的 package.json 不再暴露该子路径，`vue-tsc --noEmit` 会报 `ERR_PACKAGE_PATH_NOT_EXPORTED`。实测：
+`vue-tsc` 3.3.14 通过 `typescript/lib/tsc` 子路径加载编译器。TS 7 的 package.json 不再暴露该子路径，`vue-tsc --noEmit` 会报
+`ERR_PACKAGE_PATH_NOT_EXPORTED`。实测：
 
 - TS 7.0.2：失败；
 - TS 6.0.3：通过（package.json 无 `exports` 限制，子路径可解析）；

@@ -11,7 +11,8 @@ last-updated: 2026-11-02
 
 ## 目的
 
-`CHG-0012` 把命令集限定为 10 个命令、禁用 `-w`/`ls -R` 与扩展命令。负责人指出 `setAcl` 等同样是 zkCli 原生命令，应尽量提供，并以 ZooKeeper 3.9 官方文档为准；`connect`、`quit` 由界面连接管理承担，不必提供；`:cmd` 作为后续能力，首版不加。
+`CHG-0012` 把命令集限定为 10 个命令、禁用 `-w`/`ls -R` 与扩展命令。负责人指出 `setAcl` 等同样是 zkCli 原生命令，应尽量提供，并以
+ZooKeeper 3.9 官方文档为准；`connect`、`quit` 由界面连接管理承担，不必提供；`:cmd` 作为后续能力，首版不加。
 
 ## 依据
 
@@ -20,34 +21,37 @@ last-updated: 2026-11-02
 
 ## 命令集（首版）
 
-| 类别 | 命令 |
-|---|---|
-| 节点与数据 | `create` `delete` `deleteall` `get` `set` `ls` `stat` `sync` |
-| ACL 与认证 | `getAcl` `setAcl` `addauth` |
-| 配额 | `listquota` `setquota` `delquota` |
-| 批量与元信息 | `getAllChildrenNumber` `getEphemerals` |
-| 集群与客户端 | `config` `reconfig` `version` `whoami` |
-| 会话内辅助 | `history` `redo` `printwatches` `removewatches` `help` |
-| 明确不提供 | `connect` `quit` `close`（连接由界面管理）；四字命令（不在该文档命令表内，巡检属第三阶段） |
+| 类别         | 命令                                                                                       |
+|--------------|--------------------------------------------------------------------------------------------|
+| 节点与数据   | `create` `delete` `deleteall` `get` `set` `ls` `stat` `sync`                               |
+| ACL 与认证   | `getAcl` `setAcl` `addauth`                                                                |
+| 配额         | `listquota` `setquota` `delquota`                                                          |
+| 批量与元信息 | `getAllChildrenNumber` `getEphemerals`                                                     |
+| 集群与客户端 | `config` `reconfig` `version` `whoami`                                                     |
+| 会话内辅助   | `history` `redo` `printwatches` `removewatches` `help`                                     |
+| 明确不提供   | `connect` `quit` `close`（连接由界面管理）；四字命令（不在该文档命令表内，巡检属第三阶段） |
 
 ## flag（与 3.9 文档一致）
 
-`get -s/-w`、`ls -s/-w/-R`、`stat -w`、`create -s/-e/-c/-t`、`delete -v`、`set -s/-v`、`setAcl -s/-v/-R`、`getAcl -s`、`config -c/-w/-s`、`setquota|delquota -n/-b/-N/-B`、`removewatches -c/-d/-a/-l`、`reconfig -s/-v/-file/-members/-add/-remove`。
+`get -s/-w`、`ls -s/-w/-R`、`stat -w`、`create -s/-e/-c/-t`、`delete -v`、`set -s/-v`、`setAcl -s/-v/-R`、`getAcl -s`、
+`config -c/-w/-s`、`setquota|delquota -n/-b/-N/-B`、`removewatches -c/-d/-a/-l`、
+`reconfig -s/-v/-file/-members/-add/-remove`。
 
 ## 安全围栏
 
-`setAcl`、`addauth`、`setquota`、`delquota`、`removewatches`、`reconfig` 执行前必须展示目标路径、参数摘要、当前连接与身份，并要求二次确认（`REQ-CLI-DANGER-001`）。`deleteall` 仍要求目标路径与递归删除确认（`REQ-CLI-DELETEALL-001`）。
+`setAcl`、`addauth`、`setquota`、`delquota`、`removewatches`、`reconfig` 执行前必须展示目标路径、参数摘要、当前连接与身份，并要求二次确认（
+`REQ-CLI-DANGER-001`）。`deleteall` 仍要求目标路径与递归删除确认（`REQ-CLI-DELETEALL-001`）。
 
 ## 被取代的语句
 
-| 原语句 | 新语句 |
-|---|---|
-| `REQ-CLI-SCOPE-003`（10 命令白名单） | `REQ-CLI-GRAMMAR-002`（以 3.9 文档为准） |
-| `REQ-CLI-SCOPE-004`（禁 `-w`/`ls -R`） | `REQ-CLI-FLAGS-002`（flag 与文档一致） |
-| `REQ-CLI-FLAGS-001`（flag 白名单） | `REQ-CLI-FLAGS-002` |
-| `REQ-CLI-SCOPE-005`（无扩展命令） | `REQ-CLI-EXT-002`（首版不加，列为后续） |
-| `REQ-AUTH-ACL-001`（ACL 编辑后置） | `REQ-AUTH-ACL-004`（setAcl 提供 ACL 编辑，面板只读） |
-| `REQ-CONN-AUTH-001`（身份不得叠加） | `REQ-CONN-AUTH-006`（连接级独立 session；addauth 显式叠加需确认） |
+| 原语句                                 | 新语句                                                            |
+|----------------------------------------|-------------------------------------------------------------------|
+| `REQ-CLI-SCOPE-003`（10 命令白名单）   | `REQ-CLI-GRAMMAR-002`（以 3.9 文档为准）                          |
+| `REQ-CLI-SCOPE-004`（禁 `-w`/`ls -R`） | `REQ-CLI-FLAGS-002`（flag 与文档一致）                            |
+| `REQ-CLI-FLAGS-001`（flag 白名单）     | `REQ-CLI-FLAGS-002`                                               |
+| `REQ-CLI-SCOPE-005`（无扩展命令）      | `REQ-CLI-EXT-002`（首版不加，列为后续）                           |
+| `REQ-AUTH-ACL-001`（ACL 编辑后置）     | `REQ-AUTH-ACL-004`（setAcl 提供 ACL 编辑，面板只读）              |
+| `REQ-CONN-AUTH-001`（身份不得叠加）    | `REQ-CONN-AUTH-006`（连接级独立 session；addauth 显式叠加需确认） |
 
 ## 影响
 

@@ -1,14 +1,14 @@
-<script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
-import { useI18n } from "vue-i18n";
-import { useRouter } from "vue-router";
-import type { ConnectionProfile } from "@/api/types/ConnectionProfile";
-import type { ConnectionSnapshot } from "@/api/types/ConnectionSnapshot";
+<script lang="ts" setup>
+import {computed, onMounted, ref} from "vue";
+import {useI18n} from "vue-i18n";
+import {useRouter} from "vue-router";
+import type {ConnectionProfile} from "@/api/types/ConnectionProfile";
+import type {ConnectionSnapshot} from "@/api/types/ConnectionSnapshot";
 import ConnectionDialog from "@/components/ConnectionDialog.vue";
-import { useConnectionStore } from "@/stores/connection";
-import { useProfilesStore } from "@/stores/profiles";
+import {useConnectionStore} from "@/stores/connection";
+import {useProfilesStore} from "@/stores/profiles";
 
-const { t } = useI18n();
+const {t} = useI18n();
 const router = useRouter();
 const connections = useConnectionStore();
 const profiles = useProfilesStore();
@@ -23,10 +23,10 @@ const filtered = computed(() => {
     return profiles.profiles;
   }
   return profiles.profiles.filter((profile) =>
-    [profile.name, profile.host, `${profile.host}:${profile.port}`, profile.group ?? ""]
-      .join(" ")
-      .toLowerCase()
-      .includes(keyword),
+      [profile.name, profile.host, `${profile.host}:${profile.port}`, profile.group ?? ""]
+          .join(" ")
+          .toLowerCase()
+          .includes(keyword),
   );
 });
 const groups = computed(() => {
@@ -46,7 +46,7 @@ onMounted(async () => {
 
 function sessionOf(profile: ConnectionProfile): ConnectionSnapshot | undefined {
   return connections.connections.find(
-    (item) => item.host === profile.host && item.port === profile.port && item.state === "connected",
+      (item) => item.host === profile.host && item.port === profile.port && item.state === "connected",
   );
 }
 
@@ -84,7 +84,7 @@ async function open(profile: ConnectionProfile): Promise<void> {
 }
 
 async function remove(profile: ConnectionProfile): Promise<void> {
-  if (!window.confirm(t("home.confirmDelete", { name: profile.name }))) {
+  if (!window.confirm(t("home.confirmDelete", {name: profile.name}))) {
     return;
   }
   await profiles.remove(profile.id);
@@ -100,14 +100,14 @@ async function connected(): Promise<void> {
   <div class="home">
     <header class="topbar">
       <div class="brand">ZK Workbench</div>
-      <div class="spacer" />
-      <button type="button" class="ghost" @click="router.push('/audit')">
+      <div class="spacer"/>
+      <button class="ghost" type="button" @click="router.push('/audit')">
         {{ t("home.audit") }}
       </button>
-      <button type="button" class="ghost" @click="router.push('/observability')">
+      <button class="ghost" type="button" @click="router.push('/observability')">
         {{ t("home.observability") }}
       </button>
-      <button type="button" class="ghost" @click="router.push('/settings')">
+      <button class="ghost" type="button" @click="router.push('/settings')">
         {{ t("home.settings") }}
       </button>
     </header>
@@ -119,8 +119,8 @@ async function connected(): Promise<void> {
           <p class="muted">{{ t("home.subtitle") }}</p>
         </div>
         <div class="head-actions">
-          <input v-model="search" class="search" :placeholder="t('home.searchPlaceholder')" />
-          <button type="button" class="primary" @click="create">
+          <input v-model="search" :placeholder="t('home.searchPlaceholder')" class="search"/>
+          <button class="primary" type="button" @click="create">
             {{ t("home.new") }}
           </button>
         </div>
@@ -131,25 +131,25 @@ async function connected(): Promise<void> {
           <h2 class="group-title">{{ groupName }}</h2>
           <div class="grid">
             <article v-for="profile in items" :key="profile.id" class="card">
-          <div class="card-head">
-            <span class="dot" :data-state="sessionOf(profile)?.state ?? 'idle'" />
-            <strong>{{ profile.name }}</strong>
-          </div>
-          <div class="endpoint">{{ profile.host }}:{{ profile.port }}</div>
-          <div class="muted small">
-            {{ sessionOf(profile) ? t("home.connected") : t("home.saved") }}
-          </div>
-          <div class="card-actions">
-            <button type="button" class="primary" @click="open(profile)">
-              {{ sessionOf(profile) ? t("home.open") : t("home.connect") }}
-            </button>
-            <button type="button" class="ghost" @click="edit(profile)">
-              {{ t("home.edit") }}
-            </button>
-            <button type="button" class="ghost" @click="remove(profile)">
-              {{ t("home.delete") }}
-            </button>
-          </div>
+              <div class="card-head">
+                <span :data-state="sessionOf(profile)?.state ?? 'idle'" class="dot"/>
+                <strong>{{ profile.name }}</strong>
+              </div>
+              <div class="endpoint">{{ profile.host }}:{{ profile.port }}</div>
+              <div class="muted small">
+                {{ sessionOf(profile) ? t("home.connected") : t("home.saved") }}
+              </div>
+              <div class="card-actions">
+                <button class="primary" type="button" @click="open(profile)">
+                  {{ sessionOf(profile) ? t("home.open") : t("home.connect") }}
+                </button>
+                <button class="ghost" type="button" @click="edit(profile)">
+                  {{ t("home.edit") }}
+                </button>
+                <button class="ghost" type="button" @click="remove(profile)">
+                  {{ t("home.delete") }}
+                </button>
+              </div>
             </article>
           </div>
         </section>
@@ -158,7 +158,7 @@ async function connected(): Promise<void> {
       <div v-else class="empty">
         <h2>{{ t("home.empty") }}</h2>
         <p class="muted">{{ t("home.emptyHint") }}</p>
-        <button type="button" class="primary" @click="create">
+        <button class="primary" type="button" @click="create">
           {{ t("home.new") }}
         </button>
       </div>
@@ -167,11 +167,11 @@ async function connected(): Promise<void> {
     </main>
 
     <ConnectionDialog
-      :open="dialogOpen"
-      :profile="editTarget"
-      @close="dialogOpen = false"
-      @connected="connected"
-      @saved="saved"
+        :open="dialogOpen"
+        :profile="editTarget"
+        @close="dialogOpen = false"
+        @connected="connected"
+        @saved="saved"
     />
   </div>
 </template>
@@ -182,6 +182,7 @@ async function connected(): Promise<void> {
   overflow-y: auto;
   color: #e6e6e6;
 }
+
 .topbar {
   display: flex;
   align-items: center;
@@ -192,24 +193,34 @@ async function connected(): Promise<void> {
   background: rgb(16 20 24 / 80%);
   backdrop-filter: blur(6px);
 }
+
 .brand {
   font-weight: 600;
   letter-spacing: 0.2px;
 }
+
 .spacer {
   flex: 1;
 }
+
 .content {
+  box-sizing: border-box;
   width: 100%;
   max-width: 1000px;
   margin: 0 auto;
   padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100% - 48px);
 }
+
 .head-actions {
   display: flex;
   gap: 8px;
   align-items: center;
+  margin-left: auto;
 }
+
 .search {
   width: 220px;
   padding: 8px 10px;
@@ -218,45 +229,50 @@ async function connected(): Promise<void> {
   background: rgb(16 20 24 / 70%);
   color: inherit;
 }
+
 .group {
   margin-bottom: 22px;
 }
+
 .group-title {
   margin: 0 0 10px;
   font-size: 14px;
   font-weight: 600;
+  text-align: center;
   color: #cbd5e1;
 }
+
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 320px));
+  justify-content: center;
   gap: 14px;
 }
+
 .section-head {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: flex-end;
+  justify-content: space-between;
   flex-wrap: wrap;
-  text-align: center;
+  text-align: left;
   gap: 16px;
   margin-bottom: 20px;
 }
+
 h1 {
   margin: 0;
   font-size: 22px;
 }
+
 .muted {
   color: #9aa4b2;
   margin: 4px 0 0;
 }
+
 .small {
   font-size: 12px;
 }
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 14px;
-}
+
 .card {
   display: flex;
   flex-direction: column;
@@ -266,33 +282,40 @@ h1 {
   border: 1px solid rgb(255 255 255 / 10%);
   background: rgb(16 20 24 / 70%);
 }
+
 .card-head {
   display: flex;
   align-items: center;
   gap: 8px;
 }
+
 .endpoint {
   font-family: ui-monospace, monospace;
   font-size: 13px;
 }
+
 .card-actions {
   display: flex;
   gap: 8px;
   margin-top: 6px;
 }
+
 .dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   background: #6b7280;
 }
+
 .dot[data-state="connected"] {
   background: #22c55e;
 }
+
 .dot[data-state="disconnected"],
 .dot[data-state="expired"] {
   background: #ef4444;
 }
+
 .empty {
   display: flex;
   flex-direction: column;
@@ -303,10 +326,12 @@ h1 {
   border-radius: 12px;
   background: rgb(16 20 24 / 45%);
 }
+
 .empty h2 {
   margin: 0;
   font-size: 18px;
 }
+
 button {
   cursor: pointer;
   border-radius: 6px;
@@ -314,13 +339,16 @@ button {
   border: 1px solid transparent;
   color: inherit;
 }
+
 .primary {
   background: #2563eb;
 }
+
 .ghost {
   background: transparent;
   border-color: rgb(255 255 255 / 18%);
 }
+
 .error {
   margin-top: 16px;
   color: #ef4444;

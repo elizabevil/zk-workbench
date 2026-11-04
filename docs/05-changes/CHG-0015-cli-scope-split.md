@@ -17,19 +17,21 @@ last-updated: 2026-11-02
 
 ### 命令行保留（17 条）
 
-`ls`、`get`、`set`、`create`、`delete`、`deleteall`、`stat`、`getAcl`、`setAcl`、`addauth`、`sync`、`getAllChildrenNumber`、`getEphemerals`、`listquota`、`version`、`whoami`、`help`。
+`ls`、`get`、`set`、`create`、`delete`、`deleteall`、`stat`、`getAcl`、`setAcl`、`addauth`、`sync`、`getAllChildrenNumber`、
+`getEphemerals`、`listquota`、`version`、`whoami`、`help`。
 
-支持的 flag：`ls -s/-w/-R`、`get -s/-w`、`stat -w`、`create -s/-e/-c/-t`、`delete -v`、`set -s/-v`、`setAcl -s/-v/-R`、`getAcl -s`。`-w` 只对本次命令生效，不建立长期订阅；未支持 flag 明确报错。
+支持的 flag：`ls -s/-w/-R`、`get -s/-w`、`stat -w`、`create -s/-e/-c/-t`、`delete -v`、`set -s/-v`、`setAcl -s/-v/-R`、
+`getAcl -s`。`-w` 只对本次命令生效，不建立长期订阅；未支持 flag 明确报错。
 
 ### 交给界面
 
-| 原命令 | 界面承担方式 | 首版 |
-|---|---|---|
-| `history`、`redo` | 命令历史面板，保留本会话命令并可重跑 | 是（`REQ-UI-HISTORY-001`） |
-| `printwatches` | 设置项或状态栏开关 | 否 |
-| `removewatches` | Watcher 管理面板 | 否 |
-| `config` | 集群信息面板 | 否（第三阶段） |
-| `connect`、`quit`、`close` | 连接管理 | 已有 |
+| 原命令                     | 界面承担方式                         | 首版                       |
+|----------------------------|--------------------------------------|----------------------------|
+| `history`、`redo`          | 命令历史面板，保留本会话命令并可重跑 | 是（`REQ-UI-HISTORY-001`） |
+| `printwatches`             | 设置项或状态栏开关                   | 否                         |
+| `removewatches`            | Watcher 管理面板                     | 否                         |
+| `config`                   | 集群信息面板                         | 否（第三阶段）             |
+| `connect`、`quit`、`close` | 连接管理                             | 已有                       |
 
 ### 首版不提供
 
@@ -37,20 +39,21 @@ last-updated: 2026-11-02
 
 ## 语句变更
 
-| 原语句 | 新语句 |
-|---|---|
-| `REQ-CLI-GRAMMAR-002`（全量 3.9） | `REQ-CLI-SCOPE-006`（17 条命令） |
-| `REQ-CLI-FLAGS-002`（全量 flag） | `REQ-CLI-FLAGS-003`（对应 flag，`-w` 仅本次） |
-| `REQ-CLI-DANGER-001`（六类危险命令） | `REQ-CLI-DANGER-002`（setAcl、addauth） |
-| — | `REQ-CLI-SCOPE-007`（历史、watcher、config 由界面承担） |
-| — | `REQ-CLI-SCOPE-008`（reconfig 与配额写入不提供） |
-| — | `REQ-UI-HISTORY-001`（界面命令历史） |
+| 原语句                               | 新语句                                                  |
+|--------------------------------------|---------------------------------------------------------|
+| `REQ-CLI-GRAMMAR-002`（全量 3.9）    | `REQ-CLI-SCOPE-006`（17 条命令）                        |
+| `REQ-CLI-FLAGS-002`（全量 flag）     | `REQ-CLI-FLAGS-003`（对应 flag，`-w` 仅本次）           |
+| `REQ-CLI-DANGER-001`（六类危险命令） | `REQ-CLI-DANGER-002`（setAcl、addauth）                 |
+| —                                    | `REQ-CLI-SCOPE-007`（历史、watcher、config 由界面承担） |
+| —                                    | `REQ-CLI-SCOPE-008`（reconfig 与配额写入不提供）        |
+| —                                    | `REQ-UI-HISTORY-001`（界面命令历史）                    |
 
 ## 影响
 
 - 命令区更聚焦：节点、ACL、认证、排查类命令；管理类动作回归界面。
 - `ver/cli.md` 三条旧用例置 `stale`，新增五条；`ver/ui.md` 新增一条。
-- 兼容性：17 条命令中 `getEphemerals`（3.6+）、`getAllChildrenNumber`（3.5+）在 3.4 会报错，符合 `REQ-CONN-COMPAT-001` 的能力探测与明确报错。
+- 兼容性：17 条命令中 `getEphemerals`（3.6+）、`getAllChildrenNumber`（3.5+）在 3.4 会报错，符合 `REQ-CONN-COMPAT-001`
+  的能力探测与明确报错。
 
 ## 非目标（Non-Goals）
 

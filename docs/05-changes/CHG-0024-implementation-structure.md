@@ -11,7 +11,8 @@ last-updated: 2026-11-02
 
 ## 决策
 
-1. 每个方向独立目录：Rust 的 `connection/`、`tree/`、`node/`、`acl/`、`command/`、`ipc/`，前端的 `pages/`、`components/`、`api/`、`stores/` 同样按方向拆分。
+1. 每个方向独立目录：Rust 的 `connection/`、`tree/`、`node/`、`acl/`、`command/`、`ipc/`，前端的 `pages/`、`components/`、`api/`、
+   `stores/` 同样按方向拆分。
 2. 前端补充 `pages/`，与 `components/` 并列：页面负责组合与路由，组件只做呈现；页面私有组件放 `pages/<page>/components/`。
 3. IPC 分三段：DTO 在 `zkui-core/src/ipc/`，处理器在 `src-tauri/src/commands/`，调用层在 `src/api/`；每段按方向拆文件。
 4. TypeScript 契约类型由 `ts-rs` 从 Rust DTO 生成（`DEC-064`），不手写。

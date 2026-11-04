@@ -1,10 +1,10 @@
-<script setup lang="ts">
-import { computed, nextTick, ref, watch } from "vue";
-import { useI18n } from "vue-i18n";
-import type { ConnectionProfile } from "@/api/types/ConnectionProfile";
-import type { ConnectionSnapshot } from "@/api/types/ConnectionSnapshot";
-import { useConnectionStore } from "@/stores/connection";
-import { useProfilesStore } from "@/stores/profiles";
+<script lang="ts" setup>
+import {computed, nextTick, ref, watch} from "vue";
+import {useI18n} from "vue-i18n";
+import type {ConnectionProfile} from "@/api/types/ConnectionProfile";
+import type {ConnectionSnapshot} from "@/api/types/ConnectionSnapshot";
+import {useConnectionStore} from "@/stores/connection";
+import {useProfilesStore} from "@/stores/profiles";
 
 const props = defineProps<{ open: boolean; profile?: ConnectionProfile | null }>();
 const emit = defineEmits<{
@@ -13,7 +13,7 @@ const emit = defineEmits<{
   saved: [];
 }>();
 
-const { t } = useI18n();
+const {t} = useI18n();
 const store = useConnectionStore();
 const profiles = useProfilesStore();
 
@@ -27,25 +27,25 @@ const nameInput = ref<HTMLInputElement | null>(null);
 const dialogError = computed(() => profiles.error ?? store.error);
 
 watch(
-  () => props.open,
-  async (open) => {
-    if (open) {
-      localError.value = "";
-      if (props.profile) {
-        displayName.value = props.profile.name;
-        host.value = props.profile.host;
-        port.value = props.profile.port;
-        group.value = props.profile.group ?? "";
-      } else {
-        host.value = "127.0.0.1";
-        port.value = 2181;
-        displayName.value = "local";
-        group.value = "";
+    () => props.open,
+    async (open) => {
+      if (open) {
+        localError.value = "";
+        if (props.profile) {
+          displayName.value = props.profile.name;
+          host.value = props.profile.host;
+          port.value = props.profile.port;
+          group.value = props.profile.group ?? "";
+        } else {
+          host.value = "127.0.0.1";
+          port.value = 2181;
+          displayName.value = "local";
+          group.value = "";
+        }
+        await nextTick();
+        nameInput.value?.focus();
       }
-      await nextTick();
-      nameInput.value?.focus();
-    }
-  },
+    },
 );
 
 async function submit(): Promise<void> {
@@ -92,19 +92,19 @@ async function submit(): Promise<void> {
 
         <label>
           {{ t("home.name") }}
-          <input ref="nameInput" v-model="displayName" />
+          <input ref="nameInput" v-model="displayName"/>
         </label>
         <label>
           {{ t("home.host") }}
-          <input v-model="host" placeholder="127.0.0.1" />
+          <input v-model="host" placeholder="127.0.0.1"/>
         </label>
         <label>
           {{ t("home.port") }}
-          <input v-model.number="port" min="1" type="number" />
+          <input v-model.number="port" min="1" type="number"/>
         </label>
         <label>
           {{ t("home.group") }}
-          <input v-model="group" :placeholder="t('home.groupPlaceholder')" />
+          <input v-model="group" :placeholder="t('home.groupPlaceholder')"/>
         </label>
 
         <p v-if="localError" class="error">{{ localError }}</p>
@@ -133,6 +133,7 @@ async function submit(): Promise<void> {
   background: rgb(0 0 0 / 55%);
   z-index: 100;
 }
+
 .dialog {
   width: min(420px, 90vw);
   display: flex;
@@ -144,15 +145,18 @@ async function submit(): Promise<void> {
   border: 1px solid #2a323c;
   box-shadow: 0 18px 50px rgb(0 0 0 / 45%);
 }
+
 h2 {
   margin: 0 0 4px;
   font-size: 18px;
 }
+
 label {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
+
 input {
   padding: 8px 10px;
   border-radius: 6px;
@@ -160,12 +164,14 @@ input {
   background: #101418;
   color: inherit;
 }
+
 .actions {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
   margin-top: 4px;
 }
+
 button {
   padding: 8px 14px;
   border-radius: 6px;
@@ -174,10 +180,12 @@ button {
   color: inherit;
   cursor: pointer;
 }
+
 button[type="submit"] {
   background: #2563eb;
   border-color: #2563eb;
 }
+
 .error {
   margin: 0;
   color: #ef4444;

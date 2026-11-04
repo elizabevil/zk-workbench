@@ -3,4 +3,16 @@
 /**
  * 节点 Stat 的展示子集。
  */
-export type NodeStat = { path: string, version: number, cversion: number, aversion: number, data_length: number, num_children: number, ephemeral_owner: number, czxid: number, mzxid: number, ctime: number, mtime: number, };
+export type NodeStat = {
+    path: string,
+    version: number,
+    cversion: number,
+    aversion: number,
+    data_length: number,
+    num_children: number,
+    ephemeral_owner: number,
+    czxid: number,
+    mzxid: number,
+    ctime: number,
+    mtime: number,
+};

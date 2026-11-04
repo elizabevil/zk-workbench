@@ -11,11 +11,11 @@ last-updated: 2026-11-03
 
 ## 交付
 
-| 层 | 内容 |
-|---|---|
-| DTO | `AclEntry { scheme, id, permissions }`，权限字母 `c/r/w/d/a` |
-| core | `ConnectionManager::acl`（get_acl，记录读指标） |
-| 命令 | `node_acl` |
+| 层   | 内容                                                                     |
+|------|--------------------------------------------------------------------------|
+| DTO  | `AclEntry { scheme, id, permissions }`，权限字母 `c/r/w/d/a`             |
+| core | `ConnectionManager::acl`（get_acl，记录读指标）                          |
+| 命令 | `node_acl`                                                               |
 | 前端 | 数据/Stat/ACL 三标签；ACL 表格；空列表提示；权限不足按 `zk.no_auth` 显示 |
 
 ## 行为
