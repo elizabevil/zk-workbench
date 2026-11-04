@@ -12,9 +12,13 @@
   "app": {
     "windows": [
       {
-        "title": "zkui",
-        "width": 800,
-        "height": 600
+        "title": "ZK Workbench",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 960,
+        "minHeight": 600,
+        "center": true,
+        "maximized": true
       }
     ],
     "security": {
