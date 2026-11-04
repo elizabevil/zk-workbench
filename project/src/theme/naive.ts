@@ -45,6 +45,23 @@ export const naiveThemeOverrides: GlobalThemeOverrides = {
   Form: {
     labelTextColor: "#cbd5e1",
   },
+  Card: {
+    color: "rgb(0 0 0 / 35%)",
+    borderColor: "#2a323c",
+    borderRadius: "8px",
+    paddingSmall: "12px 14px",
+  },
+  DataTable: {
+    tdColor: "transparent",
+    thColor: "rgb(255 255 255 / 4%)",
+    tdTextColor: "#e6e6e6",
+    thTextColor: "#9aa4b2",
+    borderColor: "#2a323c",
+  },
+  Statistic: {
+    labelTextColor: "#9aa4b2",
+    valueTextColor: "#e6e6e6",
+  },
   Checkbox: {
     colorChecked: "#2563eb",
     colorDisabledChecked: "rgb(37 99 235 / 40%)",

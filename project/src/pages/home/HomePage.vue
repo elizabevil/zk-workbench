@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import {NAlert, NButton, NEmpty, NInput} from "naive-ui";
 import {computed, onMounted, ref} from "vue";
 import {useI18n} from "vue-i18n";
 import {useRouter} from "vue-router";
@@ -101,15 +102,15 @@ async function connected(): Promise<void> {
     <header class="topbar">
       <div class="brand">ZK Workbench</div>
       <div class="spacer"/>
-      <button class="ghost" type="button" @click="router.push('/audit')">
+      <NButton quaternary size="small" @click="router.push('/audit')">
         {{ t("home.audit") }}
-      </button>
-      <button class="ghost" type="button" @click="router.push('/observability')">
+      </NButton>
+      <NButton quaternary size="small" @click="router.push('/observability')">
         {{ t("home.observability") }}
-      </button>
-      <button class="ghost" type="button" @click="router.push('/settings')">
+      </NButton>
+      <NButton quaternary size="small" @click="router.push('/settings')">
         {{ t("home.settings") }}
-      </button>
+      </NButton>
     </header>
 
     <main class="content">
@@ -119,10 +120,16 @@ async function connected(): Promise<void> {
           <p class="muted">{{ t("home.subtitle") }}</p>
         </div>
         <div class="head-actions">
-          <input v-model="search" :placeholder="t('home.searchPlaceholder')" class="search"/>
-          <button class="primary" type="button" @click="create">
+          <NInput
+            v-model:value="search"
+            :placeholder="t('home.searchPlaceholder')"
+            clearable
+            size="small"
+            style="width: 240px"
+          />
+          <NButton size="small" type="primary" @click="create">
             {{ t("home.new") }}
-          </button>
+          </NButton>
         </div>
       </div>
 
@@ -140,30 +147,33 @@ async function connected(): Promise<void> {
                 {{ sessionOf(profile) ? t("home.connected") : t("home.saved") }}
               </div>
               <div class="card-actions">
-                <button class="primary" type="button" @click="open(profile)">
+                <NButton size="small" type="primary" @click="open(profile)">
                   {{ sessionOf(profile) ? t("home.open") : t("home.connect") }}
-                </button>
-                <button class="ghost" type="button" @click="edit(profile)">
+                </NButton>
+                <NButton size="small" @click="edit(profile)">
                   {{ t("home.edit") }}
-                </button>
-                <button class="ghost" type="button" @click="remove(profile)">
+                </NButton>
+                <NButton size="small" @click="remove(profile)">
                   {{ t("home.delete") }}
-                </button>
+                </NButton>
               </div>
             </article>
           </div>
         </section>
       </div>
 
-      <div v-else class="empty">
-        <h2>{{ t("home.empty") }}</h2>
-        <p class="muted">{{ t("home.emptyHint") }}</p>
-        <button class="primary" type="button" @click="create">
-          {{ t("home.new") }}
-        </button>
-      </div>
+      <NEmpty v-else :description="t('home.empty')">
+        <template #extra>
+          <p class="muted empty-hint">{{ t("home.emptyHint") }}</p>
+          <NButton type="primary" @click="create">
+            {{ t("home.new") }}
+          </NButton>
+        </template>
+      </NEmpty>
 
-      <p v-if="profiles.error" class="error">{{ t(profiles.error.message_key) }}</p>
+      <NAlert v-if="profiles.error" :bordered="false" class="error-alert" type="error">
+        {{ t(profiles.error.message_key) }}
+      </NAlert>
     </main>
 
     <ConnectionDialog
@@ -221,14 +231,6 @@ async function connected(): Promise<void> {
   margin-left: auto;
 }
 
-.search {
-  width: 220px;
-  padding: 8px 10px;
-  border-radius: 6px;
-  border: 1px solid rgb(255 255 255 / 12%);
-  background: rgb(16 20 24 / 70%);
-  color: inherit;
-}
 
 .group {
   margin-bottom: 22px;
@@ -297,7 +299,16 @@ h1 {
 .card-actions {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
   margin-top: 6px;
+}
+
+.empty-hint {
+  margin: 0 0 10px;
+}
+
+.error-alert {
+  margin-top: 16px;
 }
 
 .dot {
@@ -316,41 +327,4 @@ h1 {
   background: #ef4444;
 }
 
-.empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  padding: 72px 0;
-  border: 1px dashed rgb(255 255 255 / 15%);
-  border-radius: 12px;
-  background: rgb(16 20 24 / 45%);
-}
-
-.empty h2 {
-  margin: 0;
-  font-size: 18px;
-}
-
-button {
-  cursor: pointer;
-  border-radius: 6px;
-  padding: 8px 14px;
-  border: 1px solid transparent;
-  color: inherit;
-}
-
-.primary {
-  background: #2563eb;
-}
-
-.ghost {
-  background: transparent;
-  border-color: rgb(255 255 255 / 18%);
-}
-
-.error {
-  margin-top: 16px;
-  color: #ef4444;
-}
 </style>
