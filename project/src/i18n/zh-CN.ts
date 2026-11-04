@@ -3,6 +3,10 @@ export default {
   home: {
     title: "连接",
     subtitle: "选择一个已有连接，或新建连接开始工作",
+    delete: "删除",
+    confirmDelete: "删除连接档案「{name}」？",
+    connected: "已连接",
+    saved: "已保存",
     new: "新建连接",
     open: "打开",
     disconnect: "断开",
@@ -95,19 +99,6 @@ export default {
     },
   },
 
-  workbench: {
-    title: "连接",
-    host: "主机地址",
-    hostPlaceholder: "127.0.0.1",
-    port: "端口",
-    displayName: "名称",
-    connect: "连接",
-    close: "关闭连接",
-    connecting: "连接中…",
-    generation: "generation",
-    sessionTimeout: "会话超时",
-    empty: "尚未建立连接",
-  },
   connection: {
     state: {
       creating: "创建中",

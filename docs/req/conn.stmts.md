@@ -143,3 +143,9 @@ REQ-CONN-RETRY-001   status: accepted   since: 2026-11-02   owner: 产品负责�
   标签：#capability #ux
   验证：VER-CONN-RETRY-001
   来源：CHG-0027
+
+REQ-CONN-PROFILE-001   status: accepted   since: 2026-11-03   owner: 产品负责人
+  语句：连接档案必须本地持久保存名称、主机与端口；应用重启后必须仍能列出并连接，删除档案前必须确认。
+  标签：#capability #ux
+  验证：VER-CONN-PROFILE-001
+  来源：CHG-0035

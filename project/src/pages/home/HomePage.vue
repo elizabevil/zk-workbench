@@ -2,31 +2,57 @@
 import { computed, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
+import type { ConnectionProfile } from "@/api/types/ConnectionProfile";
 import type { ConnectionSnapshot } from "@/api/types/ConnectionSnapshot";
 import ConnectionDialog from "@/components/ConnectionDialog.vue";
 import { useConnectionStore } from "@/stores/connection";
+import { useProfilesStore } from "@/stores/profiles";
 
 const { t } = useI18n();
 const router = useRouter();
-const store = useConnectionStore();
+const connections = useConnectionStore();
+const profiles = useProfilesStore();
 const dialogOpen = ref(false);
 
-const hasConnections = computed(() => store.connections.length > 0);
+const hasProfiles = computed(() => profiles.profiles.length > 0);
 
-onMounted(() => store.refresh());
+onMounted(async () => {
+  await Promise.all([profiles.load(), connections.refresh()]);
+});
 
-function open(snapshot: ConnectionSnapshot): void {
-  store.activate(snapshot.connection_id);
-  router.push("/workbench");
+function sessionOf(profile: ConnectionProfile): ConnectionSnapshot | undefined {
+  return connections.connections.find(
+    (item) => item.host === profile.host && item.port === profile.port && item.state === "connected",
+  );
 }
 
-function connected(snapshot: ConnectionSnapshot): void {
+async function open(profile: ConnectionProfile): Promise<void> {
+  const existing = sessionOf(profile);
+  if (existing) {
+    connections.activate(existing.connection_id);
+    await router.push("/workspace");
+    return;
+  }
+  const created = await connections.connect({
+    host: profile.host,
+    port: profile.port,
+    displayName: profile.name,
+  });
+  if (created) {
+    await router.push("/workspace");
+  }
+}
+
+async function remove(profile: ConnectionProfile): Promise<void> {
+  if (!window.confirm(t("home.confirmDelete", { name: profile.name }))) {
+    return;
+  }
+  await profiles.remove(profile.id);
+}
+
+async function connected(): Promise<void> {
   dialogOpen.value = false;
-  open(snapshot);
-}
-
-async function disconnect(snapshot: ConnectionSnapshot): Promise<void> {
-  await store.close(snapshot.connection_id);
+  await router.push("/workspace");
 }
 </script>
 
@@ -51,19 +77,22 @@ async function disconnect(snapshot: ConnectionSnapshot): Promise<void> {
         </button>
       </div>
 
-      <div v-if="hasConnections" class="grid">
-        <article v-for="item in store.connections" :key="item.connection_id" class="card">
+      <div v-if="hasProfiles" class="grid">
+        <article v-for="profile in profiles.profiles" :key="profile.id" class="card">
           <div class="card-head">
-            <span class="dot" :data-state="item.state" />
-            <strong>{{ item.display_name }}</strong>
-            <span class="muted small">{{ item.connection_id }}</span>
+            <span class="dot" :data-state="sessionOf(profile)?.state ?? 'idle'" />
+            <strong>{{ profile.name }}</strong>
           </div>
-          <div class="endpoint">{{ item.host }}:{{ item.port }}</div>
-          <div class="muted small">{{ t(`connection.state.${item.state}`) }}</div>
+          <div class="endpoint">{{ profile.host }}:{{ profile.port }}</div>
+          <div class="muted small">
+            {{ sessionOf(profile) ? t("home.connected") : t("home.saved") }}
+          </div>
           <div class="card-actions">
-            <button type="button" class="primary" @click="open(item)">{{ t("home.open") }}</button>
-            <button type="button" class="ghost" @click="disconnect(item)">
-              {{ t("home.disconnect") }}
+            <button type="button" class="primary" @click="open(profile)">
+              {{ sessionOf(profile) ? t("home.open") : t("home.connect") }}
+            </button>
+            <button type="button" class="ghost" @click="remove(profile)">
+              {{ t("home.delete") }}
             </button>
           </div>
         </article>
@@ -76,6 +105,8 @@ async function disconnect(snapshot: ConnectionSnapshot): Promise<void> {
           {{ t("home.new") }}
         </button>
       </div>
+
+      <p v-if="profiles.error" class="error">{{ t(profiles.error.message_key) }}</p>
     </main>
 
     <ConnectionDialog
@@ -199,5 +230,9 @@ button {
 .ghost {
   background: transparent;
   border-color: rgb(255 255 255 / 18%);
+}
+.error {
+  margin-top: 16px;
+  color: #ef4444;
 }
 </style>

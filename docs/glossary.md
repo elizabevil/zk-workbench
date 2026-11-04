@@ -25,6 +25,6 @@ TERM acl = 节点访问控制列表
 TERM four-letter-command = ZooKeeper 服务端的运维查询命令
 TERM preview = 执行前展示的影响范围概览，不构成原子快照
 TERM node-type = 持久、临时、顺序、临时顺序四类节点及其合法组合
-TERM workbench = 多连接、树、编辑器与命令区组成的桌面工作台
+TERM workspace = 多连接、树、编辑器与命令区组成的桌面工作区
 TERM danger-operation = 删除、递归、批量写入等可能造成数据损失的操作
 TERM failure-report = 区分已完成、失败、未执行的分项结果报告

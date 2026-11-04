@@ -3,6 +3,7 @@ import { nextTick, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import type { ConnectionSnapshot } from "@/api/types/ConnectionSnapshot";
 import { useConnectionStore } from "@/stores/connection";
+import { useProfilesStore } from "@/stores/profiles";
 
 const props = defineProps<{ open: boolean }>();
 const emit = defineEmits<{
@@ -12,6 +13,7 @@ const emit = defineEmits<{
 
 const { t } = useI18n();
 const store = useConnectionStore();
+const profiles = useProfilesStore();
 
 const host = ref("127.0.0.1");
 const port = ref(2181);
@@ -39,10 +41,15 @@ async function submit(): Promise<void> {
     return;
   }
   localError.value = "";
+  const name = displayName.value.trim() || `${host.value}:${port.value}`;
+  const saved = await profiles.save({ id: null, name, host: host.value.trim(), port: port.value });
+  if (!saved) {
+    return;
+  }
   const created = await store.connect({
     host: host.value.trim(),
     port: port.value,
-    displayName: displayName.value.trim() || `${host.value}:${port.value}`,
+    displayName: name,
   });
   if (created) {
     emit("connected", created);
@@ -70,9 +77,11 @@ async function submit(): Promise<void> {
         </label>
 
         <p v-if="localError" class="error">{{ localError }}</p>
-        <p v-else-if="store.error" class="error">
-          {{ t(store.error.message_key) }}
-          <span v-if="store.error.fields.detail">（{{ store.error.fields.detail }}）</span>
+        <p v-else-if="profiles.error || store.error" class="error">
+          {{ t((profiles.error ?? store.error)!.message_key) }}
+          <span v-if="(profiles.error ?? store.error)!.fields.detail">
+            （{{ (profiles.error ?? store.error)!.fields.detail }}）
+          </span>
         </p>
 
         <div class="actions">

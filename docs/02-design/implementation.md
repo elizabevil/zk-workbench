@@ -59,7 +59,7 @@ src-tauri/src/
 ```text
 src/
   pages/
-    workbench/       主工作台；仅本页使用的组件放 pages/workbench/components/
+    workspace/       主工作区；仅本页使用的组件放 pages/workspace/components/
     connections/     连接列表与新建连接
     settings/        语言、主题、日志路径
   components/        跨页面复用

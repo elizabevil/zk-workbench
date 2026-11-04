@@ -118,3 +118,8 @@ VER-CONN-RETRY-001   status: pending
   对应：REQ-CONN-RETRY-001
   步骤：断开网络观察重连：默认开启、最多 5 次、间隔 3s 递增至 10s；修改参数后行为随之变化。
   结果：未执行
+
+VER-CONN-PROFILE-001   status: pending
+  对应：REQ-CONN-PROFILE-001
+  步骤：新建档案并连接，重启应用确认档案仍在首页；删除时确认提示出现，取消后档案保留。
+  结果：未执行

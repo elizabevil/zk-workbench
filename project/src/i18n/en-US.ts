@@ -3,6 +3,10 @@ export default {
   home: {
     title: "Connections",
     subtitle: "Open an existing connection or create a new one",
+    delete: "Delete",
+    confirmDelete: 'Delete profile "{name}"?',
+    connected: "Connected",
+    saved: "Saved",
     new: "New connection",
     open: "Open",
     disconnect: "Disconnect",
@@ -95,19 +99,6 @@ export default {
     },
   },
 
-  workbench: {
-    title: "Connection",
-    host: "Host",
-    hostPlaceholder: "127.0.0.1",
-    port: "Port",
-    displayName: "Name",
-    connect: "Connect",
-    close: "Disconnect",
-    connecting: "Connecting…",
-    generation: "generation",
-    sessionTimeout: "Session timeout",
-    empty: "No connection yet",
-  },
   connection: {
     state: {
       creating: "Creating",

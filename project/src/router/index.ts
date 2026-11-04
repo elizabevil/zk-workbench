@@ -3,10 +3,16 @@ import { createRouter, createWebHashHistory } from "vue-router";
 export const router = createRouter({
   history: createWebHashHistory(),
   routes: [
+    { path: "/", name: "home", component: () => import("@/pages/home/HomePage.vue") },
     {
-      path: "/",
-      name: "workbench",
-      component: () => import("../pages/workbench/WorkbenchPage.vue"),
+      path: "/workspace",
+      name: "workspace",
+      component: () => import("@/pages/workspace/WorkspacePage.vue"),
+    },
+    {
+      path: "/settings",
+      name: "settings",
+      component: () => import("@/pages/settings/SettingsPage.vue"),
     },
   ],
 });
