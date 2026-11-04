@@ -20,7 +20,7 @@ impl SettingsStore {
 
     pub fn with_path(path: PathBuf) -> Self {
         let settings = load_from(&path).unwrap_or_else(|error| {
-            tracing::warn!(?error, path = ?path, "读取配置失败，使用默认值");
+            tracing::warn!(?error, path = ?path, "failed to load settings, using defaults");
             Settings::default()
         });
         Self {
@@ -49,7 +49,9 @@ impl SettingsStore {
     pub fn reset(&self) -> AppResult<Settings> {
         if self.path.exists() {
             std::fs::remove_file(&self.path).map_err(|error| {
-                Box::new(app::invalid_argument(&format!("删除配置失败: {error}")))
+                Box::new(app::invalid_argument(&format!(
+                    "failed to delete settings: {error}"
+                )))
             })?;
         }
         let settings = Settings::default();
@@ -76,38 +78,61 @@ fn load_from(path: &Path) -> Result<Settings, Box<dyn std::error::Error>> {
 fn persist(path: &Path, settings: &Settings) -> AppResult<()> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent).map_err(|error| {
-            Box::new(app::invalid_argument(&format!("创建配置目录失败: {error}")))
+            Box::new(app::invalid_argument(&format!(
+                "failed to create config directory: {error}"
+            )))
         })?;
     }
-    let text = toml::to_string_pretty(settings)
-        .map_err(|error| Box::new(app::invalid_argument(&format!("序列化配置失败: {error}"))))?;
+    let text = toml::to_string_pretty(settings).map_err(|error| {
+        Box::new(app::invalid_argument(&format!(
+            "failed to serialize settings: {error}"
+        )))
+    })?;
     let temp = path.with_extension("toml.tmp");
-    std::fs::write(&temp, text)
-        .map_err(|error| Box::new(app::invalid_argument(&format!("写入配置失败: {error}"))))?;
-    std::fs::rename(&temp, path)
-        .map_err(|error| Box::new(app::invalid_argument(&format!("替换配置失败: {error}"))))?;
+    std::fs::write(&temp, text).map_err(|error| {
+        Box::new(app::invalid_argument(&format!(
+            "failed to write settings: {error}"
+        )))
+    })?;
+    std::fs::rename(&temp, path).map_err(|error| {
+        Box::new(app::invalid_argument(&format!(
+            "failed to replace settings: {error}"
+        )))
+    })?;
     Ok(())
 }
 
 fn validate(settings: &Settings) -> AppResult<()> {
     if settings.retry.max_attempts == 0 {
-        return Err(Box::new(app::invalid_argument("重试次数必须大于 0")));
+        return Err(Box::new(app::invalid_argument(
+            "retry max_attempts must be greater than 0",
+        )));
     }
     if settings.retry.initial_interval_ms == 0 || settings.retry.max_interval_ms == 0 {
-        return Err(Box::new(app::invalid_argument("重试间隔必须大于 0")));
+        return Err(Box::new(app::invalid_argument(
+            "retry intervals must be greater than 0",
+        )));
     }
     if settings.retry.initial_interval_ms > settings.retry.max_interval_ms {
-        return Err(Box::new(app::invalid_argument("初始间隔不能大于最大间隔")));
+        return Err(Box::new(app::invalid_argument(
+            "initial interval must not exceed max interval",
+        )));
     }
     if settings.audit.retention_days == 0 {
-        return Err(Box::new(app::invalid_argument("审计保留期必须大于 0")));
+        return Err(Box::new(app::invalid_argument(
+            "audit retention_days must be greater than 0",
+        )));
     }
     for profile in &settings.proxy.profiles {
         if profile.host.trim().is_empty() {
-            return Err(Box::new(app::invalid_argument("代理主机不能为空")));
+            return Err(Box::new(app::invalid_argument(
+                "proxy host must not be empty",
+            )));
         }
         if profile.port == 0 {
-            return Err(Box::new(app::invalid_argument("代理端口必须大于 0")));
+            return Err(Box::new(app::invalid_argument(
+                "proxy port must be greater than 0",
+            )));
         }
     }
     Ok(())
@@ -133,7 +158,7 @@ mod tests {
         let store = SettingsStore::with_path(path.clone());
 
         let mut settings = Settings::default();
-        settings.general.locale = "en-US".to_string();
+        settings.general.locale = crate::config::Locale::EnUs;
         settings.retry.max_attempts = 3;
         store.save(settings.clone()).expect("保存失败");
 

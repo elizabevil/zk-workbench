@@ -2,15 +2,15 @@
 
 use crate::error::{AppResult, app};
 
-const SERVICE: &str = "zkui";
+use crate::config::constants::{KEYRING_SERVICE, PROXY_ACCOUNT_PREFIX};
 
 fn entry(account: &str) -> Result<keyring::Entry, keyring::Error> {
-    keyring::Entry::new(SERVICE, account)
+    keyring::Entry::new(KEYRING_SERVICE, account)
 }
 
 /// 代理密码的 key 前缀。
 fn proxy_account(profile: &str) -> String {
-    format!("proxy:{profile}")
+    format!("{PROXY_ACCOUNT_PREFIX}{profile}")
 }
 
 pub fn set_proxy_password(profile: &str, password: &str) -> AppResult<()> {

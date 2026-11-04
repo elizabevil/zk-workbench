@@ -7,6 +7,7 @@ import { settingsGet, settingsReset, settingsSave } from "../api/settings";
 import type { AppError } from "../api/types/AppError";
 import type { Settings } from "../api/types/Settings";
 import { i18n } from "../i18n";
+import { normalizeLocale } from "../i18n/locale";
 
 export const useSettingsStore = defineStore("settings", () => {
   const settings = ref<Settings | null>(null);
@@ -14,7 +15,7 @@ export const useSettingsStore = defineStore("settings", () => {
   const saving = ref(false);
 
   function applyLocale(settings: Settings): void {
-    i18n.global.locale.value = settings.general.locale === "en-US" ? "en-US" : "zh-CN";
+    i18n.global.locale.value = normalizeLocale(settings.general.locale);
   }
 
   async function load(): Promise<void> {

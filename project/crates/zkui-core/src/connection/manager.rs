@@ -65,7 +65,9 @@ impl ConnectionManager {
     /// 建立连接并启动状态监听任务。
     pub async fn create(&self, request: CreateConnection) -> AppResult<ConnectionSnapshot> {
         if request.endpoint.trim().is_empty() {
-            return Err(Box::new(app::invalid_argument("endpoint 不能为空")));
+            return Err(Box::new(app::invalid_argument(
+                "endpoint must not be empty",
+            )));
         }
         let settings = self.settings_snapshot();
         let proxies = resolve_proxies(&request, &settings);
@@ -92,13 +94,15 @@ impl ConnectionManager {
                 tracing::warn!(
                     attempt = attempt + 1,
                     delay_ms = delay,
-                    "连接失败，准备重试"
+                    "connection failed, retrying"
                 );
                 tokio::time::sleep(std::time::Duration::from_millis(delay)).await;
             }
         }
         let (client, relay) = established.ok_or_else(|| {
-            last_error.unwrap_or_else(|| Box::new(app::invalid_argument("无法建立连接")))
+            last_error.unwrap_or_else(|| {
+                Box::new(app::invalid_argument("unable to establish connection"))
+            })
         })?;
         let id = format!("conn-{}", self.next_id.fetch_add(1, Ordering::SeqCst));
         let handle = Arc::new(ConnectionHandle::new(

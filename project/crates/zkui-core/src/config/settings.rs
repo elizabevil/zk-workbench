@@ -3,6 +3,8 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
+use crate::config::constants::{DEFAULT_LOG_LEVEL, DEFAULT_THEME, OTEL_PROTOCOL_HTTP_PROTOBUF};
+use crate::config::locale::Locale;
 use crate::transport::ProxyProfile;
 
 /// 全部应用设置。
@@ -24,7 +26,7 @@ pub struct Settings {
 #[serde(default)]
 #[ts(export, export_to = "../../../src/api/types/")]
 pub struct GeneralSettings {
-    pub locale: String,
+    pub locale: Locale,
     pub theme: String,
     pub restore_last_connection: bool,
 }
@@ -32,8 +34,8 @@ pub struct GeneralSettings {
 impl Default for GeneralSettings {
     fn default() -> Self {
         Self {
-            locale: "zh-CN".to_string(),
-            theme: "compact".to_string(),
+            locale: Locale::ZhCn,
+            theme: DEFAULT_THEME.to_string(),
             restore_last_connection: false,
         }
     }
@@ -52,7 +54,7 @@ pub struct NotificationSettings {
 impl Default for NotificationSettings {
     fn default() -> Self {
         Self {
-            desktop: "errors".to_string(),
+            desktop: crate::config::constants::NOTIFICATION_ERRORS.to_string(),
             command_finished: false,
             sound: false,
         }
@@ -130,7 +132,7 @@ impl Default for OtelSettings {
         Self {
             enabled: false,
             endpoint: String::new(),
-            protocol: "http/protobuf".to_string(),
+            protocol: OTEL_PROTOCOL_HTTP_PROTOBUF.to_string(),
             sample_ratio: 1.0,
         }
     }
@@ -146,7 +148,7 @@ pub struct LogSettings {
 impl Default for LogSettings {
     fn default() -> Self {
         Self {
-            level: "info".to_string(),
+            level: DEFAULT_LOG_LEVEL.to_string(),
         }
     }
 }

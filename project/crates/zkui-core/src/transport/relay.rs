@@ -54,7 +54,7 @@ pub async fn start(target: String, proxy: ProxyProfile) -> AppResult<RelayHandle
                         let _ = tokio::io::copy_bidirectional(&mut inbound, &mut outbound).await;
                     }
                     Err(error) => {
-                        tracing::warn!(?error, "中继上游连接失败");
+                        tracing::warn!(?error, "relay upstream connection failed");
                     }
                 }
             });

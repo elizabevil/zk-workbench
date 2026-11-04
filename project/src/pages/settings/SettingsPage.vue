@@ -8,6 +8,7 @@ import { proxyPasswordClear, proxyPasswordSet, proxyTest } from "../../api/proxy
 import type { AppPaths } from "../../api/types/AppPaths";
 import type { ProxyProfile } from "../../api/types/ProxyProfile";
 import { useSettingsStore } from "../../stores/settings";
+import { LOCALES } from "../../i18n/locale";
 
 const { t } = useI18n();
 const router = useRouter();
@@ -104,8 +105,9 @@ function removeProxy(index: number): void {
         <label>
           {{ t("settings.general.locale") }}
           <select v-model="store.settings.general.locale">
-            <option value="zh-CN">中文</option>
-            <option value="en-US">English</option>
+            <option v-for="locale in LOCALES" :key="locale" :value="locale">
+              {{ locale }}
+            </option>
           </select>
         </label>
         <label>
