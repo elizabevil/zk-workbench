@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, RwLock};
 
+use base64::Engine;
 use tokio::sync::broadcast;
 use zookeeper_client::{Client, SessionState};
 
@@ -12,7 +13,7 @@ use super::state::ConnectionState;
 use crate::config::{Settings, SettingsStore};
 use crate::error::{AppError, AppResult, app};
 use crate::ipc::connection::{ConnectionSnapshot, ConnectionStateEvent, CreateConnection};
-use crate::ipc::node::NodeStat;
+use crate::ipc::node::{NodeData, NodeStat};
 use crate::transport::{RelayHandle, no_proxy, proxy::ProxyProfile, relay};
 
 struct Entry {
@@ -208,6 +209,20 @@ impl ConnectionManager {
         })
     }
 
+    /// 读取节点原始数据与 Stat。
+    pub async fn data(&self, connection_id: &str, path: &str) -> AppResult<NodeData> {
+        let client = self.client_of(connection_id)?;
+        let (bytes, stat) = client.get_data(path).await?;
+        let is_text = std::str::from_utf8(&bytes).is_ok();
+        Ok(NodeData {
+            path: path.to_string(),
+            data_b64: base64::engine::general_purpose::STANDARD.encode(&bytes),
+            byte_len: bytes.len() as u64,
+            is_text,
+            stat: stat_of(path, &stat),
+        })
+    }
+
     fn client_of(&self, connection_id: &str) -> AppResult<Client> {
         let entries = self.entries.read().expect("connections lock poisoned");
         entries
@@ -355,4 +370,20 @@ fn resolve_proxies(
         .iter()
         .map(|profile| Some(profile.clone()))
         .collect()
+}
+
+fn stat_of(path: &str, stat: &zookeeper_client::Stat) -> NodeStat {
+    NodeStat {
+        path: path.to_string(),
+        version: stat.version,
+        cversion: stat.cversion,
+        aversion: stat.aversion,
+        data_length: stat.data_length,
+        num_children: stat.num_children,
+        ephemeral_owner: stat.ephemeral_owner,
+        czxid: stat.czxid,
+        mzxid: stat.mzxid,
+        ctime: stat.ctime,
+        mtime: stat.mtime,
+    }
 }

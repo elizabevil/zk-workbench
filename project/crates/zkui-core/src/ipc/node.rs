@@ -24,3 +24,15 @@ pub struct NodeStat {
     #[ts(type = "number")]
     pub mtime: i64,
 }
+
+/// 节点数据。`data_b64` 为原始字节，前端按需解码展示。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[ts(export)]
+pub struct NodeData {
+    pub path: String,
+    pub data_b64: String,
+    #[ts(type = "number")]
+    pub byte_len: u64,
+    pub is_text: bool,
+    pub stat: NodeStat,
+}

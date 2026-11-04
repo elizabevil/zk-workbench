@@ -22,7 +22,21 @@ export default {
     hostRequired: "Host must not be empty",
     portInvalid: "Port must be an integer between 1 and 65535",
   },
+  data: {
+    tab: "Data",
+    statTab: "Stat",
+    refresh: "Refresh",
+    raw: "Raw",
+    formatted: "Formatted",
+    binary: "Binary data",
+    binaryHint: "Not valid UTF-8; read-only hex preview is provided.",
+    bytes: "Byte length",
+    empty: "Empty",
+    notEditable: "Inline editing is not available for binary data",
+  },
   shell: {
+    loading: "Loading…",
+
     noConnection: "Not connected",
     tree: "Node tree",
     treeHint: "Lazy loading arrives in S4",

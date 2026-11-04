@@ -22,7 +22,21 @@ export default {
     hostRequired: "主机地址不能为空",
     portInvalid: "端口必须是 1 到 65535 之间的整数",
   },
+  data: {
+    tab: "数据",
+    statTab: "Stat",
+    refresh: "刷新",
+    raw: "原始",
+    formatted: "格式化",
+    binary: "二进制数据",
+    binaryHint: "无法安全解码为文本，仅提供只读十六进制预览。",
+    bytes: "字节长度",
+    empty: "空数据",
+    notEditable: "二进制数据不支持内联编辑",
+  },
   shell: {
+    loading: "加载中…",
+
     noConnection: "未连接",
     tree: "节点树",
     treeHint: "按需加载将在 S4 提供",

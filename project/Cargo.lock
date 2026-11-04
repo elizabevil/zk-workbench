@@ -5531,6 +5531,7 @@ dependencies = [
 name = "zkui"
 version = "0.1.0"
 dependencies = [
+ "base64 0.23.1",
  "dirs",
  "serde",
  "serde_json",
@@ -5546,6 +5547,7 @@ name = "zkui-core"
 version = "0.1.0"
 dependencies = [
  "async-http-proxy",
+ "base64 0.23.1",
  "dirs",
  "keyring",
  "serde",

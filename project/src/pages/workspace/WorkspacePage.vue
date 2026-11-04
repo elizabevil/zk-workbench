@@ -4,13 +4,14 @@ import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 
 import { type InvokeRejection, toAppError } from "@/api/client";
-import { nodeStat } from "@/api/node";
+import { nodeData } from "@/api/node";
 import type { AppError } from "@/api/types/AppError";
 import type { ConnectionSnapshot } from "@/api/types/ConnectionSnapshot";
-import type { NodeStat } from "@/api/types/NodeStat";
+import type { NodeData } from "@/api/types/NodeData";
 import ConnectionDialog from "@/components/ConnectionDialog.vue";
 import TreeNodeItem from "@/components/TreeNodeItem.vue";
 import { useConnectionStore } from "@/stores/connection";
+import { decodeUtf8Base64, hexPreview } from "@/utils/encoding";
 
 const { t } = useI18n();
 const router = useRouter();
@@ -20,44 +21,67 @@ const menuOpen = ref(false);
 const dialogOpen = ref(false);
 const treeKey = ref(0);
 const selectedPath = ref<string | null>("/");
-const stat = ref<NodeStat | null>(null);
-const statError = ref<AppError | null>(null);
+
+const activeTab = ref<"data" | "stat">("data");
+const formatted = ref(false);
+const data = ref<NodeData | null>(null);
+const dataError = ref<AppError | null>(null);
+const loadingData = ref(false);
 
 const connectionId = computed(() => store.snapshot?.connection_id ?? "");
 const stateLabel = computed(() =>
   store.snapshot ? t(`connection.state.${store.snapshot.state}`) : t("shell.noConnection"),
 );
 
-async function loadStat(path: string): Promise<void> {
+const text = computed(() => (data.value?.is_text ? decodeUtf8Base64(data.value.data_b64) : ""));
+const pretty = computed(() => {
+  if (!text.value) {
+    return null;
+  }
+  try {
+    return JSON.stringify(JSON.parse(text.value), null, 2);
+  } catch {
+    return null;
+  }
+});
+const displayText = computed(() => (formatted.value && pretty.value ? pretty.value : text.value));
+const hexDump = computed(() => (data.value ? hexPreview(data.value.data_b64) : ""));
+
+async function loadData(path: string): Promise<void> {
   if (!connectionId.value) {
     return;
   }
-  statError.value = null;
+  loadingData.value = true;
+  dataError.value = null;
   try {
-    stat.value = await nodeStat(connectionId.value, path);
+    data.value = await nodeData(connectionId.value, path);
   } catch (raw) {
-    stat.value = null;
-    statError.value = toAppError(raw as InvokeRejection);
+    data.value = null;
+    dataError.value = toAppError(raw as InvokeRejection);
+  } finally {
+    loadingData.value = false;
   }
 }
 
 function select(path: string): void {
   selectedPath.value = path;
-  void loadStat(path);
+  activeTab.value = "data";
+  formatted.value = false;
+  void loadData(path);
 }
 
 function refresh(): void {
   treeKey.value += 1;
   if (selectedPath.value) {
-    void loadStat(selectedPath.value);
+    void loadData(selectedPath.value);
   }
 }
 
 watch(connectionId, () => {
   treeKey.value += 1;
   selectedPath.value = "/";
-  stat.value = null;
-  void loadStat("/");
+  data.value = null;
+  void loadData("/");
 });
 
 watch(
@@ -65,7 +89,7 @@ watch(
   () => {
     treeKey.value += 1;
     if (selectedPath.value) {
-      void loadStat(selectedPath.value);
+      void loadData(selectedPath.value);
     }
   },
 );
@@ -82,7 +106,7 @@ onMounted(async () => {
     }
   }
   selectedPath.value = "/";
-  void loadStat("/");
+  void loadData("/");
 });
 
 function switchTo(snapshot: ConnectionSnapshot): void {
@@ -163,7 +187,7 @@ async function disconnect(): Promise<void> {
             path="/"
             :depth="0"
             @select="select"
-            @error="statError = $event"
+            @error="dataError = $event"
           />
         </div>
         <p v-else class="muted">{{ t("shell.noConnection") }}</p>
@@ -175,18 +199,66 @@ async function disconnect(): Promise<void> {
           <p class="muted">{{ t("shell.contentHint") }}</p>
         </div>
 
-        <div v-else class="stat-panel">
-          <h2 class="path">{{ selectedPath }}</h2>
-          <p v-if="statError" class="error">{{ t(statError.message_key) }}</p>
+        <div v-else class="detail">
+          <div class="detail-head">
+            <h2 class="path">{{ selectedPath }}</h2>
+            <div class="toolbar">
+              <button type="button" class="tiny" @click="refresh">{{ t("data.refresh") }}</button>
+            </div>
+          </div>
 
-          <dl v-if="stat" class="stat-grid">
-            <div><dt>{{ t("shell.version") }}</dt><dd>{{ stat.version }}</dd></div>
-            <div><dt>{{ t("shell.cversion") }}</dt><dd>{{ stat.cversion }}</dd></div>
-            <div><dt>{{ t("shell.children") }}</dt><dd>{{ stat.num_children }}</dd></div>
-            <div><dt>{{ t("shell.dataLength") }}</dt><dd>{{ stat.data_length }}</dd></div>
-            <div><dt>{{ t("shell.ephemeral") }}</dt><dd>{{ stat.ephemeral_owner === 0 ? t("shell.persistent") : stat.ephemeral_owner }}</dd></div>
-            <div><dt>{{ t("shell.mtime") }}</dt><dd>{{ new Date(stat.mtime).toLocaleString() }}</dd></div>
-          </dl>
+          <div class="tabs">
+            <button
+              type="button"
+              :class="{ active: activeTab === 'data' }"
+              @click="activeTab = 'data'"
+            >
+              {{ t("data.tab") }}
+            </button>
+            <button
+              type="button"
+              :class="{ active: activeTab === 'stat' }"
+              @click="activeTab = 'stat'"
+            >
+              {{ t("data.statTab") }}
+            </button>
+          </div>
+
+          <p v-if="dataError" class="error">{{ t(dataError.message_key) }}</p>
+          <p v-else-if="loadingData" class="muted">{{ t("shell.loading") }}</p>
+
+          <template v-else-if="data">
+            <div v-if="activeTab === 'data'" class="data-pane">
+              <div v-if="!data.is_text" class="binary">
+                <p class="warn">{{ t("data.binaryHint") }}</p>
+                <p class="muted">{{ t("data.bytes") }}: {{ data.byte_len }}</p>
+                <pre class="hex">{{ hexDump }}</pre>
+              </div>
+              <template v-else>
+                <div class="data-toolbar">
+                  <span class="muted">{{ t("data.bytes") }}: {{ data.byte_len }}</span>
+                  <button v-if="pretty" type="button" class="tiny" @click="formatted = !formatted">
+                    {{ formatted ? t("data.raw") : t("data.formatted") }}
+                  </button>
+                </div>
+                <pre class="text">{{ displayText || t("data.empty") }}</pre>
+              </template>
+            </div>
+
+            <dl v-else class="stat-grid">
+              <div><dt>{{ t("shell.version") }}</dt><dd>{{ data.stat.version }}</dd></div>
+              <div><dt>{{ t("shell.cversion") }}</dt><dd>{{ data.stat.cversion }}</dd></div>
+              <div><dt>{{ t("shell.children") }}</dt><dd>{{ data.stat.num_children }}</dd></div>
+              <div><dt>{{ t("shell.dataLength") }}</dt><dd>{{ data.stat.data_length }}</dd></div>
+              <div>
+                <dt>{{ t("shell.ephemeral") }}</dt>
+                <dd>
+                  {{ data.stat.ephemeral_owner === 0 ? t("shell.persistent") : data.stat.ephemeral_owner }}
+                </dd>
+              </div>
+              <div><dt>{{ t("shell.mtime") }}</dt><dd>{{ new Date(data.stat.mtime).toLocaleString() }}</dd></div>
+            </dl>
+          </template>
         </div>
       </section>
     </div>
@@ -376,6 +448,89 @@ async function disconnect(): Promise<void> {
 .stat-grid dd {
   margin: 0;
   font-family: ui-monospace, monospace;
+}
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+}
+.detail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.path {
+  margin: 0;
+  font-family: ui-monospace, monospace;
+  font-size: 17px;
+  word-break: break-all;
+}
+.toolbar {
+  display: flex;
+  gap: 6px;
+  flex: none;
+}
+.tiny {
+  padding: 2px 8px;
+  border-radius: 5px;
+  border: 1px solid rgb(255 255 255 / 15%);
+  background: transparent;
+  color: #cbd5e1;
+  cursor: pointer;
+  font-size: 12px;
+}
+.tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid rgb(255 255 255 / 8%);
+}
+.tabs button {
+  padding: 6px 12px;
+  border: none;
+  background: transparent;
+  color: #9aa4b2;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+.tabs button.active {
+  color: inherit;
+  border-bottom-color: #2563eb;
+}
+.data-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.data-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.text,
+.hex {
+  margin: 0;
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid rgb(255 255 255 / 8%);
+  background: rgb(16 20 24 / 70%);
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 60vh;
+  overflow: auto;
+}
+.binary {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.warn {
+  color: #fbbf24;
+  margin: 0;
+  font-size: 13px;
 }
 .statusbar {
   display: flex;
