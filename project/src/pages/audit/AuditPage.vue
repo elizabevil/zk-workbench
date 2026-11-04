@@ -1,12 +1,15 @@
 <script lang="ts" setup>
-import {onMounted, onUnmounted, ref} from "vue";
+import {NButton, NDataTable, NInput, NInputNumber, type DataTableColumns} from "naive-ui";
+import {computed, h, onMounted, onUnmounted, ref} from "vue";
 import {useI18n} from "vue-i18n";
 import {useRouter} from "vue-router";
 
 import {auditClear, auditExport, auditList, auditPrune, auditVerify} from "@/api/audit";
 import {type InvokeRejection, toAppError} from "@/api/client";
 import type {AuditRecord} from "@/api/types/AuditRecord";
+import {KEY_ESCAPE} from "@/constants/keyboard";
 import {useSettingsStore} from "@/stores/settings";
+import {applyNumber} from "@/utils/number";
 import {toRfc3339} from "@/utils/time";
 
 const {t} = useI18n();
@@ -25,6 +28,31 @@ const rows = ref<AuditRecord[]>([]);
 const message = ref("");
 const exportPath = ref("");
 
+const columns = computed<DataTableColumns<AuditRecord>>(() => [
+  {
+    title: t("settings.audit.time"),
+    key: "ts",
+    width: 190,
+    render: (row) => h("span", {class: "mono"}, toRfc3339(row.ts)),
+  },
+  {title: t("settings.audit.op"), key: "op", width: 90},
+  {
+    title: t("settings.audit.path"),
+    key: "path",
+    minWidth: 180,
+    ellipsis: {tooltip: true},
+    render: (row) => h("span", {class: "mono"}, row.path),
+  },
+  {title: t("settings.audit.result"), key: "result", width: 90},
+  {title: t("settings.audit.actor"), key: "actor", width: 130, ellipsis: {tooltip: true}},
+  {
+    title: t("settings.audit.detail"),
+    key: "detail",
+    minWidth: 180,
+    ellipsis: {tooltip: true},
+  },
+]);
+
 async function load(): Promise<void> {
   rows.value = await auditList(200, 0, null);
 }
@@ -32,8 +60,8 @@ async function load(): Promise<void> {
 async function verify(): Promise<void> {
   const report = await auditVerify();
   message.value = report.ok
-      ? t("settings.audit.verified", {count: report.checked})
-      : t("settings.audit.broken", {id: report.broken_at});
+    ? t("settings.audit.verified", {count: report.checked})
+    : t("settings.audit.broken", {id: report.broken_at});
 }
 
 async function clear(): Promise<void> {
@@ -66,8 +94,14 @@ async function saveRetention(): Promise<void> {
   message.value = t("settings.saved");
 }
 
+function setRetention(value: number): void {
+  if (store.settings) {
+    store.settings.audit.retention_days = value;
+  }
+}
+
 function onEscape(event: KeyboardEvent): void {
-  if (event.key === "Escape") {
+  if (event.key === KEY_ESCAPE) {
     goBack();
   }
 }
@@ -88,51 +122,51 @@ onUnmounted(() => window.removeEventListener("keydown", onEscape));
         <h1>{{ t("settings.audit.title") }}</h1>
         <p class="hint">{{ t("settings.audit.hint") }}</p>
       </div>
-      <button type="button" @click="goBack">{{ t("settings.back") }}</button>
+      <NButton size="small" @click="goBack">{{ t("settings.back") }}</NButton>
     </header>
 
     <section v-if="store.settings" class="bar">
-      <label>
-        {{ t("settings.audit.retention") }}
-        <input v-model.number="store.settings.audit.retention_days" min="1" type="number"/>
+      <label class="retention">
+        <span>{{ t("settings.audit.retention") }}</span>
+        <NInputNumber
+          :min="1"
+          :show-button="false"
+          :value="store.settings.audit.retention_days"
+          class="retention-input"
+          size="small"
+          @update:value="(value) => applyNumber(value, setRetention)"
+        />
       </label>
-      <button type="button" @click="saveRetention">{{ t("settings.save") }}</button>
-      <button type="button" @click="load">{{ t("settings.audit.refresh") }}</button>
-      <button type="button" @click="verify">{{ t("settings.audit.verify") }}</button>
-      <button type="button" @click="prune">{{ t("settings.audit.prune") }}</button>
-      <button type="button" @click="clear">{{ t("settings.audit.clear") }}</button>
+      <NButton size="small" @click="saveRetention">{{ t("settings.save") }}</NButton>
+      <NButton size="small" @click="load">{{ t("settings.audit.refresh") }}</NButton>
+      <NButton size="small" @click="verify">{{ t("settings.audit.verify") }}</NButton>
+      <NButton size="small" @click="prune">{{ t("settings.audit.prune") }}</NButton>
+      <NButton size="small" type="error" @click="clear">{{ t("settings.audit.clear") }}</NButton>
     </section>
 
     <section class="bar">
-      <input v-model="exportPath" :placeholder="t('settings.audit.exportPath')"/>
-      <button type="button" @click="exportLog">{{ t("settings.audit.export") }}</button>
+      <NInput
+        v-model:value="exportPath"
+        :placeholder="t('settings.audit.exportPath')"
+        class="export-input"
+        size="small"
+      />
+      <NButton size="small" @click="exportLog">{{ t("settings.audit.export") }}</NButton>
       <span v-if="message" class="hint">{{ message }}</span>
     </section>
 
     <div class="table-wrap">
-      <table class="audit-table">
-        <thead>
-        <tr>
-          <th>{{ t("settings.audit.time") }}</th>
-          <th>{{ t("settings.audit.op") }}</th>
-          <th>{{ t("settings.audit.path") }}</th>
-          <th>{{ t("settings.audit.result") }}</th>
-          <th>{{ t("settings.audit.actor") }}</th>
-          <th>{{ t("settings.audit.detail") }}</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr v-for="row in rows" :key="row.id">
-          <td class="mono">{{ toRfc3339(row.ts) }}</td>
-          <td>{{ row.op }}</td>
-          <td class="mono">{{ row.path }}</td>
-          <td>{{ row.result }}</td>
-          <td>{{ row.actor }}</td>
-          <td>{{ row.detail }}</td>
-        </tr>
-        </tbody>
-      </table>
-      <p v-if="!rows.length" class="hint">{{ t("settings.audit.empty") }}</p>
+      <NDataTable
+        :columns="columns"
+        :data="rows"
+        :row-key="(row: AuditRecord) => row.id"
+        flex-height
+        size="small"
+      >
+        <template #empty>
+          <p class="hint">{{ t("settings.audit.empty") }}</p>
+        </template>
+      </NDataTable>
     </div>
   </main>
 </template>
@@ -162,6 +196,12 @@ h1 {
   font-size: 20px;
 }
 
+.hint {
+  color: #9aa4b2;
+  margin: 0;
+  font-size: 12px;
+}
+
 .bar {
   display: flex;
   flex-wrap: wrap;
@@ -169,54 +209,35 @@ h1 {
   align-items: center;
 }
 
-.bar input {
-  min-width: 6rem;
+.retention {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #cbd5e1;
+  font-size: 13px;
 }
 
-.page button {
-  padding: 6px 12px;
-  border: 1px solid rgb(255 255 255 / 15%);
-  border-radius: 6px;
-  background: rgb(255 255 255 / 8%);
-  color: #e6e6e6;
-  cursor: pointer;
+.retention-input {
+  width: 110px;
 }
 
-.page button:hover {
-  background: rgb(255 255 255 / 14%);
-}
-
-.page input {
-  padding: 6px 9px;
-  border: 1px solid #2a323c;
-  border-radius: 6px;
-  background: #101418;
-  color: #e6e6e6;
-}
-
-.audit-table th {
-  color: #9aa4b2;
-  font-weight: 600;
-  background: rgb(255 255 255 / 4%);
+.export-input {
+  width: 280px;
+  max-width: 100%;
 }
 
 .table-wrap {
   flex: 1;
-  overflow: auto;
+  min-height: 0;
+  overflow: hidden;
 }
 
-.audit-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
+.table-wrap :deep(.n-data-table) {
+  height: 100%;
 }
 
-.audit-table th,
-.audit-table td {
-  text-align: left;
-  padding: 6px 8px;
-  border-bottom: 1px solid rgb(255 255 255 / 8%);
-  white-space: nowrap;
+.table-wrap :deep(.n-data-table-th) {
+  background: rgb(255 255 255 / 4%);
 }
 
 .mono {

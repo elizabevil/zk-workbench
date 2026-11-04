@@ -1,4 +1,14 @@
 <script lang="ts" setup>
+import {
+  NButton,
+  NCard,
+  NCheckbox,
+  NGrid,
+  NGridItem,
+  NInput,
+  NInputNumber,
+  NStatistic,
+} from "naive-ui";
 import {onMounted, onUnmounted, ref} from "vue";
 import {useI18n} from "vue-i18n";
 import {useRouter} from "vue-router";
@@ -8,7 +18,9 @@ import {metricsSnapshot} from "@/api/metrics";
 import {otelExportNow, otelStatus} from "@/api/otel";
 import type {MetricsSnapshot} from "@/api/types/MetricsSnapshot";
 import type {OtelExportStatus} from "@/api/types/OtelExportStatus";
+import {KEY_ESCAPE} from "@/constants/keyboard";
 import {useSettingsStore} from "@/stores/settings";
+import {applyNumber} from "@/utils/number";
 import {toRfc3339} from "@/utils/time";
 
 const {t} = useI18n();
@@ -47,8 +59,14 @@ async function save(): Promise<void> {
   message.value = t("settings.saved");
 }
 
+function setSampleRatio(value: number): void {
+  if (store.settings) {
+    store.settings.observability.otel.sample_ratio = value;
+  }
+}
+
 function onEscape(event: KeyboardEvent): void {
-  if (event.key === "Escape") {
+  if (event.key === KEY_ESCAPE) {
     goBack();
   }
 }
@@ -69,44 +87,60 @@ onUnmounted(() => window.removeEventListener("keydown", onEscape));
         <h1>{{ t("settings.observability.title") }}</h1>
         <p class="hint">{{ t("settings.observability.hint") }}</p>
       </div>
-      <button type="button" @click="goBack">{{ t("settings.back") }}</button>
+      <NButton size="small" @click="goBack">{{ t("settings.back") }}</NButton>
     </header>
 
-    <section v-if="store.settings" class="card">
-      <label class="inline">
-        <input v-model="store.settings.observability.otel.enabled" type="checkbox"/>
-        {{ t("settings.observability.otlp") }}
-      </label>
-      <label>
-        {{ t("settings.observability.endpoint") }}
-        <input v-model="store.settings.observability.otel.endpoint"/>
-      </label>
-      <label>
-        {{ t("settings.observability.sampleRatio") }}
-        <input v-model.number="store.settings.observability.otel.sample_ratio" max="1" min="0" step="0.1"
-               type="number"/>
-      </label>
-      <div class="actions">
-        <button type="button" @click="save">{{ t("settings.save") }}</button>
-        <button type="button" @click="exportNow">{{ t("settings.observability.otelExportNow") }}</button>
-        <button type="button" @click="refresh">{{ t("settings.observability.refresh") }}</button>
+    <NCard v-if="store.settings" size="small">
+      <div class="settings">
+        <NCheckbox v-model:checked="store.settings.observability.otel.enabled">
+          {{ t("settings.observability.otlp") }}
+        </NCheckbox>
+        <div class="field">
+          <span class="field-label">{{ t("settings.observability.endpoint") }}</span>
+          <NInput
+            v-model:value="store.settings.observability.otel.endpoint"
+            class="endpoint"
+            size="small"
+          />
+        </div>
+        <div class="field">
+          <span class="field-label">{{ t("settings.observability.sampleRatio") }}</span>
+          <NInputNumber
+            :max="1"
+            :min="0"
+            :show-button="false"
+            :step="0.1"
+            :value="store.settings.observability.otel.sample_ratio"
+            class="ratio"
+            size="small"
+            @update:value="(value) => applyNumber(value, setSampleRatio)"
+          />
+        </div>
+        <div class="actions">
+          <NButton size="small" type="primary" @click="save">{{ t("settings.save") }}</NButton>
+          <NButton size="small" @click="exportNow">
+            {{ t("settings.observability.otelExportNow") }}
+          </NButton>
+          <NButton size="small" @click="refresh">{{ t("settings.observability.refresh") }}</NButton>
+        </div>
+        <p v-if="message" class="hint">{{ message }}</p>
+        <p v-if="otel" class="hint">
+          {{ otel.enabled ? t("settings.observability.otelEnabled") : t("settings.observability.otelDisabled") }}
+          · {{ otel.endpoint }}
+          <span v-if="otel.last_export_ts">
+            · {{ t("settings.observability.otelLast") }}: {{ toRfc3339(otel.last_export_ts) }}
+          </span>
+        </p>
       </div>
-      <p v-if="message" class="hint">{{ message }}</p>
-      <p v-if="otel" class="hint">
-        {{ otel.enabled ? t("settings.observability.otelEnabled") : t("settings.observability.otelDisabled") }}
-        · {{ otel.endpoint }}
-        <span v-if="otel.last_export_ts">
-          · {{ t("settings.observability.otelLast") }}: {{ toRfc3339(otel.last_export_ts) }}
-        </span>
-      </p>
-    </section>
+    </NCard>
 
-    <section v-if="metrics" class="metrics">
-      <div v-for="(value, key) in metrics" :key="key" class="metric">
-        <span class="label">{{ key }}</span>
-        <span class="value">{{ value }}</span>
-      </div>
-    </section>
+    <NGrid v-if="metrics" :cols="4" :x-gap="8" :y-gap="8" responsive="screen">
+      <NGridItem v-for="(value, key) in metrics" :key="key">
+        <NCard size="small">
+          <NStatistic :label="key" :value="value" />
+        </NCard>
+      </NGridItem>
+    </NGrid>
   </main>
 </template>
 
@@ -135,69 +169,43 @@ h1 {
   font-size: 20px;
 }
 
-.card {
+.hint {
+  color: #9aa4b2;
+  margin: 0;
+  font-size: 12px;
+}
+
+.settings {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 16px;
-  border: 1px solid rgb(255 255 255 / 8%);
-  border-radius: 8px;
 }
 
-.page button {
-  padding: 6px 12px;
-  border: 1px solid rgb(255 255 255 / 15%);
-  border-radius: 6px;
-  background: rgb(255 255 255 / 8%);
-  color: #e6e6e6;
-  cursor: pointer;
-}
-
-.page button:hover {
-  background: rgb(255 255 255 / 14%);
-}
-
-.page input {
-  padding: 6px 9px;
-  border: 1px solid #2a323c;
-  border-radius: 6px;
-  background: #101418;
-  color: #e6e6e6;
-}
-
-.inline {
-  flex-direction: row;
+.field {
+  display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.field-label {
+  color: #cbd5e1;
+  font-size: 13px;
+}
+
+.endpoint {
+  width: 360px;
+  max-width: 100%;
+}
+
+.ratio {
+  width: 120px;
 }
 
 .actions {
   display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
-}
-
-.metrics {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
-  gap: 8px;
-}
-
-.metric {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 10px;
-  border: 1px solid rgb(255 255 255 / 8%);
-  border-radius: 6px;
-}
-
-.label {
-  color: #9aa4b2;
-  font-size: 11px;
-}
-
-.value {
-  font-family: ui-monospace, monospace;
-  font-size: 18px;
 }
 </style>
