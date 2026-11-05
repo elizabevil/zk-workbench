@@ -6,14 +6,14 @@ import yamlLanguage from "highlight.js/lib/languages/yaml";
 import {computed, onMounted, onUnmounted, ref, watch} from "vue";
 import {useI18n} from "vue-i18n";
 
-import {NButton, NDropdown, NInputNumber, NModal} from "naive-ui";
+import {NButton, NCheckbox, NDropdown, NInput, NInputNumber, NModal} from "naive-ui";
 import {useRouter} from "vue-router";
 import {isMap, isSeq, parseDocument} from "yaml";
 
 import {KEY_ESCAPE} from "@/constants/keyboard";
 import {auditList} from "@/api/audit";
 import {type InvokeRejection, toAppError} from "@/api/client";
-import {nodeAcl, nodeChildren, nodeData, nodeStat} from "@/api/node";
+import {nodeAcl, nodeChildren, nodeData, nodeSetAcl, nodeStat} from "@/api/node";
 import type {AclEntry} from "@/api/types/AclEntry";
 import type {AppError} from "@/api/types/AppError";
 import type {AuditRecord} from "@/api/types/AuditRecord";
@@ -57,6 +57,11 @@ const dataError = ref<AppError | null>(null);
 const activeTab = ref<"data" | "stat" | "acl">("data");
 const acls = ref<AclEntry[] | null>(null);
 const aclError = ref<AppError | null>(null);
+const aclLocalError = ref("");
+const aclEditing = ref(false);
+const aclSaving = ref(false);
+const aclDraft = ref<AclEntry[]>([]);
+const ACL_PERMISSIONS = ["c", "r", "w", "d", "a"] as const;
 const format = ref<"raw" | "json" | "yaml">("raw");
 const loadingData = ref(false);
 const statView = ref<NodeStat | null>(null);
@@ -378,6 +383,9 @@ async function select(path: string): Promise<void> {
   format.value = "raw";
   acls.value = null;
   aclError.value = null;
+  aclEditing.value = false;
+  aclLocalError.value = "";
+  aclDraft.value = [];
   if (connectionId.value) {
     tabs.open(connectionId.value, canonical);
   }
@@ -415,9 +423,94 @@ async function loadAcl(): Promise<void> {
   aclError.value = null;
   try {
     acls.value = await nodeAcl(connectionId.value, selectedPath.value);
+    aclDraft.value = acls.value.map((entry) => ({...entry}));
   } catch (raw) {
     acls.value = null;
+    aclDraft.value = [];
     aclError.value = toAppError(raw as InvokeRejection);
+  }
+}
+
+function startAclEdit(): void {
+  aclDraft.value = (acls.value ?? []).map((entry) => ({...entry}));
+  if (aclDraft.value.length === 0) {
+    aclDraft.value.push({scheme: "world", id: "anyone", permissions: "r"});
+  }
+  aclLocalError.value = "";
+  aclEditing.value = true;
+}
+
+function cancelAclEdit(): void {
+  aclEditing.value = false;
+  aclLocalError.value = "";
+  aclDraft.value = (acls.value ?? []).map((entry) => ({...entry}));
+}
+
+function addAclEntry(): void {
+  aclDraft.value.push({scheme: "world", id: "anyone", permissions: "r"});
+}
+
+function removeAclEntry(index: number): void {
+  aclDraft.value.splice(index, 1);
+}
+
+function hasAclPermission(entry: AclEntry, permission: string): boolean {
+  return entry.permissions.includes(permission);
+}
+
+function toggleAclPermission(entry: AclEntry, permission: string): void {
+  const selected = new Set(entry.permissions.split(""));
+  if (selected.has(permission)) {
+    selected.delete(permission);
+  } else {
+    selected.add(permission);
+  }
+  entry.permissions = ACL_PERMISSIONS.filter((item) => selected.has(item)).join("");
+}
+
+function normalizedAclEntries(): AclEntry[] {
+  return aclDraft.value.map((entry) => ({
+    scheme: entry.scheme.trim(),
+    id: entry.id.trim(),
+    permissions: ACL_PERMISSIONS.filter((permission) => entry.permissions.includes(permission)).join(""),
+  }));
+}
+
+async function saveAcl(): Promise<void> {
+  if (!connectionId.value || !selectedPath.value || !stat.value) {
+    return;
+  }
+  const entries = normalizedAclEntries();
+  if (entries.length === 0) {
+    aclLocalError.value = t("data.aclEmptyError");
+    return;
+  }
+  if (entries.some((entry) => !entry.scheme || (entry.scheme !== "auth" && !entry.id) || !entry.permissions)) {
+    aclLocalError.value = t("data.aclInvalidError");
+    return;
+  }
+  aclSaving.value = true;
+  aclError.value = null;
+  aclLocalError.value = "";
+  try {
+    const updated = await nodeSetAcl(
+      connectionId.value,
+      selectedPath.value,
+      entries,
+      stat.value.aversion,
+    );
+    statView.value = updated;
+    if (data.value) {
+      data.value = {...data.value, stat: updated};
+    }
+    acls.value = entries;
+    aclDraft.value = entries.map((entry) => ({...entry}));
+    aclEditing.value = false;
+    showToast(t("data.aclSaved"), 3000);
+  } catch (raw) {
+    aclError.value = toAppError(raw as InvokeRejection);
+  } finally {
+    aclSaving.value = false;
   }
 }
 
@@ -988,7 +1081,59 @@ function onDeleted(outcome: DeleteOutcome): void {
               </div>
 
               <div v-else-if="activeTab === 'acl'" class="acl-pane">
+                <div class="acl-head">
+                  <span v-if="stat" class="hint">
+                    {{ t("data.aclVersion", {version: stat.aversion}) }}
+                  </span>
+                  <div class="acl-actions">
+                    <template v-if="aclEditing">
+                      <NButton size="tiny" @click="addAclEntry">{{ t("data.aclAdd") }}</NButton>
+                      <NButton :loading="aclSaving" size="tiny" type="primary" @click="saveAcl">
+                        {{ t("data.aclSave") }}
+                      </NButton>
+                      <NButton :disabled="aclSaving" size="tiny" @click="cancelAclEdit">
+                        {{ t("data.aclCancel") }}
+                      </NButton>
+                    </template>
+                    <NButton v-else size="tiny" @click="startAclEdit">{{ t("data.aclEdit") }}</NButton>
+                  </div>
+                </div>
+
                 <p v-if="aclError" class="error">{{ t(aclError.message_key) }}</p>
+                <p v-if="aclLocalError" class="error">{{ aclLocalError }}</p>
+
+                <table v-if="aclEditing" class="acl-table acl-edit-table">
+                  <thead>
+                  <tr>
+                    <th>{{ t("data.scheme") }}</th>
+                    <th>{{ t("data.identity") }}</th>
+                    <th>{{ t("data.permissions") }}</th>
+                    <th/>
+                  </tr>
+                  </thead>
+                  <tbody>
+                  <tr v-for="(entry, index) in aclDraft" :key="index">
+                    <td><NInput v-model:value="entry.scheme" size="tiny"/></td>
+                    <td><NInput v-model:value="entry.id" size="tiny"/></td>
+                    <td class="acl-permissions">
+                      <NCheckbox
+                        v-for="permission in ACL_PERMISSIONS"
+                        :key="permission"
+                        :checked="hasAclPermission(entry, permission)"
+                        @update:checked="toggleAclPermission(entry, permission)"
+                      >
+                        {{ permission }}
+                      </NCheckbox>
+                    </td>
+                    <td class="acl-row-actions">
+                      <NButton size="tiny" text type="error" @click="removeAclEntry(index)">
+                        {{ t("data.aclRemove") }}
+                      </NButton>
+                    </td>
+                  </tr>
+                  </tbody>
+                </table>
+
                 <table v-else-if="acls?.length" class="acl-table">
                   <thead>
                   <tr>
@@ -1005,8 +1150,7 @@ function onDeleted(outcome: DeleteOutcome): void {
                   </tr>
                   </tbody>
                 </table>
-                <p v-else class="muted">{{ t("data.aclEmpty") }}</p>
-                <p class="hint">{{ t("data.aclReadOnly") }}</p>
+                <p v-else-if="!aclEditing" class="muted">{{ t("data.aclEmpty") }}</p>
               </div>
 
               <div v-else class="stat-groups">
@@ -1776,6 +1920,38 @@ function onDeleted(outcome: DeleteOutcome): void {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.acl-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.acl-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.acl-edit-table :deep(.n-input) {
+  width: 100%;
+}
+
+.acl-permissions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.acl-permissions :deep(.n-checkbox) {
+  margin-right: 0;
+}
+
+.acl-row-actions {
+  text-align: right;
 }
 
 .acl-table {
