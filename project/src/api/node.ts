@@ -72,3 +72,17 @@ export function nodeDelete(
 export function nodeAcl(connectionId: string, path: string): Promise<AclEntry[]> {
     return call<AclEntry[]>("node_acl", {connectionId, path});
 }
+
+export function nodeSetAcl(
+    connectionId: string,
+    path: string,
+    acls: AclEntry[],
+    expectedAclVersion: number,
+): Promise<NodeStat> {
+    return call<NodeStat>("node_set_acl", {
+        connectionId,
+        path,
+        acls,
+        expectedAclVersion,
+    });
+}

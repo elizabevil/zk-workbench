@@ -8,7 +8,7 @@ use tauri::State;
 use zkui_core::audit::AuditEvent;
 use zkui_core::error::{AppResult, app};
 use zkui_core::ipc::audit::AuditOp;
-use zkui_core::ipc::node::{DeleteOutcome, DeletePreview, NodeCreateMode, NodeData, NodeStat};
+use zkui_core::ipc::node::{AclEntry, DeleteOutcome, DeletePreview, NodeCreateMode, NodeData, NodeStat};
 
 use crate::state::AppState;
 
@@ -205,6 +205,49 @@ pub async fn node_delete(
         Err(error) => {
             state.audit.record(AuditEvent::failure(
                 AuditOp::Delete,
+                &connection_id,
+                generation,
+                &actor,
+                &path,
+                error.as_ref(),
+            ))?;
+        }
+    }
+    result
+}
+
+#[tauri::command]
+pub async fn node_set_acl(
+    state: State<'_, AppState>,
+    connection_id: String,
+    path: String,
+    acls: Vec<AclEntry>,
+    expected_acl_version: i32,
+) -> AppResult<NodeStat> {
+    let entry_count = acls.len();
+    let result = state
+        .manager
+        .set_acl(&connection_id, &path, acls, expected_acl_version)
+        .await;
+    let generation = state.manager.generation_of(&connection_id)?;
+    let actor = state.manager.actor_of(&connection_id)?;
+    match &result {
+        Ok(stat) => {
+            state.audit.record(
+                AuditEvent::success(
+                    AuditOp::SetAcl,
+                    &connection_id,
+                    generation,
+                    &actor,
+                    &path,
+                )
+                .with_versions(expected_acl_version, stat.aversion)
+                .with_detail(format!("entries={entry_count}")),
+            )?;
+        }
+        Err(error) => {
+            state.audit.record(AuditEvent::failure(
+                AuditOp::SetAcl,
                 &connection_id,
                 generation,
                 &actor,

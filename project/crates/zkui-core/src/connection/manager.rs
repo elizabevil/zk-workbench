@@ -8,7 +8,7 @@ use std::time::Instant;
 
 use base64::Engine;
 use tokio::sync::broadcast;
-use zookeeper_client::{Acls, Client, CreateMode, Error as ZkError, SessionState};
+use zookeeper_client::{Acl, Acls, AuthId, Client, CreateMode, Error as ZkError, Permission, SessionState};
 
 use super::handle::ConnectionHandle;
 use super::state::ConnectionState;
@@ -446,6 +446,59 @@ impl ConnectionManager {
                 }
             })
             .collect())
+    }
+
+    /// 写入 ACL，使用 ACL version 做 CAS。
+    pub async fn set_acl(
+        &self,
+        connection_id: &str,
+        path: &str,
+        entries: Vec<AclEntry>,
+        expected_acl_version: i32,
+    ) -> AppResult<NodeStat> {
+        if entries.is_empty() {
+            return Err(Box::new(app::invalid_argument("ACL must not be empty")));
+        }
+        let mut acls = Vec::with_capacity(entries.len());
+        for entry in entries {
+            let scheme = entry.scheme.trim();
+            let id = entry.id.trim();
+            if scheme.is_empty() || (scheme != "auth" && id.is_empty()) {
+                return Err(Box::new(app::invalid_argument(
+                    "ACL scheme is required; id is required except for auth",
+                )));
+            }
+            let mut permission = Permission::NONE;
+            for letter in entry.permissions.chars() {
+                permission = permission
+                    | match letter.to_ascii_lowercase() {
+                        'c' => Permission::CREATE,
+                        'r' => Permission::READ,
+                        'w' => Permission::WRITE,
+                        'd' => Permission::DELETE,
+                        'a' => Permission::ADMIN,
+                        _ => {
+                            return Err(Box::new(app::invalid_argument(
+                                "ACL permissions must contain only c/r/w/d/a",
+                            )));
+                        }
+                    };
+            }
+            if permission == Permission::NONE {
+                return Err(Box::new(app::invalid_argument(
+                    "ACL permissions must not be empty",
+                )));
+            }
+            acls.push(Acl::new(permission, AuthId::new(scheme, id)));
+        }
+        let client = self.client_of(connection_id)?;
+        let started = Instant::now();
+        let stat = client
+            .set_acl(path, &acls, Some(expected_acl_version))
+            .await?;
+        self.metrics
+            .record_write(started.elapsed().as_millis() as u64);
+        Ok(stat_of(path, &stat))
     }
 
     /// 读取直接子节点，按名称排序。

@@ -72,8 +72,8 @@ pub struct DeleteOutcome {
     pub unexecuted: u64,
 }
 
-/// ACL 条目（只读展示）。
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+/// ACL 条目。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct AclEntry {
     pub scheme: String,
